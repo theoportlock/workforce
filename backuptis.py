@@ -1,17 +1,3 @@
-def basechanger(nrv,base):
-  pos = 0
-  counter = -1
-  conv = [0]*((base**2)-1)
-  for e in range(len(nrv)-1,len(nrv)-base-1,-1):
-    if nrv[e] == 1:
-      counter = counter + 2**pos
-    pos += 1
-  for f in range(len(conv)):
-    conv[f] = 0
-  if counter > 0:
-    conv[counter] = 1
-  return conv
-
 # 1. Defining how all combinations work
 def combinations(txt):
 # Defining a function that adds one to a previous binary string
@@ -22,6 +8,7 @@ def combinations(txt):
     else:
       arr[count] = 0
       return binadd(arr,count+1)
+
 # Create arrays (will have to fix to make a continuous process)
   qry = [0]*len(txt)
   comb = [0]*2**len(txt)
@@ -48,7 +35,7 @@ def combinations(txt):
 
 #2. Reading the "input.txt" file as bitarray
 t = "input.txt"
-o = "output.csv"
+o = "output.txt"
 with open(o,"a") as of:
   with open(t) as tf:
     text = map(int,''.join(format(ord(x), 'b') for x in tf.read()))
@@ -57,27 +44,18 @@ with open(o,"a") as of:
 
 #4. Find combinations    
 # Nerv length should be refined (don't know how yet) - linked to sampling rate
-    
-    nerv = [0]*9
-    newnerv = [0]*17
-    node = [0]*(len(newnerv)-1)
+    nerv = [0]*8
+    node = [0]*(len(nerv)-1)
 # For every bin in each letter, separate the bitarray of the text by measuring distances between bits
     for c in text:
       for d in range(len(nerv)-1,0,-1):
 	nerv[d] = nerv[d-1]
       nerv[0] = c
-      
-      tmp = basechanger(nerv,2)
-      for e in tmp:
-	for g in range(len(newnerv)-1,0,-1):
-	  newnerv[g] = newnerv[g-1]
-	newnerv[0] = e
-      
-	for a in range(1,len(newnerv)):
-	  node[a-1] = 0
-	  for b in range(len(newnerv)-a):
-	    if newnerv[b] == newnerv[b+a] and newnerv[b] == 1:
-	      node[a-1] = 1
+      for a in range(1,len(nerv)):
+	node[a-1] = 0
+	for b in range(len(nerv)-a):
+	  if nerv[b] == nerv[b+a] and nerv[b] == 1:
+	    node[a-1] = 1
 #5. Verify by output
       of.write(str(combinations(node))+"\n")
 
