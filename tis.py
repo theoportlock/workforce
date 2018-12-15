@@ -1,9 +1,17 @@
-def basechanger(nrv,base):
+def splitter(inarr, outarr):
+  for a in range(1,len(inarr)):
+    outarr[a-1] = 0
+    for b in range(len(inarr)-a):
+      if inarr[b] == inarr[b+a] and inarr[b] == 1:
+	outarr[a-1] = 1
+  return outarr
+
+def basechanger(arr,base):
   pos = 0
   counter = -1
   conv = [0]*((base**2)-1)
-  for e in range(len(nrv)-1,len(nrv)-base-1,-1):
-    if nrv[e] == 1:
+  for e in range(len(arr)-1,len(arr)-base-1,-1):
+    if arr[e] == 1:
       counter = counter + 2**pos
     pos += 1
   for f in range(len(conv)):
@@ -12,8 +20,7 @@ def basechanger(nrv,base):
     conv[counter] = 1
   return conv
 
-# 1. Defining how all combinations work
-def combinations(txt):
+def combinations(arr):
 # Defining a function that adds one to a previous binary string
   def binadd(arr,count):
     if arr[count] == 0:
@@ -23,13 +30,13 @@ def combinations(txt):
       arr[count] = 0
       return binadd(arr,count+1)
 # Create arrays (will have to fix to make a continuous process)
-  qry = [0]*len(txt)
-  comb = [0]*2**len(txt)
+  qry = [0]*len(arr)
+  comb = [0]*2**len(arr)
 # certain this section can be written better  
   for i, iitem in enumerate(comb[:-1]):
     for j, jitem in enumerate(qry):
       if qry[j] == 1:
-	if txt[j] == 1:
+	if arr[j] == 1:
 	  comb[i] = 1
 	else:
 	  comb[i] = 0
@@ -38,46 +45,35 @@ def combinations(txt):
   else:
     for k, kitem in enumerate(qry):
       if kitem == 1:
-	if txt[k] == 1:
+	if arr[k] == 1:
 	  comb[-1] = 1
 	else:
 	  comb[-1] = 0
 	  break
   return comb
 
+def outreader(out,arr):
+  with open(out,"a") as of:
+    of.write(str(arr)+"\n")
 
-#2. Reading the "input.txt" file as bitarray
-t = "input.txt"
-o = "output.csv"
-with open(o,"a") as of:
-  with open(t) as tf:
-    text = map(int,''.join(format(ord(x), 'b') for x in tf.read()))
+def inreader(inp):
+  with open(inp) as tf:
+    return map(int,''.join(format(ord(x), 'b') for x in tf.read()))
 
-#3. Make sparce - sampling rate effects resolution (maybe have multiple sampling rates)
+def addnewelement(arr,inp):
+  for d in range(len(arr)-1,0,-1):
+    arr[d] = arr[d-1]
+  arr[0] = inp
+  return arr
 
-#4. Find combinations    
-# Nerv length should be refined (don't know how yet) - linked to sampling rate
-    
-    nerv = [0]*9
-    newnerv = [0]*17
-    node = [0]*(len(newnerv)-1)
-# For every bin in each letter, separate the bitarray of the text by measuring distances between bits
-    for c in text:
-      for d in range(len(nerv)-1,0,-1):
-	nerv[d] = nerv[d-1]
-      nerv[0] = c
-      
-      tmp = basechanger(nerv,2)
-      for e in tmp:
-	for g in range(len(newnerv)-1,0,-1):
-	  newnerv[g] = newnerv[g-1]
-	newnerv[0] = e
-      
-	for a in range(1,len(newnerv)):
-	  node[a-1] = 0
-	  for b in range(len(newnerv)-a):
-	    if newnerv[b] == newnerv[b+a] and newnerv[b] == 1:
-	      node[a-1] = 1
-#5. Verify by output
-      of.write(str(combinations(node))+"\n")
+nerv = [0]*8
+newnerv = [0]*10
+node = [0]*(len(newnerv)-1)
+text = inreader("input.txt")
+
+for c in text:
+  for e in basechanger(addnewelement(nerv,c),2):
+    newnerv = addnewelement(newnerv,e)
+    node = splitter(newnerv,node)
+  outreader("output.csv",combinations(node))
 
