@@ -1,29 +1,22 @@
-text = [0,1,1,1,1,0,0,1,0,0,1,0,1,1,1,1,1,0]
-nerv = [0]*10
-newnerv = [0]*30
-
-def basechanger(nrv,base):
+'''
+Input = 1D bit array of length n
+Output = 1D bitarray of length (2^n)-1 with 1 active bit if there are more than one active bits in the input
+'''
+def basechanger(arr):
   pos = 0
   counter = -1
-  conv = [0]*((base**2)-1)
-  for e in range(len(nrv)-1,len(nrv)-base-1,-1):
-    if nrv[e] == 1:
+  conv = [0]*(2**len(arr)-1)
+  for e in arr:
+    if e == 1:
       counter = counter + 2**pos
     pos += 1
   for f in range(len(conv)):
     conv[f] = 0
-  if counter > 0:
+  if counter > -1:
     conv[counter] = 1
   return conv
 
-
-for c in text:
-  for d in range(len(nerv)-1,0,-1):
-    nerv[d] = nerv[d-1]
-  nerv[0] = c
-  tmp = basechanger(nerv,2)
-  for e in tmp:
-    for g in range(len(newnerv)-1,0,-1):
-      newnerv[g] = newnerv[g-1]
-    newnerv[0] = e
-    print newnerv
+'''
+text = [1,1]
+print(basechanger(text))
+'''

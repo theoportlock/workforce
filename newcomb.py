@@ -1,5 +1,4 @@
 def combinations(txt):
-  
   def binadd(arr,count):
     if arr[count] == 0:
       arr[count] = 1
@@ -7,10 +6,8 @@ def combinations(txt):
     else:
       arr[count] = 0
       return binadd(arr,count+1)
-   
   qry = [0]*len(txt)
   comb = [0]*2**len(txt)
-  
   for i, iitem in enumerate(comb[:-1]):
     for j, jitem in enumerate(qry):
       if qry[j] == 1:
@@ -30,9 +27,11 @@ def combinations(txt):
 	  break
   return comb
 
-text = [1,1,0,1,1,1,1,1,1,1,1,1]
-
+text = [0,1,0,0,0,0,0,0,0]
 comb = combinations(text)
+
+print comb
+'''
 lcount = 0
 for l in text:
   if l == 1:
@@ -50,3 +49,4 @@ print ("text active nodes percent")
 print (lpercent)
 print ("combinations active nodes percent")
 print (mpercent)
+'''
