@@ -28,6 +28,6 @@ def combinations(arr):
 
   return comb
 
-test = [0,0,0,0,0,1,0,0,0,0]
+test = [0,0]
 
 print(combinations(test))

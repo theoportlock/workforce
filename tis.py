@@ -1,10 +1,20 @@
-def splitter(inarr, outarr):
-  for a in range(1,len(inarr)):
-    outarr[a-1] = 0
-    for b in range(len(inarr)-a):
-      if inarr[b] == inarr[b+a] and inarr[b] == 1:
-	outarr[a-1] = 1
-  return outarr
+def splitter(arr):
+  output = []
+  for a in range(1,len(arr)):
+    curr = 0
+    for b in range(len(arr)-a):
+      if arr[b] == arr[b+a] and arr[b] == 1:
+	curr = 1
+    output.append(curr)
+  return output
+
+def unpacker(arr):
+  output = []
+  for a in arr:
+    for b in range(a-1):
+      output.append(0)
+    output.append(1)
+  return output
 
 def basechanger(arr):
   pos = 0
@@ -64,28 +74,22 @@ def addnewelement(arr,inp):
   arr[0] = inp
   return arr
 
-nerv = [0]*2
-newnerv = [0]*12
-split = [0]*(len(newnerv)-1)
+nerv = [0]*1
+newnerv = [0]*5
 text = inreader("input.txt")
 
-'''
-for c in text:
-  for e in basechanger(addnewelement(nerv,c)):
-    newnerv = addnewelement(newnerv,e)
-    split = splitter(newnerv,split)
-  outreader(combinations(split),"output.csv")
-'''
-
 print ('text = {0}\n'.format(text))
+
 for c in text:
   nerv = addnewelement(nerv,c)
-  print ('nerv			{0}'.format(nerv))
-  print ('then changed base	{0}'.format(basechanger(nerv)))
+  #print ('nerv			{0}'.format(nerv))
+  #print ('then changed base	{0}'.format(basechanger(nerv)))
   for e in basechanger(nerv):
     newnerv = addnewelement(newnerv,e)
-    split = splitter(newnerv,split)
-  print ('	newnerv		{0}'.format(newnerv))
-  print ('	new split	{0}'.format(split))
-  print ('	comb		{0}'.format(combinations(split)))
-  print ('\n')
+    split = splitter(newnerv)
+  print ('	splitcomb	{0}'.format(splitter(unpacker(combinations(split)))))
+  #print ('	newnerv		{0}'.format(newnerv))
+  #print ('	split		{0}'.format(split))
+  #print ('	comb		{0}'.format(combinations(split)))
+  #print ('	testsplit	{0}'.format(splitter(combinations(split),split)))
+  #print ('\n')
