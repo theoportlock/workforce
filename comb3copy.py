@@ -1,4 +1,4 @@
-def a(arr):
+def combinations(arr):
   def packer(arr):
     output = []
     for a, b in enumerate(arr):
@@ -28,6 +28,6 @@ def a(arr):
 
   return comb
 
-if __name__ == "__main__":
-  test = [1,0,0,0,0,0,0,0,0,0,1]
-  print(a(test))
+test = [1,1,1,1,1]
+
+print(combinations(test))

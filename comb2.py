@@ -1,4 +1,4 @@
-def combinations(txt):
+def a(txt):
   def binadd(arr,count):
     if arr[count] == 0:
       arr[count] = 1
@@ -27,8 +27,9 @@ def combinations(txt):
 	  break
   return comb
 
-text = [0,1,0,0,0,0,0,0,0]
-comb = combinations(text)
+if __name__ == "__main__":
+  text = [0,1,0,0,0,0,0,0,0]
+  comb = a(text)
 
 print comb
 '''

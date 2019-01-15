@@ -2,7 +2,7 @@
 Input = 1D bit array of length n
 Output = 1D bitarray of length (2^n)-1 with 1 active bit if there are more than one active bits in the input
 '''
-def basechanger(arr):
+def a(arr):
   pos = 0
   counter = -1
   conv = [0]*(2**len(arr)-1)
@@ -16,7 +16,7 @@ def basechanger(arr):
     conv[counter] = 1
   return conv
 
-'''
-text = [1,1]
-print(basechanger(text))
-'''
+if __name__ == "__main__":
+  text = [1,1]
+  print(a(text))
+
