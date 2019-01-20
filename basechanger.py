@@ -17,6 +17,9 @@ def a(arr):
   return conv
 
 if __name__ == "__main__":
-  text = [1,1]
+  text = [1,1,0,1]
+  print("text =")
+  print(text)
+  print("basechanger =")
   print(a(text))
 

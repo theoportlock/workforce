@@ -1,15 +1,15 @@
-def differences(arr):
-  output = []
-  for a in range(1,len(arr)):
-    for b in range(len(arr)-a):
-      if arr[b] == arr[b+a]:
-        output.append(0)
+import binadder
+
+def a(arr):
+  curr = []
+  for i in range(len(arr)-1):
+    for j in range(1,len(arr)-i):
+      if arr[i] == arr[i+j]:
+        curr.append(1)
       else:
-        output.append(1)
-  return output
+        curr.append(0)
+  return curr
 
-test = [1,1,1]
-
-for a in range(len(test)):
-  test = differences(test)
-  print(test)
+if __name__ == "__main__":
+  test = [1,1,0,0,1]
+  print(a(test))
