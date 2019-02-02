@@ -1,5 +1,6 @@
+# needs work -minus a binary value conventionally and extends the array to fit new data
 def a(arr,count=0):
-  if arr[count] == 0:
+  if arr[count] == 1:
     arr[count] = 1
     return arr
   else:

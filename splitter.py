@@ -9,5 +9,5 @@ def a(arr):
   return output
 
 if __name__ == "__main__":
-  inp = [0,0,0,0,0,0,0,0,0]
+  inp = [0,0,1,0,0,1,1,0,0]
   print(a(inp))

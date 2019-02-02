@@ -2,7 +2,7 @@ def a(arr):
   output = []
   for a, b in enumerate(arr):
     if b == 1:
-      output.append(a)
+      output.append(2**a)
   return output
 
 if __name__ == "__main__":

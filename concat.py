@@ -9,12 +9,12 @@ can be represented as 2^x + y ?
         print to output and repeat for y
   no:
 print
-'''
 
 def a(arr):
   output = []
   for i,j in enumerate(arr):
     if j:
       if i % 2 == 0:
-        
-        
+'''      
+
+

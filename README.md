@@ -1,5 +1,51 @@
 Pattern Recognition
 
+Program summary
+
+addnewelement
+Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
+
+binadder
+Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
+
+binminuser
+opposite of binadder - not started yet
+
+basechanger1
+converts bitarray into a single decimal representing the full array's value
+
+basechanger
+converts bitarray into a single binary representing the full array's value
+
+comb1
+old attempt to find combinations in group, rather than binary, order
+
+comb2
+finds combinations but puts an incorrect empty bit at start of bitarray - to fix
+
+comb
+finds combinations and outputs decimals of active combinations
+
+entropy
+works like combinations finder but finds all possible correlations
+
+inreader
+opens file and returns a bitarray of contents
+
+packer
+returns decimal array of active nodes counting from the left
+
+unpacker
+returns bitarray of active nodes in a decimal array
+
+splitter
+returns bitarray of distances between active nodes in an array of total distance possibilities
+
+tis
+main file
+.....
+
+
 Pipeline summary
 
 1. Reading the "input.txt" file

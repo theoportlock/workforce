@@ -32,7 +32,7 @@ def a(txt):
   return comb
 
 if __name__ == "__main__":
-  text = [1]
+  text = [1,1,1,1,1]
   print(text)
   comb = a(text)
   print(comb)
