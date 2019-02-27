@@ -1,15 +1,17 @@
 import splitter
 import basechanger
 import comb
-import inreader
-import outreader
 import addnewelement
+import tester
 
-nerv = [0]*3
-newnerv = [0]*8
-
-text = inreader.a("input.txt")
-
-for c in text:
-  for e in basechanger.a(addnewelement.a(nerv,c)):
-    print(splitter.a(addnewelement.a(newnerv,e)))
+def a(arr):
+    nerv = [0]*2
+    newnerv = [0]*9
+    out = []
+    for c in arr:
+      for e in basechanger.a(addnewelement.a(nerv,list(map(int,list(str(c)))))):
+        out.append(splitter.a(addnewelement.a(newnerv,list(map(int,list(str(c)))))))
+    return out
+ 
+if __name__ == "__main__":
+    print(tester.test(a))

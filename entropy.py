@@ -1,3 +1,5 @@
+import tester
+
 def a(arr):
   curr = []
   for i in range(len(arr)-1):
@@ -9,6 +11,4 @@ def a(arr):
   return curr
 
 if __name__ == "__main__":
-  test = [1,1,0,0,1]
-  
-  print('test = {0}\nfunction = {1}'.format(test,a(test)))
+    print(tester.test(a))

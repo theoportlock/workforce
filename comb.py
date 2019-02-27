@@ -1,5 +1,7 @@
+import tester
 import packer
 import binadder
+import basechanger
 
 def a(arr):
   tmp = [0]*len(packer.a(arr))
@@ -13,9 +15,11 @@ def a(arr):
       if c == 1:
         curr = curr + packed[b]
     comb.append(curr)
-  return comb
+  out = []
+  for d in comb:
+      for e in basechanger.a(list(map(int,"{0:#b}".format(d)[2:]))):
+          out.append(e)
+  return out
 
 if __name__ == "__main__":
-  test = [1,1,1,1,1]
-  print(test)
-  print(a(test))
+  print(tester.test(a))
