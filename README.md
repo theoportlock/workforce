@@ -36,13 +36,10 @@ splitter - returns bitarray of distances between active nodes in an array of tot
 tis - main file
 
 ##To do:
-- fix combinations
-- add bit differences function (xor gates)
-- incorporate charge delay function to increase time resolution
-- fix sparcity amount problem (solution may lie above)
-- investigate the node delay mechanics
-- make real time reader
-- create and link action nodes
-- image import (live and from webcam perhaps)
-- output a script writer for a variety of outputs (bash compatibility, drone flight, image generation etc.)
-- need to control node size - 2^8 = 256. sigma 256 is all combinations of just 2 letters is 32896... (like counting in base 256 with no 0s)
+- Fix combinations
+- Play around with node delay mechanics for pattern memory
+- Create and link nodes that do an action when a pattern is recognised
+- Real time reader and writer
+- Investigate different inputs (picture files e.t.c.)
+
+I'm pretty new to all this, any suggestions more than welcome! 
