@@ -1,4 +1,5 @@
 #Pattern Recognition
+
 This is a project designed to find patterns in a bitarray datastream. 
 
 ##Pipeline summary
