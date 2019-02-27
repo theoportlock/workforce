@@ -1,6 +1,19 @@
-Pattern Recognition
+#Pattern Recognition
+This is a project designed to find patterns in a bitarray datastream. 
 
-Program summary
+##Pipeline summary
+
+1. Reading the "input.txt" file and convert each letter to a binary represenation of their ascii character
+2. Drip feed each bit into a temporary array 
+3. Increase the sparcity of the array by changing its base
+4. Measure distances between active nodes in the array and output into a distances array
+5. Find all combinations of active nodes in the distances array and output into combinations array
+6. Find all groups of active nodes in the combinations array and output into grouping array
+
+##Program summary
+
+inreader
+opens file and returns a bitarray of contents
 
 addnewelement
 Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
@@ -8,29 +21,17 @@ Removes the rightmost element of an array, shuffles the information down towards
 binadder
 Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
 
-binminuser
-opposite of binadder - not started yet
-
-basechanger1
-converts bitarray into a single decimal representing the full array's value
-
 basechanger
 converts bitarray into a single binary representing the full array's value
 
-comb1
-old attempt to find combinations in group, rather than binary, order
-
 comb2
-finds combinations but puts an incorrect empty bit at start of bitarray - to fix
+returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 
 comb
-finds combinations and outputs decimals of active combinations
+same as comb2 but broken
 
 entropy
-works like combinations finder but finds all possible correlations
-
-inreader
-opens file and returns a bitarray of contents
+works like combinations finder but finds all pairs of active nodes
 
 packer
 returns decimal array of active nodes counting from the left
@@ -43,20 +44,8 @@ returns bitarray of distances between active nodes in an array of total distance
 
 tis
 main file
-.....
 
-
-Pipeline summary
-
-1. Reading the "input.txt" file
-2. Convert each letter to a binary represenation of their ascii character
-3. Drip feed each bit into an array 
-4. Increase the sparcity of the array
-5. Measure distances between active nodes in the array and output into a distances array
-6. Find all combinations of active nodes in the distances array and output into combinations array
-7. Find all groups of active nodes in the combinations array and output into grouping array
-
-To do:
+##To do:
 - fix combinations
 - add bit differences function (xor gates)
 - incorporate charge delay function to increase time resolution
