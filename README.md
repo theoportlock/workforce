@@ -13,49 +13,27 @@ This is a project designed to find patterns in a bitarray datastream.
 
 ##Program summary
 
-inreader
+inreader - opens file and returns a bitarray of contents
 
-opens file and returns a bitarray of contents
+addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
 
-addnewelement
+binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
 
-Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
+basechanger - converts bitarray into a single binary representing the full array's value
 
-binadder
+comb2 - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 
-Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
+comb - same as comb2 but broken
 
-basechanger
+entropy - works like combinations finder but finds all pairs of active nodes
 
-converts bitarray into a single binary representing the full array's value
+packer - returns decimal array of active nodes counting from the left
 
-comb2
+unpacker - returns bitarray of active nodes in a decimal array
 
-returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
+splitter - returns bitarray of distances between active nodes in an array of total distance possibilities
 
-comb
-
-same as comb2 but broken
-
-entropy
-
-works like combinations finder but finds all pairs of active nodes
-
-packer
-
-returns decimal array of active nodes counting from the left
-
-unpacker
-
-returns bitarray of active nodes in a decimal array
-
-splitter
-
-returns bitarray of distances between active nodes in an array of total distance possibilities
-
-tis
-
-main file
+tis - main file
 
 ##To do:
 - fix combinations
