@@ -1,69 +1,45 @@
-Pattern Recognition
+#Pattern Recognition
 
-Program summary
+This is a project designed to find patterns in a bitarray datastream. 
 
-addnewelement
-Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
+##Pipeline summary
 
-binadder
-Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
+1. Reading the "input.txt" file and convert each letter to a binary represenation of their ascii character
+2. Drip feed each bit into a temporary array 
+3. Increase the sparcity of the array by changing its base
+4. Measure distances between active nodes in the array and output into a distances array
+5. Find all combinations of active nodes in the distances array and output into combinations array
+6. Find all groups of active nodes in the combinations array and output into grouping array
 
-binminuser
-opposite of binadder - not started yet
+##Program summary
 
-basechanger1
-converts bitarray into a single decimal representing the full array's value
+inreader - opens file and returns a bitarray of contents
 
-basechanger
-converts bitarray into a single binary representing the full array's value
+addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
 
-comb1
-old attempt to find combinations in group, rather than binary, order
+binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
 
-comb2
-finds combinations but puts an incorrect empty bit at start of bitarray - to fix
+basechanger - converts bitarray into a single binary representing the full array's value
 
-comb
-finds combinations and outputs decimals of active combinations
+comb2 - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 
-entropy
-works like combinations finder but finds all possible correlations
+comb - same as comb2 but broken
 
-inreader
-opens file and returns a bitarray of contents
+entropy - works like combinations finder but finds all pairs of active nodes
 
-packer
-returns decimal array of active nodes counting from the left
+packer - returns decimal array of active nodes counting from the left
 
-unpacker
-returns bitarray of active nodes in a decimal array
+unpacker - returns bitarray of active nodes in a decimal array
 
-splitter
-returns bitarray of distances between active nodes in an array of total distance possibilities
+splitter - returns bitarray of distances between active nodes in an array of total distance possibilities
 
-tis
-main file
-.....
+tis - main file
 
+##To do:
+- Fix combinations
+- Play around with node delay mechanics for pattern memory
+- Create and link nodes that do an action when a pattern is recognised
+- Real time reader and writer
+- Investigate different inputs (picture files e.t.c.)
 
-Pipeline summary
-
-1. Reading the "input.txt" file
-2. Convert each letter to a binary represenation of their ascii character
-3. Drip feed each bit into an array 
-4. Increase the sparcity of the array
-5. Measure distances between active nodes in the array and output into a distances array
-6. Find all combinations of active nodes in the distances array and output into combinations array
-7. Find all groups of active nodes in the combinations array and output into grouping array
-
-To do:
-- fix combinations
-- add bit differences function (xor gates)
-- incorporate charge delay function to increase time resolution
-- fix sparcity amount problem (solution may lie above)
-- investigate the node delay mechanics
-- make real time reader
-- create and link action nodes
-- image import (live and from webcam perhaps)
-- output a script writer for a variety of outputs (bash compatibility, drone flight, image generation etc.)
-- need to control node size - 2^8 = 256. sigma 256 is all combinations of just 2 letters is 32896... (like counting in base 256 with no 0s)
+I'm pretty new to all this, any suggestions more than welcome! 
