@@ -1,4 +1,4 @@
-import tester
+import tester as t
 
 def a(arr,x=0,y=0):
     if arr[x]:
@@ -13,4 +13,4 @@ def a(arr,x=0,y=0):
     return arr
 
 if __name__ == "__main__":
-    print(tester.test(a))
+    print(t.bitarrout(a(t.bitarrin())))

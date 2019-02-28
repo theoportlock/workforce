@@ -1,5 +1,5 @@
 import math
-import tester
+import tester as t
 import numpy as np
 
 def a(arr):
@@ -33,4 +33,4 @@ def a(arr):
       replace[i-2][j]=1
 
 if __name__ == "__main__":
-  tester.test(a)
+  print(t.bitarrout(a(t.bitarrin())))

@@ -1,4 +1,4 @@
-import tester
+import tester as t
 import binadder
 
 def a(txt):
@@ -26,4 +26,4 @@ def a(txt):
   return comb
 
 if __name__ == "__main__":
-    print(tester.test(a))
+    print(t.bitarrout(a(t.bitarrin())))

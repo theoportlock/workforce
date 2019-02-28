@@ -1,4 +1,4 @@
-import tester
+import tester as t
 
 def a(arr):
   pos = 0
@@ -15,4 +15,4 @@ def a(arr):
   return conv
 
 if __name__ == "__main__":
-  print(tester.test(a))
+  print(t.bitarrout(a(t.bitarrin())))

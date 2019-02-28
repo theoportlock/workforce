@@ -1,4 +1,4 @@
-import tester
+import tester as t
 
 def a(arr):
   curr = []
@@ -11,4 +11,4 @@ def a(arr):
   return curr
 
 if __name__ == "__main__":
-    print(tester.test(a))
+    print(t.bitarrout(a(t.bitarrin())))

@@ -1,25 +1,31 @@
-import tester
+import tester as t
 import packer
-import binadder
-import basechanger
+import combmaker
 
 def a(arr):
-  tmp = [0]*len(packer.a(arr))
-  packed = packer.a(arr)
-  comb = []
+    packedarr = packer.a(arr)
+    def generator(arr2,group):
+        grouping = []
+        currarr = combmaker.a(packedarr,group+1)
+        for i in currarr:
+            tmp = 0
+            for j,k in enumerate(i):
+                if k:
+                    tmp += arr2[j]
+            #if not tmp % group:
+            grouping.append(tmp)#(tmp//group)
+        return grouping
+    
+    out = []
+    groupnumber = 0
+    currarr = packedarr
+    out.append(currarr)
 
-  for a in range(2**len(tmp)-1):
-    tmp = binadder.a(tmp)
-    curr = 0
-    for b,c in enumerate(tmp):
-      if c == 1:
-        curr = curr + packed[b]
-    comb.append(curr)
-  out = []
-  for d in comb:
-      for e in basechanger.a(list(map(int,"{0:#b}".format(d)[2:]))):
-          out.append(e)
-  return out
+    while len(currarr) > 1:
+        groupnumber += 1
+        currarr = generator(currarr,groupnumber)
+        out.append(currarr)
+    return out
 
 if __name__ == "__main__":
-  print(tester.test(a))
+    print(t.bitarrout(a(t.bitarrin())))

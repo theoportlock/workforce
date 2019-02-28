@@ -1,4 +1,4 @@
-import tester
+import tester as t
 
 def a(arr):
   output = []
@@ -8,4 +8,4 @@ def a(arr):
   return output
 
 if __name__ == "__main__":
-    print(tester.test(a))
+    print(t.bitarrout(a(t.bitarrin())))

@@ -1,4 +1,4 @@
-import tester
+import tester as t
 
 def a(arr1,arr2):
     if len(arr1) != len(arr2):
@@ -11,6 +11,4 @@ def a(arr1,arr2):
 
 
 if __name__ == "__main__":
-    in1 = [0,1,1]
-    in2 = [0,1,0]
-    print(a(in1,in2))
+    print(a(t.bitarrin(),t.bitarrin()))

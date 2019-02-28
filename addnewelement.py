@@ -1,4 +1,5 @@
 import tester
+import tester as t
 
 def a(arr,inp):
     for b in inp:
@@ -8,5 +9,4 @@ def a(arr,inp):
     return arr
 
 if __name__ == "__main__":
-    print(tester.twotest(a))
-    print(list(1))
+    print(t.bitarrout(a(t.bitarrin(),t.bitarrin())))
