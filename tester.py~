@@ -1,5 +1,5 @@
 def bitarrin():
-    return list(map(int,raw_input("Input bitarray: ")))
+    return list(map(int,input("Input bitarray: ")))
 
 def filein():
     with open("Input filename: ") as tf:

@@ -8,4 +8,4 @@ def a(arr):
   return output
 
 if __name__ == "__main__":
-    print(a(t.bitarrin()))
+    print(t.bitarrout(a(t.bitarrin())))
