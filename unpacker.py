@@ -1,4 +1,4 @@
-import tester1 as t
+import tester as t
 
 def a(arr):
   output = []

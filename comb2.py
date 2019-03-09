@@ -23,7 +23,7 @@ def a(txt):
           comb[-1] = 0
           break
 
-  return comb
+  return comb[1:]
 
 if __name__ == "__main__":
     print(t.bitarrout(a(t.bitarrin())))
