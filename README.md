@@ -6,10 +6,9 @@ This is a project designed to find patterns in a bitarray datastream.
 
 1. Reading the "input.txt" file and convert each letter to a binary represenation of their ascii character
 2. Drip feed each bit into a temporary array 
-3. Increase the sparcity of the array by changing its base
-4. Measure distances between active nodes in the array and output into a distances array
-5. Find all combinations of active nodes in the distances array and output into combinations array
-6. Find all groups of active nodes in the combinations array and output into grouping array
+3. Increase the sparcity by changing the base of the temporary array
+4. Measure distances between active nodes in the temporary array and output into a distances array
+5. Find all combinations of active nodes in the distances array and output into combinations array. Each active combination element will represent a feature of the original input
 
 ##Program summary
 
@@ -23,15 +22,9 @@ basechanger - converts bitarray into a single binary representing the full array
 
 comb2 - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 
-comb - same as comb2 but broken
-
-entropy - works like combinations finder but finds all pairs of active nodes
-
 packer - returns decimal array of active nodes counting from the left
 
-unpacker - returns bitarray of active nodes in a decimal array
-
-splitter - returns bitarray of distances between active nodes in an array of total distance possibilities
+splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
 
 tis - main file
 
