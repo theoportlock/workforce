@@ -1,15 +1,16 @@
 def bitarrin():
-    return list(map(int,raw_input("Input bitarray: ")))
+    return list(map(int,input("Input bitarray: ")))
 
-def multibitarr():
-    decarr = []
-    number = input("Enter the number of elements: ")
+def multibitarrin():
+    arr = []
+    number = int(input("Enter the number of elements: "))
     print ('Enter nested bitarray: ')
-    for i in range(int(number)):
+    for i in range(number):
         print("element ",i," =")
         n = list(map(int,input("Input bitarray: ")))
-        decarr.append(int(n))
-    return decarr   
+        arr.append(n)
+    print("inputted array = ",arr)
+    return arr   
 
 def filein():
     with open("Input filename: ") as tf:

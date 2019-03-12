@@ -1,18 +1,20 @@
-# attempting to use multidimensional input for basechanger interaction
-
 import tester as t
 
 def a(arr):
-    def reducer(currarr):
-        for elements in currarr:
-            output = []
-            for a in range(1,len(currarr)):
-                curr = 0
-                for b in range(len(currarr)-a):
-                    if not arr[b] == arr[b+a]:
+    output = []
+    for a in range(len(arr)):
+        dim1 = []
+        for b in range(len(arr[a])):
+            curr = 0
+            for c in range(len(arr)-a):
+                for d in range(len(arr[a])-b):
+                    print("c = ",c," d = ",d)
+                    print("a+c = ",a+c," b+d = ",b+d)
+                    #if a+c <= len(arr) and b+d <= len(arr[a]): 
+                    if arr[c][d] and arr[a+c][b+d]:
                         curr = 1
-                output.append(reducer(elements))
-        return output
+            dim1.append(curr)
+        output.append(dim1)
     return output
 
 if __name__ == "__main__":

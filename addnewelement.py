@@ -9,4 +9,4 @@ def a(arr,inp):
     return arr
 
 if __name__ == "__main__":
-    print(t.bitarrout(a(t.bitarrin(),t.bitarrin())))
+    print(a(t.multibitarrin(),t.multibitarrin()))

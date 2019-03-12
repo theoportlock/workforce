@@ -2,10 +2,10 @@ import tester as t
 
 def a(arr):
     output = []
-    for a in range(1,len(arr)):
+    for a in range(len(arr)):
         curr = 0
         for b in range(len(arr)-a):
-            if arr[b] == arr[b+a] and arr[b] == 1:
+            if arr[b] and arr[b+a]:
                 curr = 1
         output.append(curr)
     return output

@@ -28,4 +28,4 @@ if __name__ == "__main__":
     for j in output:
         print("".join(map(str,j)))
     """
-    print(tester.twotestdec(a))
+    print(a(tester.bitarrin(),tester.decin()))
