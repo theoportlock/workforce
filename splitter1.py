@@ -1,4 +1,4 @@
-import tester as t
+# supports multidimensional input (all subarrays must be same length for now)
 
 def a(arr):
     output = []
@@ -8,10 +8,7 @@ def a(arr):
             curr = 0
             for c in range(len(arr)-a):
                 for d in range(len(arr[a])-b):
-                    #print("c = ",c," d = ",d)
-                    #print("a+c = ",a+c," b+d = ",b+d)
                     if a+c <= len(arr) and b+d <= len(arr[a]): 
-                        print("a+c = ",a+c," b+d = ",b+d)
                         if arr[c][d] and arr[a+c][b+d]:
                             curr = 1
             dim1.append(curr)
@@ -19,7 +16,8 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    array = [[1,0,0,0],[0,1,0,0,1],[0,0,0,1,0]]
+    array = [[1,0,0,0,0],[0,1,0,0,1],[0,0,0,1,0]]
+    print("input array =")
     print(array)
+    print("distances array =")
     print(a(array))
-    #print(a(t.multibitarrin()))
