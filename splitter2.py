@@ -1,3 +1,6 @@
+# a more combinatorial approach
+import lineariser
+import comb
 import tester as t
 
 def a(arr):
