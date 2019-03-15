@@ -1,6 +1,6 @@
-import splitter
+import splitter1
 import basechanger
-import comb2
+import comb
 import addnewelement
 import tester as t
 
@@ -10,7 +10,7 @@ def a(arr):
     out = []
     for c in arr:
         for e in basechanger.a(addnewelement.a(nerv,list(map(int,list(str(c)))))):
-            out.append(comb2.a(splitter.a(addnewelement.a(newnerv,list(map(int,list(str(c))))))))
+            out.append(comb.a(splitter1.a(addnewelement.a(newnerv,list(map(int,list(str(e))))))))
     return out
  
 if __name__ == "__main__":

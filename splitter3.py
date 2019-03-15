@@ -2,6 +2,14 @@ import tester as t
 
 def a(arr):
     output = []
+    def dim(a):
+        if type(a[0]) == list:
+            for i in a:
+                dim(i)
+        else:
+            for j in a:
+                output.append(j)
+                
     for a in range(len(arr)):
         dim1 = []
         for b in range(len(arr[a])):

@@ -1,29 +1,31 @@
 import tester as t
-import binadder
+import packer
+import combmaker
 
-def a(txt):
-  qry = [0]*len(txt)
-  comb = [0]*(2**len(txt)-1)
-  
-  for i, iitem in enumerate(comb[:-1]):
-    for j, jitem in enumerate(qry):
-      if qry[j]:
-        if txt[j]:
-          comb[i] = 1
-        else:
-          comb[i] = 0
-          break
-    qry = binadder.a(qry,0)
-  else:
-    for k, kitem in enumerate(qry):
-      if kitem:
-        if txt[k]:
-          comb[-1] = 1
-        else:
-          comb[-1] = 0
-          break
+def a(arr):
+    packedarr = packer.a(arr)
+    def generator(arr2,group):
+        grouping = []
+        currarr = combmaker.a(packedarr,group+1)
+        for i in currarr:
+            tmp = 0
+            for j,k in enumerate(i):
+                if k:
+                    tmp += arr2[j]
+            #if not tmp % group:
+            grouping.append(tmp)#(tmp//group)
+        return grouping
+    
+    out = []
+    groupnumber = 0
+    currarr = packedarr
+    out.append(currarr)
 
-  return comb[1:]
+    while len(currarr) > 1:
+        groupnumber += 1
+        currarr = generator(currarr,groupnumber)
+        out.append(currarr)
+    return out
 
 if __name__ == "__main__":
     print(t.bitarrout(a(t.bitarrin())))

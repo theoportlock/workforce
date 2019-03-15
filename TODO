@@ -1,0 +1,7 @@
+fix the tester array input
+after fixing above, make sure that addnewelement works with it
+to prove, test by running tis.py again
+
+fix splitter1
+
+try to make comb more like comb2 for lagging support

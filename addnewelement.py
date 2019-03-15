@@ -1,4 +1,3 @@
-import tester
 import tester as t
 
 def a(arr,inp):
