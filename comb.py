@@ -1,29 +1,18 @@
 import tester as t
+import elementno
 import binadder
 
-def a(txt):
-  qry = [0]*len(txt)
-  comb = [0]*(2**len(txt)-1)
-  
-  for i, iitem in enumerate(comb[:-1]):
-    for j, jitem in enumerate(qry):
-      if qry[j]:
-        if txt[j]:
-          comb[i] = 1
-        else:
-          comb[i] = 0
-          break
-    qry = binadder.a(qry,0)
-  else:
-    for k, kitem in enumerate(qry):
-      if kitem:
-        if txt[k]:
-          comb[-1] = 1
-        else:
-          comb[-1] = 0
-          break
-
-  return comb[1:]
+def a(arr):
+    out = []
+    qry = [0]*len(arr)
+    for j in range(2**len(qry)-1):
+        qry = binadder.a(qry)
+        matches = 1
+        for i in range(len(qry)):
+            if qry[i] and not arr[i]:
+                matches = 0
+        out.append(matches)
+    return out
 
 if __name__ == "__main__":
-    print(t.bitarrout(a(t.bitarrin())))
+       print(elementno.a((a(t.bitarrin()))))

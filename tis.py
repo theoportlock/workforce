@@ -1,17 +1,18 @@
-import splitter1
+import splitter
 import basechanger
 import comb
 import addnewelement
+import elementno
 import tester as t
 
 def a(arr):
-    nerv = [0]*2
-    newnerv = [0]*8
+    base = [0]*14
     out = []
     for c in arr:
-        for e in basechanger.a(addnewelement.a(nerv,list(map(int,list(str(c)))))):
-            out.append(comb.a(splitter1.a(addnewelement.a(newnerv,list(map(int,list(str(e))))))))
+        base = addnewelement.a(base,[c])
+        out.append(comb.a(splitter.a(base)))
     return out
  
 if __name__ == "__main__":
-    print(t.bitarrout(a(t.bitarrin())))
+    for j in a(t.bitarrin()):
+        print(elementno.a(j))

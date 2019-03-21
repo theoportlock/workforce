@@ -11,4 +11,12 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    print(t.bitarrout(a(t.bitarrin())))
+    arr1 = t.bitarrin()
+    print(t.bitarrout(a(arr1)))
+    '''
+    for j in range(10):
+        arr1 = a(arr1)
+        print(t.bitarrout(arr1))
+        print(t.bitarrstats(arr1))
+    '''
+    
