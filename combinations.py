@@ -1,5 +1,4 @@
 import tester as t
-import elementno
 import binadder
 
 def a(arr):
@@ -15,4 +14,4 @@ def a(arr):
     return out
 
 if __name__ == "__main__":
-       print(elementno.a((a(t.bitarrin()))))
+       print(t.elementno(a(t.bitarrin())))

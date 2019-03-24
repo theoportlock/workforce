@@ -2,7 +2,6 @@ import splitter
 import basechanger
 import combinations
 import addnewelement
-import elementno
 import tester as t
 
 def a(arr):
