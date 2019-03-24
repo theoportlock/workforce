@@ -56,3 +56,10 @@ def bitarrstats(arr):
     output += "array length equals:\n"
     output += str(len(arr))
     return percentactive(arr)
+
+def elementno(arr): 
+  output = []
+  for a, b in enumerate(arr):
+    if b:
+      output.append(a+1)
+  return output
