@@ -4,7 +4,7 @@ import addnewelement
 import tester as t
 
 def a(arr):
-    base = [0]*16
+    base = [0]*14
     out = []
     for c in arr:
         base = addnewelement.a(base,[c])
