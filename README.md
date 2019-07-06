@@ -13,7 +13,7 @@ This is a project designed to find patterns in a bitarray datastream.
 1. inreader - opens file and returns a bitarray of contents
 2. addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
 3. binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
-4. comb - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
+4. combinations - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 5. splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
 6. tis - main file
 
