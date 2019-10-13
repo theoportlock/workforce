@@ -4,18 +4,26 @@ This is a project designed to find patterns in a bitarray datastream.
 
 ## 1. Pipeline Summary
 
-1. Reading the "input.txt" file and convert each letter to a binary represenation of their ascii character
+1. Convert inputs into binary (inputs can be text or from file)
 4. Measure distances between active nodes in the temporary array and output into a distances array
 5. Find all combinations of active nodes in the distances array and output into combinations array. Each active combination element will represent a feature of the original input
 
 ## 2. Function Summary
 
+<<<<<<< HEAD
 1. inreader - opens file and returns a bitarray of contents
 2. addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
 3. binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
 4. combinations - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 5. splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
 6. tis - main file
+=======
+1. addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
+2. binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
+3. comb - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
+4. splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
+5. main - uses all above functions
+>>>>>>> newsplitter
 
 ## 3. Function Details
 
@@ -40,15 +48,7 @@ This function finds all combinations of 1's in an input bitarray. Works similar 
 * For each possible distance between 1's in the bitarray, if that distance is observed then append a 1. If the distance between 1's is not observed then append a 0.
 What this function effectively does is produce an array of 1D vectors of active nodes in the input bitarray. This way, even if the the bitarray is a datastream, the same distances are observed. Work still needs to be done here with regards to multidimensional inputs
 
-### 5. inreader
-* Opens a file found in the same directory (arg1)
-* Converts its contents into a list of binary digits 
-* Returns those digits 
-
-### 6. outreader
-* Writes the contents of a bitarray (arg1) into a file named the input of arg2 of the function
-
-### 7. tis
+### 5. main 
 * Inputs a single bitarray
 * Dripfeeds each element of that array into a new temporary array of a defined length
 * After each dripfeed, the splitter function finds distances between 1's in the temporary array
