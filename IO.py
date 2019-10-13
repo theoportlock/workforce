@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import os.path
 
+#inputs
 def bitarrin():
     return list(map(int,input("Input bitarray: ")))
 
@@ -43,10 +44,11 @@ def decarrin():
         decarr.append(int(n))
     return decarr   
 
-def bitarrout(inputs):
+#decorators
+def bitarrdec(inputs):
     return "".join(map(str,(inputs)))
 
-def bitarrstatsout(arr):
+def bitarrstatsdec(arr):
     def percentactive(arr):
         lcount = 0
         for l in ar:
@@ -60,14 +62,25 @@ def bitarrstatsout(arr):
     output += str(len(arr))
     return percentactive(arr)
 
-def elementnumberout(arr): 
-  output = []
-  for a, b in enumerate(arr):
-    if b:
-      output.append(a+1)
-  return output
+def elementnumberdec(arr): 
+    out = []
+    for a, b in enumerate(arr):
+        if b:
+            out.append(a+1)
+    return out
 
+def arrelementnumberdec(arr):
+    out = [] 
+    for i in arr:
+        out.append(elementnumberdec(i))
+    return out
+
+def stringdec(arr):
+    return str(arr) + "\n)"
+
+#outputs
 def plotterout(arr):
+    #needs fixing
     B = arr[:len(arr)//2]
     C = arr[len(arr)//2:len(arr)-1]
     print("blen= ",len(B),"clen= ",len(C))
@@ -75,9 +88,18 @@ def plotterout(arr):
 
     def nextname(a=1,pre="",ext="",directory="."):
         if os.path.exists(directory+pre+str(a)+ext):
-            existancecheck(a+1,pre,ext)
+            nextname(a+1,pre,ext)
         else:
             return directory+pre+str(a)+ext
-
     plt.savefig(nextname(ext=".png"))
-    existancecheck(a)
+
+def newfileout(arr,filename,format):
+    with open(filename,"w") as of:
+        of.write(format(arr))
+
+def fileappendout(arr,filename,format):
+    with open(filename,"a") as of:
+        of.write(format(arr))
+
+def printerout(arr):
+    print(arr)

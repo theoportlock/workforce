@@ -1,16 +1,7 @@
 #!/usr/bin/env python
 
-import io
-
-class run:
-    def __init__(self,function):
-        self.function=function
-        self.i=[]
-        self.o=[]
-        self.log=[]
-
-    def excecute(self):
-        self.o(self.function(self.i))
+import IO
+import tester
 
 def a(arr):
     output = []
@@ -23,8 +14,5 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    run = run(a)
-    print(io.bitarrout(io.bitarrin()))
-    #run.i = io.bitarrin()
-    #run.o = io.bitarrout()
-    #run.excecute()
+    run = tester.run(f=a,i=IO.bitarrin,d=IO.bitarrdec,o=IO.printerout)
+    run.excecute()

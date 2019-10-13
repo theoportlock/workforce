@@ -1,4 +1,7 @@
-import tester as t
+#!/usr/bin/env python
+
+import IO 
+import tester
 import binadder
 
 def a(arr):
@@ -14,4 +17,5 @@ def a(arr):
     return out
 
 if __name__ == "__main__":
-       print(t.elementno(a(t.bitarrin())))
+    run = tester.run(f=a,i=IO.bitarrin,o=IO.printerout,d=IO.elementnumberdec)
+    run.excecute()
