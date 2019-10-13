@@ -10,20 +10,11 @@ This is a project designed to find patterns in a bitarray datastream.
 
 ## 2. Function Summary
 
-<<<<<<< HEAD
-1. inreader - opens file and returns a bitarray of contents
-2. addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
-3. binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
-4. combinations - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
-5. splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
-6. tis - main file
-=======
 1. addnewelement - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node	
 2. binadder - Removes the rightmost element of an array, shuffles the information down towards that empty space and adds a new input node
 3. comb - returns a bitarray of all combinations of an input bitarray. Puts an incorrect empty bit at start of bitarray - to fix
 4. splitter - returns bitarray of distances between active nodes in an array of total distance possibilities. This removes the effects of array transpositions and inversions
 5. main - uses all above functions
->>>>>>> newsplitter
 
 ## 3. Function Details
 
