@@ -1,9 +1,13 @@
+import sys
+import os
+
 class run:
     #need to sort this out
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
         self.r=[]
         self.log=[]
+        print(os.path.basename(sys.argv[0]))
 
     def excecute(self):
         #inputs
@@ -20,7 +24,7 @@ class run:
             self.r = self.d(self.r)
 
         #output
-        for i in self.o*
+        #for i in self.o*
 
         #not sure here
         if self.o:
