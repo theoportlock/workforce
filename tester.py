@@ -6,7 +6,7 @@ class run:
         self.log=[]
 
     def excecute(self):
-
+        #inputs
         if callable(self.i):
             self.i = self.i()
 
@@ -14,10 +14,14 @@ class run:
             print("no inputs given")
             exit()
 
+        #functions
         self.r = self.f(self.i)
-
         if self.d:
             self.r = self.d(self.r)
 
+        #output
+        for i in self.o*
+
+        #not sure here
         if self.o:
             self.o(self.r)
