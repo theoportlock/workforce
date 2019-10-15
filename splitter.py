@@ -14,5 +14,5 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    run = tester.run(f=a,i=IO.bitarrin,d=IO.bitarrdec,o=IO.printerout)
+    run = tester.run()
     run.excecute()

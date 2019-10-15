@@ -1,15 +1,41 @@
 import sys
+import importlib
 import os
 
+#SORT OUT IMPORTLIB
 class run:
-    #need to sort this out
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+    def __init__(self):
+
+        #read configuration files
+        conffile = "config/"+os.path.basename(sys.argv[0])+"conf"
+        variables = []
+        fvariables = []
+        if os.path.exists(conffile):
+            with open(conffile) as cf:
+                variables = str.splitlines(cf.read())
+                for i in variables:
+                    fvariables.append(i.split("="))
+
+        lvariables = {k[0]: k[1] for k in fvariables}
+        print(lvariables)
+
+        #find IO and load
+        print (lvariables["IO"])
+        
+        #import lvariables["IO"]
+
+        #find functions in IO
+        #for j in lvariables:
+        #    j = eval(j)
+
+        #load variables
+        #self.__dict__.update(lvariables)
+
         self.r=[]
         self.log=[]
-        print(os.path.basename(sys.argv[0]))
 
     def excecute(self):
+        '''
         #inputs
         if callable(self.i):
             self.i = self.i()
@@ -29,3 +55,4 @@ class run:
         #not sure here
         if self.o:
             self.o(self.r)
+        '''
