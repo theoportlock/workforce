@@ -1,12 +1,12 @@
 import sys
-import importlib
+import importlib as il
 import os
+import IO.IO
 
-#SORT OUT IMPORTLIB
 class run:
-    def __init__(self):
-
+    def __init__(self, f):
         #read configuration files
+        self.f = f
         conffile = "config/"+os.path.basename(sys.argv[0])+"conf"
         variables = []
         fvariables = []
@@ -15,22 +15,42 @@ class run:
                 variables = str.splitlines(cf.read())
                 for i in variables:
                     fvariables.append(i.split("="))
+        else:
+            print("no conf file")
+            quit()
 
-        lvariables = {k[0]: k[1] for k in fvariables}
-        print(lvariables)
+        variables = {k[0]: k[1] for k in fvariables}
 
-        #find IO and load
-        print (lvariables["IO"])
-        
-        #import lvariables["IO"]
+        import IO.bitarrin
+
+        l = IO.bitarrin.a()
+        print(l)
+
+        IO = variables["IO"]
+        if IO == "":
+            print("no IO found")
+            quit()
+
+        del variables["IO"]
 
         #find functions in IO
-        #for j in lvariables:
-        #    j = eval(j)
+        functions = []
+        for j in variables:
+            print("j =",j)
+            print("loading "+variables[j]," with type:",type(variables[j]))
+            variables[j]=IO+"."+variables[j]
+            il.import_module(variables[j])
+            try:
+                variables[j]=variables[j]+".a"
+            except KeyError:
+                raise ValueError("invalid input")
+
+        IO.printerout.a()
+        print(variables)
+        print(IO)
 
         #load variables
-        #self.__dict__.update(lvariables)
-
+        #self.__dict__.update(functions)
         self.r=[]
         self.log=[]
 

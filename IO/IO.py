@@ -1,4 +1,3 @@
-
 #inputs
 def bitarrin():
     return list(map(int,input("Input bitarray: ")))

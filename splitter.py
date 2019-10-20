@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import IO
 import tester
 
 def a(arr):
@@ -14,5 +13,5 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    run = tester.run()
+    run = tester.run(a)
     run.excecute()
