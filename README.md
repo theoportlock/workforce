@@ -1,7 +1,11 @@
 # Pattern Recognition
 
-This is a project designed to find patterns in a bitarray datastream. To begin, setup the virtual environment with the following commands:
-source mypython/bin/activate
+This is a project designed to find patterns in a bitarray datastream.
+
+# Setup 
+
+To begin, setup the python virtual environment with the following commands:
+source tester/venv/bin/activate
 
 deactivate afterward by:
 deactivate
@@ -9,8 +13,8 @@ deactivate
 ## 1. Pipeline Summary
 
 1. Convert inputs into binary (inputs can be text or from file)
-4. Measure distances between active nodes in the temporary array and output into a distances array
-5. Find all combinations of active nodes in the distances array and output into combinations array. Each active combination element will represent a feature of the original input
+2. Measure distances between active nodes in the temporary array and output into a distances array
+3. Find all combinations of active nodes in the distances array and output into combinations array. Each active combination element will represent a feature of the original input
 
 ## 2. Function Summary
 
