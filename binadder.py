@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import IO
 import tester
 
 def a(arr,count=0):
@@ -14,5 +13,5 @@ def a(arr,count=0):
         return a(arr,count+1)
 
 if __name__ == "__main__":
-    run = tester.run(f=a,i=IO.bitarrin,d=IO.bitarrdec,o=IO.printerout)
+    run = tester.run(a)
     run.excecute()

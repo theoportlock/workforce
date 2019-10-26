@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import IO
 import tester
 
 import splitter
@@ -16,5 +15,5 @@ def a(arr):
     return out
 
 if __name__ == "__main__":
-    run = tester.run(f=a,i=IO.bitarrin,o=IO.printerout,d=IO.arrelementnumberdec)
+    run = tester.run(a)
     run.excecute()
