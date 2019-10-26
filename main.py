@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import tester
+import tester.main as t
 
 import splitter
 import combinations
@@ -15,5 +15,5 @@ def a(arr):
     return out
 
 if __name__ == "__main__":
-    run = tester.run(a)
+    run = t.run(a)
     run.excecute()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import tester
+import tester.main as t
 
 def a(arr,count=0):
     if arr[count] == 0:
@@ -13,5 +13,5 @@ def a(arr,count=0):
         return a(arr,count+1)
 
 if __name__ == "__main__":
-    run = tester.run(a)
+    run = t.run(a)
     run.excecute()
