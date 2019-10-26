@@ -51,6 +51,9 @@ What this function effectively does is produce an array of 1D vectors of active 
 * The position of each 1's in the results of this function is printed to the command line
 This is the main file. By default, the input to this function is by a user prompt on the command line. However, using the inreader and outreader functions (5 & 6) can be used to read and write files respectively in the same directory as the running script. The length of the temporary array is a value that needs to be played around with depending on the sparcity of 1's in the original inputted bitarray. Changing the base of this inputted array would increase the sparcity of the input bitarray and is an action that's currently under investigation 
 
+### 6. tester
+inputs do not require an input
+
 ## 4. To do:
 
 - Play around with node delay mechanics for pattern memory

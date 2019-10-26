@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-import IO
-import tester
+import tester.main as t
 
 def a(arr):
     output = []
@@ -14,5 +13,5 @@ def a(arr):
     return output
 
 if __name__ == "__main__":
-    run = tester.run(f=a,i=IO.bitarrin,d=IO.bitarrdec,o=IO.printerout)
+    run = t.run(a)
     run.excecute()
