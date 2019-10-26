@@ -18,7 +18,6 @@ class run:
             print("no conf file")
             quit()
 
-        print(fvariables)
         variables = {k[0]: k[1] for k in fvariables}
 
         # find functions in IO
