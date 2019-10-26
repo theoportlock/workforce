@@ -1,6 +1,10 @@
 # Pattern Recognition
 
-This is a project designed to find patterns in a bitarray datastream. 
+This is a project designed to find patterns in a bitarray datastream. To begin, setup the virtual environment with the following commands:
+source mypython/bin/activate
+
+deactivate afterward by:
+deactivate
 
 ## 1. Pipeline Summary
 
@@ -53,6 +57,5 @@ This is the main file. By default, the input to this function is by a user promp
 - Create and link nodes that do an action when a pattern is recognised
 - Real time reader and writer
 - Investigate different inputs (jpg files e.t.c.)
-- Virtual environments for python
 
 I'm pretty new to all this, any suggestions more than welcome! 
