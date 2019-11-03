@@ -1,2 +1,4 @@
+import numpy as np
+
 def a():
-    return list(map(int,input("Input bitarray: ")))
+    return np.array(list(map(int,input("Input bitarray: "))))
