@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import tester.main as t
+import main as t
 
 def a(arr):
     output = []
