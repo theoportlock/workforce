@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 import importlib as il
 import os
@@ -37,23 +39,24 @@ class run:
 
         #load variables
         self.__dict__.update(variables)
-        self.r=[]
-        self.log=[]
 
     def excecute(self):
         if not self.i:
             print("no inputs given")
             quit()
 
-        if not self.o:
-            print("no output given")
-            quit()
+        self.curr = self.i()
 
-        #functions
-        self.r = self.f(self.i())
-        if self.d:
-            self.r = self.d(self.r)
+        print(self.__dict__)
 
-        #output
-        if self.o:
-            self.o(self.r)
+        #define functions
+        functions = []
+        for k in self.__dict__:
+            if not k.startswith('_') and not k == "excecute" and not k == "curr" and not k == "i":
+                functions.append(k)
+
+        print(functions)
+
+        #run functions
+        for j in functions:
+            self.curr = self.__dict__[j](self.curr)

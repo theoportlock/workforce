@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import tester.main as t
-
 import numpy as np
 
 def a(arr):
