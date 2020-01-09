@@ -1,0 +1,7 @@
+graph "" {
+	"Chop celery into small pieces" -- "Add to pan with 1 tblspoon of oil"	[weight=1.0];
+	"Add to pan with 1 tblspoon of oil" -- "Sweat down and add brocolli"	[weight=1.0];
+	"Sweat down and add brocolli" -- "Add 1.5 L stock and leave to simmer for 40 mins"	[weight=1.0];
+	"Add 1.5 L stock and leave to simmer for 40 mins" -- "Blend using hand blender"	[weight=1.0];
+	"Blend using hand blender" -- "Add stilton cheese to taste"	[weight=1.0];
+}
