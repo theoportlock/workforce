@@ -11,6 +11,7 @@ def plotter2yout(dic):
     ax1.tick_params(axis="y",labelcolor=color)
 
     ax2 = ax1.twinx()
+
     color = 'tab:blue'
     ax2.set_ylabel("Conc B (%)(ml)") 
     ax2.plot(dic['volume (ml)'],dic['Buffer B Concentration (%)'],color=color)
