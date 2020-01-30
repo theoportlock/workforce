@@ -1,7 +1,14 @@
 import sys
+import subprocess as sp
 import importlib as il
 import os
 
+"""
+barpath = os.path.dirname(os.path.realpath(sys.argv[0])) + "/BarChart.R"
+sp.call(["Rscript", barpath, sizes])
+sp.call(["Rscript", ringchart, str(core_total), str(acc_total)])
+
+"""
 class run:
     def __init__(self, f):
         # read configuration files
