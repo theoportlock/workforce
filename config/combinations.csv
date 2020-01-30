@@ -1,0 +1,4 @@
+source,target,weight
+bitarrin,combinations,         1
+combinations,arrelementnumberdec,         1
+arrelementnumberdec,printerout,         1
