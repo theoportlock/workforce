@@ -48,10 +48,12 @@ class run:
         self.currval=functions[df.iloc[0]["target"]](functions[df.iloc[0]["source"]]())
         self.currloc=df.iloc[0]["target"]
 
-        for i in df.loc[df["source"]==self.currloc].index:
-            print(self.funcnames[df.iloc[i]["source"]] + " --> " + self.funcnames[df.iloc[i]["target"]])
-            self.currval=functions[df.iloc[i]["target"]](functions[df.iloc[i]["source"]](self.currval))
-            print(self.currval)
+        while self.currloc in df["source"]:
+            for i in df.loc[df["source"]==self.currloc].index:
+                print(self.funcnames[df.iloc[i]["source"]] + " --> " + self.funcnames[df.iloc[i]["target"]])
+                self.currval=functions[df.iloc[i]["target"]](functions[df.iloc[i]["source"]](self.currval))
+                print(self.currval)
+                self.currloc=df.iloc[i]["target"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
