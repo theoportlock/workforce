@@ -1,9 +1,6 @@
 import argparse
 import pandas as pd
 import importlib as il
-class cursor:
-    def __init__(self):
-
 
 class run:
     def __init__(self,functions,schema):
