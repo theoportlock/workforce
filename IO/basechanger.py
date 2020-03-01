@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import tester.main as t
-
 def a(arr):
     pos = 0
     counter = -1
@@ -15,7 +13,3 @@ def a(arr):
     if counter > -1:
         conv[counter] = 1
     return conv
-
-if __name__ == "__main__":
-    run = t.run(a)
-    run.excecute()

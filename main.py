@@ -1,59 +1,62 @@
-import sys
+import argparse
+import pandas as pd
 import importlib as il
-import os
 
 class run:
-    def __init__(self, f):
-        # read configuration files
-        self.f = f
-        conffile = "tester/config/"+os.path.basename(sys.argv[0])+"conf"
-        variables = []
-        fvariables = []
-        if os.path.exists(conffile):
-            with open(conffile) as cf:
-                variables = str.splitlines(cf.read())
-                for i in variables:
-                    fvariables.append(i.split("="))
-        else:
-            print("no conf file")
-            quit()
+    def __init__(self,functions,schema):
 
-        variables = {k[0]: k[1] for k in fvariables}
+        print("loading schema...")
+        df = pd.read_csv(schema)
+        print(df)
+        print("schema loaded successfully\n")
 
-        # find functions in IO
-        for j in variables:
-            variables[j]="tester.IO." + variables[j]
-            print("loading "+variables[j], "as",j)
+        self.schema = df
+
+        print("loading functions...")
+        with open(functions) as f:
+            functions = str.splitlines(f.read())
+            print(functions)
+            self.funcnames = functions[:]
+
+        for j,k in enumerate(functions):
+            functions[j]="IO." + k
+            print("loading "+str(j)+" "+k)
             try:
-                variables[j] = il.import_module(variables[j])
+                functions[j] = il.import_module(functions[j])
             except ImportError:
-                print("no IO function for", j)
+                print("MISSING FUNCTION")
                 quit()
+            print("LOADED")
             try:
-                variables[j]=variables[j].a
+                functions[j]=functions[j].a
             except AttributeError:
                 print("no function called \"a\" in", j)
                 quit()
 
-        #load variables
-        self.__dict__.update(variables)
-        self.r=[]
-        self.log=[]
+        self.__dict__.update(enumerate(functions))
+        self.currloc=[]
+        self.currval=[]
+        print("complete\n")
 
     def excecute(self):
-        if not self.i:
-            print("no inputs given")
-            quit()
+        print("begin excecution")
+        df = self.schema
+        functions = self.__dict__ 
 
-        if not self.o:
-            print("no output given")
-            quit()
+        # start run with first row of schema
+        print(self.funcnames[df.iloc[0]["source"]] + " --> " + self.funcnames[df.iloc[0]["target"]])
+        self.currval=functions[df.iloc[0]["target"]](functions[df.iloc[0]["source"]]())
+        self.currloc=df.iloc[0]["target"]
 
-        #functions
-        self.r = self.f(self.i())
-        if self.d:
-            self.r = self.d(self.r)
+        for i in df.loc[df["source"]==self.currloc].index:
+            print(self.funcnames[df.iloc[i]["source"]] + " --> " + self.funcnames[df.iloc[i]["target"]])
+            self.currval=functions[df.iloc[i]["target"]](functions[df.iloc[i]["source"]](self.currval))
+            print(self.currval)
 
-        #output
-        if self.o:
-            self.o(self.r)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--functions')
+    parser.add_argument('-s', '--schema')
+    args = parser.parse_args()
+    currentrun = run(args.functions,args.schema)
+    currentrun.excecute()
