@@ -1,64 +1,65 @@
+#!/usr/bin/env python3
 import argparse
+import subprocess
 import pandas as pd
 import importlib as il
 
 class run:
-    def __init__(self,functions,schema):
+    def __init__(self,functionsdir,schema):
 
         print("loading schema...")
-        df = pd.read_csv(schema)
-        print(df)
-        print("schema loaded successfully\n")
+        self.schema = pd.read_csv(schema)
+        print(self.schema)
+        print("done\n")
 
-        self.schema = df
+        print("loading schema functions")
+        dfcheck = self.schema["source"].append(self.schema["target"],ignore_index=True).unique()
+        print(dfcheck)
+        print("done\n")
 
-        print("loading functions...")
-        with open(functions) as f:
-            functions = str.splitlines(f.read())
-            print(functions)
-            self.funcnames = functions[:]
+        print("loding available functions...")
+        functions = subprocess.check_output(['ls',functionsdir]).splitlines()
+        functions = [i.decode() for i in functions]
+        print(functions)
+        print("done\n")
 
-        for j,k in enumerate(functions):
-            functions[j]="IO." + k
-            print("loading "+str(j)+" "+k)
-            try:
-                functions[j] = il.import_module(functions[j])
-            except ImportError:
-                print("MISSING FUNCTION")
+        print("checking that schema functions are available...")
+        for i in dfcheck:
+            if i not in functions:
+                print("function " + i + " not found")
                 quit()
-            print("LOADED")
-            try:
-                functions[j]=functions[j].a
-            except AttributeError:
-                print("no function called \"a\" in", j)
-                quit()
+        print("done\n")
 
-        self.__dict__.update(enumerate(functions))
-        self.currloc=[]
-        self.currval=[]
-        print("complete\n")
+        self.schema["source"] = [functionsdir + "/" + i for i in self.schema["source"]]
+        self.schema["target"] = [functionsdir + "/" + i for i in self.schema["target"]]
+        self.curr=[]
+
+        print("init complete\n")
 
     def excecute(self):
         print("begin excecution")
-        df = self.schema
-        functions = self.__dict__ 
-
+        schema = self.schema
+        print(schema)
         # start run with first row of schema
-        print(self.funcnames[df.iloc[0]["source"]] + " --> " + self.funcnames[df.iloc[0]["target"]])
-        self.currval=functions[df.iloc[0]["target"]](functions[df.iloc[0]["source"]]())
-        self.currloc=df.iloc[0]["target"]
+        print(schema.iloc[0]["source"] + " --> " + schema.iloc[0]["target"])
+        subprocess.run(schema.iloc[0]["source"])
+        subprocess.run(schema.iloc[0]["target"])
+        self.curr = schema.iloc[0]["target"]
+        print(self.curr)
+        '''
 
-        while self.currloc in df["source"]:
-            for i in df.loc[df["source"]==self.currloc].index:
-                print(self.funcnames[df.iloc[i]["source"]] + " --> " + self.funcnames[df.iloc[i]["target"]])
-                self.currval=functions[df.iloc[i]["target"]](functions[df.iloc[i]["source"]](self.currval))
+        while self.curr in schema["source"]:
+            for i in schema.loc[schema["source"]==self.currloc].index:
+                print(self.funcnames[schema.iloc[i]["source"]] + " --> " + self.funcnames[schema.iloc[i]["target"]])
+                self.currval=functions[schema.iloc[i]["target"]](functions[schema.iloc[i]["source"]](self.currval))
                 print(self.currval)
-                self.currloc=df.iloc[i]["target"]
+                self.currloc=schema.iloc[i]["target"] 
+                '''
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--functions')
+    parser.add_argument('-f', '--functionsdir')
     parser.add_argument('-s', '--schema')
     args = parser.parse_args()
-    currentrun = run(args.functions,args.schema)
+    currentrun = run(args.functionsdir,args.schema)
     currentrun.excecute()
