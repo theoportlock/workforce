@@ -3,9 +3,10 @@ import argparse
 import subprocess
 import pandas as pd
 import importlib as il
+from pathlib import Path
 
 class run:
-    def __init__(self,functionsdir,schema):
+    def __init__(self,functionsdir,schema,output):
 
         print("loading schema...")
         self.schema = pd.read_csv(schema)
@@ -34,32 +35,35 @@ class run:
         self.schema["target"] = [functionsdir + "/" + i for i in self.schema["target"]]
         self.curr=[]
 
+        print("creating output file..."
+        Path(output).mkdir(parents=True, exist_ok=True)
+        print("done\n")
+
         print("init complete\n")
 
+    def task(function):
+        
+
     def excecute(self):
+
         print("begin excecution")
         schema = self.schema
-        print(schema)
+
         # start run with first row of schema
-        print(schema.iloc[0]["source"] + " --> " + schema.iloc[0]["target"])
+        print(schema.iloc[0]["source"]) 
         subprocess.run(schema.iloc[0]["source"])
-        subprocess.run(schema.iloc[0]["target"])
         self.curr = schema.iloc[0]["target"]
-        print(self.curr)
-        '''
 
         while self.curr in schema["source"]:
-            for i in schema.loc[schema["source"]==self.currloc].index:
-                print(self.funcnames[schema.iloc[i]["source"]] + " --> " + self.funcnames[schema.iloc[i]["target"]])
-                self.currval=functions[schema.iloc[i]["target"]](functions[schema.iloc[i]["source"]](self.currval))
-                print(self.currval)
+            for i in schema.loc[schema["source"] == self.curr].index:
                 self.currloc=schema.iloc[i]["target"] 
-                '''
+                subprocess.run(self.currloc)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--functionsdir')
     parser.add_argument('-s', '--schema')
+    parser.add_argument('-o', '--output')
     args = parser.parse_args()
-    currentrun = run(args.functionsdir,args.schema)
+    currentrun = run(args.functionsdir,args.schema,args.output)
     currentrun.excecute()
