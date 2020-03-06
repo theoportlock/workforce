@@ -46,7 +46,6 @@ class run:
 
         logging.info("init complete")
 
-        
     def excecute(self):
 
         def task(curr):
