@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-print("splitter function working")
 
-'''
 def a(arr):
     output = []
     for a in range(1,len(arr)):
@@ -11,4 +9,3 @@ def a(arr):
                 curr = 1
         output.append(curr)
     return output
-'''

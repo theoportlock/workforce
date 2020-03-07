@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-print("combinations function working")
-
-'''
 import IO.binadder as binadder
 
 def a(arr):
@@ -15,4 +12,3 @@ def a(arr):
                 matches = 0
         out.append(matches)
     return out
-'''

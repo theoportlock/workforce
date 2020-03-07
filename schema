@@ -1,3 +1,4 @@
 source,target,weight
 bitarrin.py,splitter.py,0
 splitter.py,combinations.py,0
+splitter.py,pwd,0

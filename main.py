@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import threading
 import sys
 import argparse
 import subprocess
@@ -9,40 +10,45 @@ from pathlib import Path
 
 class run:
     def __init__(self,functionsdir,schema,output):
-
-        Path(output).mkdir(parents=True, exist_ok=True)
+        # functionsdir -- directory of functions
+        # functions -- functions in directory of functions
+        # self.schema -- pandas csv of schema file
 
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-        #logger = logging.getLogger()
-        #logger.addHandler(logging.FileHandler(output+"/output.log", 'a'))
+
+        # create output directory if one is necessary
+        if output:
+            Path(output).mkdir(parents=True, exist_ok=True)
+            logger = logging.getLogger()
+            logger.addHandler(logging.FileHandler(output+"/output.log", 'a'))
 
         logging.info("loading %s", schema)
         self.schema = pd.read_csv(schema)
         print(self.schema, "\n")
         logging.info("done")
 
-        logging.info("loading schema functions")
-        dfcheck = self.schema["source"].append(self.schema["target"],ignore_index=True).unique()
-        print(dfcheck, "\n")
+        if functionsdir:
+            logging.info("loding available functions")
+            functions = subprocess.check_output(['ls',functionsdir]).splitlines()
+            functions = [i.decode() for i in functions]
+            print(functions, "\n")
+            logging.info("done")
+        else:
+            functions = []
+
+        logging.info("checking that schema functions are available")
+        for i in self.schema.index:
+            for j in ("source","target"):
+                if self.schema[j][i] not in functions:
+                    logging.info("function " + self.schema[j][i] + " not found")
+                else:
+                    logging.info("function " + self.schema[j][i] + " found")
+                    self.schema.loc[i,j] = functionsdir + "/" + self.schema[j][i]
         logging.info("done")
 
-        logging.info("loding available functions...")
-        functions = subprocess.check_output(['ls',functionsdir]).splitlines()
-        functions = [i.decode() for i in functions]
-        print(functions, "\n")
-        logging.info("done")
-
-        logging.info("checking that schema functions are available...")
-        for i in dfcheck:
-            if i not in functions:
-                logging.info("function " + i + " not found")
-                quit()
-        logging.info("done")
-
-        self.schema["source"] = [functionsdir + "/" + i for i in self.schema["source"]]
-        self.schema["target"] = [functionsdir + "/" + i for i in self.schema["target"]]
         self.curr=[]
+        print(self.schema)
 
         logging.info("init complete")
 
@@ -50,12 +56,11 @@ class run:
 
         def task(curr):
             logging.info("running %s",curr) 
+            subprocess.run(curr)
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 task(self.schema.iloc[i]["target"])
-                #subprocess.run(self.currloc)
 
         logging.info("begin excecution")
-
         # start run with first row of schema
         task(self.schema.iloc[0]["source"])
 
