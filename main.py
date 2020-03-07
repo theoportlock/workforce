@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logging
-import threading
+import multiprocessing
 import sys
 import argparse
 import subprocess
@@ -58,7 +58,9 @@ class run:
             logging.info("running %s",curr) 
             subprocess.run(curr)
             for i in self.schema.loc[self.schema["source"] == curr].index:
-                task(self.schema.iloc[i]["target"])
+                t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                t.start()
+                #task(self.schema.iloc[i]["target"])
 
         logging.info("begin excecution")
         # start run with first row of schema
