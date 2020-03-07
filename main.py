@@ -14,7 +14,7 @@ class run:
         # functions -- functions in directory of functions
         # self.schema -- pandas csv of schema file
 
-        format = "%(asctime)s %(processName)s %(threadName)s: %(message)s"
+        format = "%(asctime)s %(processName)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
         # create output directory if one is necessary
@@ -23,6 +23,10 @@ class run:
             logger = logging.getLogger()
             logger.addHandler(logging.FileHandler(output+"/output.log", 'a'))
 
+        if not schema:
+            logging.error("no schema loaded (use -s flag)")
+            quit()
+            
         logging.info("loading %s", schema)
         self.schema = pd.read_csv(schema)
         print(self.schema, "\n")
@@ -52,7 +56,7 @@ class run:
     def excecute(self):
         def task(curr):
             logging.info("running %s",curr) 
-            subprocess.run(curr.split())
+            subprocess.check_call(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
                 t.start()
