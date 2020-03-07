@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-print("splitter function working")
+import time
+
+print("splitter start")
+time.sleep(5) 
+print("splitter done")
 
 '''
 def a(arr):

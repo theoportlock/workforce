@@ -14,7 +14,7 @@ class run:
         # functions -- functions in directory of functions
         # self.schema -- pandas csv of schema file
 
-        format = "%(asctime)s: %(message)s"
+        format = "%(asctime)s %(processName)s %(threadName)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
 
         # create output directory if one is necessary
@@ -41,22 +41,18 @@ class run:
         for i in self.schema.index:
             for j in ("source","target"):
                 if self.schema[j][i] not in functions:
-                    logging.info("function " + self.schema[j][i] + " not found")
+                    logging.warning("function " + self.schema[j][i] + " not found")
                 else:
                     logging.info("function " + self.schema[j][i] + " found")
                     self.schema.loc[i,j] = functionsdir + "/" + self.schema[j][i]
-        logging.info("done")
-
-        self.curr=[]
         print(self.schema)
-
+        logging.info("done")
         logging.info("init complete")
 
     def excecute(self):
-
         def task(curr):
             logging.info("running %s",curr) 
-            subprocess.run(curr)
+            subprocess.run(curr.split())
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
                 t.start()

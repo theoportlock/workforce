@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-print("combinations function working")
+import time
+print("comb start")
+time.sleep(2)
+print("comb done")
 
 '''
 import IO.binadder as binadder

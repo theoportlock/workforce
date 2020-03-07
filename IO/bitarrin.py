@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-print("bitarrin working properly")
+import time
+
+print("bitarr start")
+time.sleep(10)
+print("bitarr done")
 '''
 import numpy as np
 
