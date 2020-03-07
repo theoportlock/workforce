@@ -49,7 +49,6 @@ class run:
                 else:
                     logging.info("function " + self.schema[j][i] + " found")
                     self.schema.loc[i,j] = functionsdir + "/" + self.schema[j][i]
-        print(self.schema)
         logging.info("done")
         logging.info("init complete")
 
@@ -60,7 +59,6 @@ class run:
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
                 t.start()
-                #task(self.schema.iloc[i]["target"])
 
         logging.info("begin excecution")
         # start run with first row of schema
