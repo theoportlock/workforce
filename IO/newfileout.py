@@ -4,4 +4,4 @@ def a(arr):
             nextname(a+1,pre,ext)
         else:
             return directory+pre+str(a)+ext
-    plt.savefig(nextname(ext=".png"))
+    with open(savefig(nextname(ext=".png"))

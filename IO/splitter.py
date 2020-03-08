@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-import time
+import file2arr
+import arr2file
+import argparse
 
-print("splitter start")
-time.sleep(5) 
-print("splitter done")
-
-'''
 def a(arr):
     output = []
     for a in range(1,len(arr)):
@@ -15,4 +12,12 @@ def a(arr):
                 curr = 1
         output.append(curr)
     return output
-'''
+
+if __name__ == "__main__":
+    print("splitter start")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input')
+    parser.add_argument('-o', '--output')
+    args = parser.parse_args()
+    arr2file.a(a(file2arr.a(args.input)),args.output)
+    print("splitter done")
