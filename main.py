@@ -8,14 +8,11 @@ import importlib as il
 from pathlib import Path
 
 class run:
-    def __init__(self,functionsdir,schema,output):
+    def __init__(self,functionsdir,schema):
         format = "%(asctime)s %(processName)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-
-        if output:
-            Path(output).mkdir(parents=True, exist_ok=True)
-            logger = logging.getLogger()
-            logger.addHandler(logging.FileHandler(output+"/output.log", 'a'))
+        logger = logging.getLogger()
+        logger.addHandler(logging.FileHandler("output.log", 'a'))
 
         if not schema:
             logging.error("no schema loaded (use -s flag)")
@@ -27,7 +24,7 @@ class run:
             logging.info("done")
             
         if functionsdir:
-            logging.info("loading functions in supplied directory")
+            logging.info("loading functions in supplied directories")
             functions = subprocess.check_output(['ls',functionsdir]).splitlines()
             functions = [i.decode() for i in functions]
             print(functions, "\n")
@@ -47,12 +44,15 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
+        jobs = []
         def task(curr):
             logging.info("running %s",curr) 
-            subprocess.check_call(curr,shell=True)
+            subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
-                t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                t = multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                jobs.append(t)
                 t.start()
+            t.join()
 
         logging.info("begin excecution")
         # start run with first row of schema
@@ -62,8 +62,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--functionsdir')
     parser.add_argument('-s', '--schema')
-    parser.add_argument('-o', '--output')
     args = parser.parse_args()
 
-    currentrun = run(args.functionsdir,args.schema,args.output)
+    currentrun = run(args.functionsdir,args.schema)
     currentrun.excecute()

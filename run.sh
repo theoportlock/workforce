@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 main.py -f IO -s schema 
+python3 main.py -f IO -s testschema 
