@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import logging
 import multiprocessing
+#import threading
 import argparse
 import subprocess
 import pandas as pd
@@ -49,8 +50,9 @@ class run:
     def excecute(self):
         def task(curr):
             logging.info("running %s",curr) 
-            subprocess.check_call(curr,shell=True)
+            subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
+                #t=threading.Thread(target=task, args=[self.schema.iloc[i]["target"]])
                 t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
                 t.start()
 
