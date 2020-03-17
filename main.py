@@ -48,12 +48,13 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
+        processes=[]
         def task(curr):
             logging.info("running %s",curr) 
             subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 #t=threading.Thread(target=task, args=[self.schema.iloc[i]["target"]])
-                t=multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                t=multiprocessing.Process(target=task, args=(self.schema.iloc[i]["target"],))
                 t.start()
 
         logging.info("begin excecution")
