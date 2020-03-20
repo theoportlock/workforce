@@ -48,14 +48,20 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
-        processes=[]
+        processes = []
         def task(curr):
             logging.info("running %s",curr) 
+            multiprocessing.active_children()
             subprocess.run(curr,shell=True)
-            for i in self.schema.loc[self.schema["source"] == curr].index:
-                #t=threading.Thread(target=task, args=[self.schema.iloc[i]["target"]])
-                t=multiprocessing.Process(target=task, args=(self.schema.iloc[i]["target"],))
-                t.start()
+            targets = self.schema.loc[self.schema["source"] == curr].index
+            for j in targets:
+                print("j={}".format(j))
+                if j == 0:
+                    task(self.schema.iloc[j]["target"])
+                else:
+                    #t=threading.Thread(target=task, args=[self.schema.iloc[i]["target"]])
+                    t = multiprocessing.Process(target=task, args=(self.schema.iloc[j]["target"],))
+                    t.start()
 
         logging.info("begin excecution")
         # start run with first row of schema
