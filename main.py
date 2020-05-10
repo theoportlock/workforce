@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import logging
 import multiprocessing
-#import threading
 import argparse
 import subprocess
 import pandas as pd
@@ -45,7 +44,6 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
-<<<<<<< HEAD
         jobs = []
         def task(curr):
             logging.info("running %s",curr) 
@@ -55,22 +53,6 @@ class run:
                 jobs.append(t)
                 t.start()
             t.join()
-=======
-        processes = []
-        def task(curr):
-            logging.info("running %s",curr) 
-            multiprocessing.active_children()
-            subprocess.run(curr,shell=True)
-            targets = self.schema.loc[self.schema["source"] == curr].index
-            for j in targets:
-                print("j={}".format(j))
-                if j == 0:
-                    task(self.schema.iloc[j]["target"])
-                else:
-                    #t=threading.Thread(target=task, args=[self.schema.iloc[i]["target"]])
-                    t = multiprocessing.Process(target=task, args=(self.schema.iloc[j]["target"],))
-                    t.start()
->>>>>>> 3fabea9602a2cfb2d20d4ab025fe5fda0a98497b
 
         logging.info("begin excecution")
         # start run with first row of schema
