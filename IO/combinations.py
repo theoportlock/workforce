@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+import time
+print("comb start")
+time.sleep(2)
+print("comb done")
 
-import tester.main as t
-import binadder
+'''
+import IO.binadder as binadder
 
 def a(arr):
     out = []
@@ -14,7 +18,4 @@ def a(arr):
                 matches = 0
         out.append(matches)
     return out
-
-if __name__ == "__main__":
-    run = t.run(a)
-    run.excecute()
+'''

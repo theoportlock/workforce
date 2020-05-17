@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import tester.main as t
-
 def a(arr):
     output = []
     for a in range(1,len(arr)):
@@ -11,7 +9,3 @@ def a(arr):
                 curr = 1
         output.append(curr)
     return output
-
-if __name__ == "__main__":
-    run = t.run(a)
-    run.excecute()
