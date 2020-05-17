@@ -44,15 +44,16 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
-        jobs = []
         def task(curr):
+            jobs = []
             logging.info("running %s",curr) 
             subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 t = multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
                 jobs.append(t)
                 t.start()
-            t.join()
+            for j in jobs:
+                j.join()
 
         logging.info("begin excecution")
         # start run with first row of schema
