@@ -1,0 +1,6 @@
+source,target,weight
+echo “starting 1 – 5 seconds”; date; sleep 5; echo “ending 1 – 5 seconds”; date,echo “starting 1.1 – 5 seconds”; date; sleep 5; echo “ending 1.1 – 5 seconds”; date,0
+echo “starting 1.1 – 5 seconds”; date; sleep 5; echo “ending 1.1 – 5 seconds”; date,echo “starting 1.1.1 – 3 seconds”; date; sleep 3; echo “ending 1.1.1 – 3 seconds”; date,0
+echo “starting 1.1 – 5 seconds”; date; sleep 5; echo “ending 1.1 – 5 seconds”; date,echo “starting 1.1.2– 5 seconds”; date; sleep 5; echo “ending 1.1.2 – 5 seconds”; date ,0
+echo “starting 1.1.2– 5 seconds”; date; sleep 5; echo “ending 1.1.2 – 5 seconds”; date ,echo “starting 1.1.2.1– 5 seconds”; date; sleep 5; echo “ending 1.1.2.1 – 5 seconds”; date ,0
+echo “starting 1.1.1 – 3 seconds”; date; sleep 3; echo “ending 1.1.1 – 3 seconds”; date,echo “starting 1.1.1.1 – 3 seconds”; date; sleep 8; echo “ending 1.1.1 – 8 seconds”; date,0

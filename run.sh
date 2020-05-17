@@ -1,2 +1,2 @@
 #!/bin/bash
-python3 main.py -f IO -s testschema 
+python3 main.py -f IO -s schema.csv
