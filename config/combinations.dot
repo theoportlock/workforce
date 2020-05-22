@@ -1,5 +1,0 @@
-strict graph "" {
-	bitarrin -- combinations	[weight=1];
-	combinations -- arrelementnumberdec	[weight=1];
-	arrelementnumberdec -- printerout	[weight=1];
-}

@@ -1,58 +1,69 @@
-import sys
-import subprocess as sp
+#!/usr/bin/env python3
+import logging
+import multiprocessing
+import argparse
+import subprocess
+import pandas as pd
 import importlib as il
-import os
+from pathlib import Path
 
-"""
-barpath = os.path.dirname(os.path.realpath(sys.argv[0])) + "/BarChart.R"
-sp.call(["Rscript", barpath, sizes])
-sp.call(["Rscript", ringchart, str(core_total), str(acc_total)])
-
-"""
 class run:
-    def __init__(self, f):
-        # read configuration files
-        self.f = f
-        conffile = "tester/config/"+os.path.basename(sys.argv[0])+"conf"
-        variables = []
-        fvariables = []
-        if os.path.exists(conffile):
-            with open(conffile) as cf:
-                variables = str.splitlines(cf.read())
-                for i in variables:
-                    fvariables.append(i.split("="))
-        else:
-            print("no conf file")
+    def __init__(self,functionsdir,schema):
+        format = "%(asctime)s %(processName)s: %(message)s"
+        logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+        logger = logging.getLogger()
+        logger.addHandler(logging.FileHandler("output.log", 'a'))
+
+        if not schema:
+            logging.error("no schema loaded (use -s flag)")
             quit()
+        else:
+            logging.info("loading %s", schema)
+            self.schema = pd.read_csv(schema)
+            print(self.schema, "\n")
+            logging.info("done")
+            
+        if functionsdir:
+            logging.info("loading functions in supplied directories")
+            functions = subprocess.check_output(['ls',functionsdir]).splitlines()
+            functions = [i.decode() for i in functions]
+            print(functions, "\n")
+            
+            for i in self.schema.index:
+                for j in ("source","target"):
+                    if self.schema[j][i] not in functions:
+                        logging.warning("function " + self.schema[j][i] + " not found")
+                    else:
+                        logging.info("function " + self.schema[j][i] + " found")
+                        self.schema.loc[i,j] = functionsdir + "/" + self.schema[j][i]
 
-        variables = {k[0]: k[1] for k in fvariables}
+            logging.info("done")
+        else:
+            functions = []
 
-        # find functions in IO
-        for j in variables:
-            variables[j]="tester.IO." + variables[j]
-            print("loading "+variables[j], "as",j)
-            try:
-                variables[j] = il.import_module(variables[j])
-            except ImportError:
-                print("no IO function for", j)
-                quit()
-            try:
-                variables[j]=variables[j].a
-            except AttributeError:
-                print("no function called \"a\" in", j)
-                quit()
-
-        #load variables
-        self.__dict__.update(variables)
+        logging.info("init complete")
 
     def excecute(self):
-        if not self.i:
-            print("no inputs given")
-            quit()
+        def task(curr):
+            jobs = []
+            logging.info("running %s",curr) 
+            subprocess.run(curr,shell=True)
+            for i in self.schema.loc[self.schema["source"] == curr].index:
+                t = multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                jobs.append(t)
+                t.start()
+            for j in jobs:
+                j.join()
 
-        self.curr = self.i()
+        logging.info("begin excecution")
+        # start run with first row of schema
+        task(self.schema.iloc[0]["source"])
 
-        #define functions
-        for k in self.__dict__:
-            if not k.startswith('_') and not k == "excecute" and not k == "curr" and not k == "i":
-                self.curr = self.__dict__[k](self.curr)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--functionsdir')
+    parser.add_argument('-s', '--schema')
+    args = parser.parse_args()
+
+    currentrun = run(args.functionsdir,args.schema)
+    currentrun.excecute()
