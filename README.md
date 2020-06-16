@@ -1,2 +1,2 @@
 # tester
-A collection of I/O operations for the testing of functions
+A collection of I/O operations for the testing of functions using multiprocessing
