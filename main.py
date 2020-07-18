@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logging
-import multiprocessing
+from multiprocessing import Process, Queue
 import argparse
 import subprocess
 import pandas as pd
@@ -51,7 +51,7 @@ class run:
             logging.info("running %s",curr) 
             subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
-                t = multiprocessing.Process(target=task, args=[self.schema.iloc[i]["target"]])
+                t = Process(target=task, args=[self.schema.iloc[i]["target"]])
                 jobs.append(t)
                 t.start()
             for j in jobs:
