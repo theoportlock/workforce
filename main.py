@@ -19,7 +19,9 @@ class run:
             quit()
         else:
             logging.info("loading %s", schema)
-            self.schema = pd.read_csv(schema)
+            # read schema (first of the remainer of args)
+            self.schema = pd.read_csv(schema[0],names=["source","target"])
+            self.schema["weight"] = 1
             print(self.schema, "\n")
             logging.info("done")
             
@@ -62,7 +64,7 @@ class run:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--functionsdir')
-    parser.add_argument('-s', '--schema')
+    parser.add_argument('schema', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     currentrun = run(args.functionsdir,args.schema)
