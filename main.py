@@ -8,29 +8,41 @@ import importlib as il
 from pathlib import Path
 
 class run:
+    ''' A method for running bash processes in parallel according to a csv file schema '''
     def __init__(self,functionsdir,schema):
-        format = "%(asctime)s %(processName)s: %(message)s"
-        logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-        logger = logging.getLogger()
-        logger.addHandler(logging.FileHandler("output.log", 'a'))
-
+        # Set up logging
+        logging.basicConfig(filename="output.log",
+                filemode="w",
+                format= "%(asctime)s %(processName)s: %(message)s",
+                level=logging.INFO, datefmt="%H:%M:%S")
         if not schema:
-            logging.error("no schema loaded (use -s flag)")
+            logging.error("no schema loaded")
             quit()
         else:
             logging.info("loading %s", schema)
-            # read schema (first of the remainer of args)
+            # Read schema (first of the remainer of args)
             self.schema = pd.read_csv(schema[0],names=["source","target"])
             self.schema["weight"] = 1
-            print(self.schema, "\n")
             logging.info("done")
+
+            # Create graph - can remove this if not needed
+            import matplotlib.pyplot as plt
+            import networkx as nx
+            Graphtype = nx.Graph()
+            G = nx.from_pandas_edgelist(self.schema, edge_attr='weight', create_using=Graphtype)
+            pos = nx.layout.spring_layout(G)
+            M = G.number_of_edges()
+            edge_colors = range(2, M + 2)
+            edge_alphas = [(5 + i) / (M + 4) for i in range(M)]
+            nx.draw(G, with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=2)
+            #plt.show()
+            plt.savefig(schema[0]+".pdf")
             
+        # Load additional functions in a directory if necessary
         if functionsdir:
             logging.info("loading functions in supplied directories")
             functions = subprocess.check_output(['ls',functionsdir]).splitlines()
             functions = [i.decode() for i in functions]
-            print(functions, "\n")
-            
             for i in self.schema.index:
                 for j in ("source","target"):
                     if self.schema[j][i] not in functions:
@@ -46,6 +58,7 @@ class run:
         logging.info("init complete")
 
     def excecute(self):
+        # run loaded schema
         def task(curr):
             jobs = []
             logging.info("running %s",curr) 
