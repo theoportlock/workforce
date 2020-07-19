@@ -38,7 +38,7 @@ class run:
                 M = G.number_of_edges()
                 edge_colors = range(2, M + 2)
                 edge_alphas = [(5 + i) / (M + 4) for i in range(M)]
-                nx.draw(G, with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=2)
+                nx.draw(G, with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=3)
                 #plt.show()
                 plt.savefig(schema[0]+".pdf")
             
