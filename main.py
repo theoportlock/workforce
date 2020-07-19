@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-import logging
+
+from datetime import datetime
 from multiprocessing import Process, Queue
-import argparse
-import subprocess
-import pandas as pd
-import importlib as il
 from pathlib import Path
+import argparse
+import importlib as il
+import logging
+import pandas as pd
+import subprocess
 
 class run:
     ''' A method for running bash processes in parallel according to a csv file schema '''
-    def __init__(self,functionsdir,schema):
+    def __init__(self, functionsdir, schema, graph):
+        print(graph)
         # Set up logging
-        logging.basicConfig(filename="output.log",
+        logging.basicConfig(filename=str(datetime.now())[0:-7]+'.log',
                 filemode="w",
                 format= "%(asctime)s %(processName)s: %(message)s",
                 level=logging.INFO, datefmt="%H:%M:%S")
@@ -25,18 +28,19 @@ class run:
             self.schema["weight"] = 1
             logging.info("done")
 
-            # Create graph - can remove this if not needed
-            import matplotlib.pyplot as plt
-            import networkx as nx
-            Graphtype = nx.Graph()
-            G = nx.from_pandas_edgelist(self.schema, edge_attr='weight', create_using=Graphtype)
-            pos = nx.layout.spring_layout(G)
-            M = G.number_of_edges()
-            edge_colors = range(2, M + 2)
-            edge_alphas = [(5 + i) / (M + 4) for i in range(M)]
-            nx.draw(G, with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=2)
-            #plt.show()
-            plt.savefig(schema[0]+".pdf")
+            if graph:
+                # Create graph - can remove this if not needed
+                import matplotlib.pyplot as plt
+                import networkx as nx
+                Graphtype = nx.Graph()
+                G = nx.from_pandas_edgelist(self.schema, edge_attr='weight', create_using=Graphtype)
+                pos = nx.layout.spring_layout(G)
+                M = G.number_of_edges()
+                edge_colors = range(2, M + 2)
+                edge_alphas = [(5 + i) / (M + 4) for i in range(M)]
+                nx.draw(G, with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=2)
+                #plt.show()
+                plt.savefig(schema[0]+".pdf")
             
         # Load additional functions in a directory if necessary
         if functionsdir:
@@ -61,7 +65,7 @@ class run:
         # run loaded schema
         def task(curr):
             jobs = []
-            logging.info("running %s",curr) 
+            logging.info("running %s", curr) 
             subprocess.run(curr,shell=True)
             for i in self.schema.loc[self.schema["source"] == curr].index:
                 t = Process(target=task, args=[self.schema.iloc[i]["target"]])
@@ -77,8 +81,9 @@ class run:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--functionsdir')
+    parser.add_argument('-g', '--graph', action='store_false')
     parser.add_argument('schema', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    currentrun = run(args.functionsdir,args.schema)
+    currentrun = run(args.functionsdir, args.schema, args.graph)
     currentrun.excecute()
