@@ -12,24 +12,23 @@ import subprocess
 class run:
     ''' A method for running bash processes in parallel according to a csv file schema '''
     def __init__(self, functionsdir, schema, graph):
-        print(graph)
         # Set up logging
-        logging.basicConfig(filename=str(datetime.now())[0:-7]+'.log',
-                filemode="w",
+        logging.basicConfig(filename=schema[0]+".log",
+                filemode="a",
                 format= "%(asctime)s %(processName)s: %(message)s",
                 level=logging.INFO, datefmt="%H:%M:%S")
         if not schema:
             logging.error("no schema loaded")
             quit()
         else:
-            logging.info("loading %s", schema)
+            logging.info("loading %s", schema[0])
             # Read schema (first of the remainer of args)
             self.schema = pd.read_csv(schema[0],names=["source","target"])
             self.schema["weight"] = 1
             logging.info("done")
 
             if graph:
-                # Create graph - can remove this if not needed
+                # Create graph - have to install graphviz and networkx for this - produces if you give the g flag
                 import matplotlib.pyplot as plt
                 import networkx as nx
                 Graphtype = nx.Graph()
@@ -81,7 +80,7 @@ class run:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--functionsdir')
-    parser.add_argument('-g', '--graph', action='store_false')
+    parser.add_argument('-g', '--graph', action='store_true')
     parser.add_argument('schema', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
