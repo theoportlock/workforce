@@ -1,0 +1,11 @@
+,echo "start"
+echo "start",echo "add text" >> file.txt
+echo "start",echo "add more text" >> file.txt
+echo "start",cp file.txt another-file.txt
+cp file.txt another-file.txt,cat another-file.txt
+cat another-file.txt,echo "1"
+cat another-file.txt,echo "2"
+cat another-file.txt,echo "3"
+echo "3", rm another-file.txt
+echo "3", rm file.txt
+echo "3",echo "finished"
