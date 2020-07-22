@@ -45,7 +45,7 @@ class worker:
                 plt.figure(figsize=(10, 7))
                 nx.draw(G, pos=nx.spring_layout(G,k=5/math.sqrt(G.order())), with_labels=True, edge_color=edge_colors, edge_cmap=plt.cm.Blues, width=2, font_size=10)
                 #plt.show()
-                plt.savefig(instructions+".pdf")
+                plt.savefig(instructions+".png")
             
         # Load additional functions in a directory if necessary
         if self.functionsdir:
