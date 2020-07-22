@@ -5,7 +5,7 @@ Install requirements with:
 	pip3 install -r requirements.txt
 
 Run with:
-	python3 main.py exampleschema.csv
+	python3 main.py -g exampleschema.csv
 
 Options:
 	-g	if networkx and graphviz is installed, make a pdf with the nodes of the program based on the schema (note that if the graph looks messy, a second run may fix)
