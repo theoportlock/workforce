@@ -1,4 +1,4 @@
-# tester
+# workforce
 A tool for running commands with multiprocessing according to a csv file schema 
 
 Install requirements with:
