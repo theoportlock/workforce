@@ -1,5 +1,5 @@
 ,echo "start"
-echo "start",echo "add text" >> file.txt
+echo "start", echo "add text" >> file.txt
 echo "start",echo "add more text" >> file.txt
 echo "start",cp file.txt another-file.txt
 cp file.txt another-file.txt,cat another-file.txt
