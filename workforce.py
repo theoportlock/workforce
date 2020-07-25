@@ -3,8 +3,8 @@ from multiprocessing import Process
 from pathlib import Path
 from time import time
 import argparse
-import logging
 import csv
+import logging
 import subprocess
 
 class worker:
@@ -13,7 +13,7 @@ class worker:
         # Setup logging
         self.init_time = str(time())
         logging.basicConfig(filename=str(Path.home())+"/workforce/log.csv", filemode="a", format="%(created).6f,"+self.init_time+",%(processName)s,%(message)s", level=logging.INFO)
-        logging.info("begin %s", plan_file)
+        logging.info("start %s", plan_file)
 
         # Load plan
         logging.info("loading plan") 
