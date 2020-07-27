@@ -5,6 +5,7 @@ from time import time
 import argparse
 import csv
 import logging
+import os
 import subprocess
 
 class worker:
@@ -25,14 +26,14 @@ class worker:
         # Run loaded plan beginning from the first row
         def task(curr):
             logging.info("running %s", curr[1]) 
-            subprocess.run(curr[1], shell=True)
+            os.system(curr[1])
             for i, j in enumerate(self.plan):
                 if j[0] == curr[1]:
                     t = Process(target=task, args=[self.plan[i]])
                     t.start()
         logging.info("begin work")
         logging.info("running %s", self.plan[0][0]) 
-        subprocess.run(self.plan[0][0], shell=True)
+        os.system(self.plan[0][0])
         task(self.plan[0])
         logging.info("work complete")
 
