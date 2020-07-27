@@ -7,6 +7,7 @@ import logging
 import math
 import matplotlib.pyplot as plt
 import networkx as nx
+import os
 import pandas as pd
 import subprocess
 
@@ -15,10 +16,11 @@ class worker:
     def __init__(self, plan):
         # Load attributes
         self.init_time = str(time())
+        self.pid = str(os.getpid())
         self.plan_file = plan
 
         # Set up logging
-        logging.basicConfig(filename=str(Path.home())+"/workforce/run.log", filemode="a", format="%(created).6f,"+self.init_time+",%(processName)s,%(message)s", level=logging.INFO)
+        logging.basicConfig(filename=str(Path.home())+"/workforce/workforce.log", filemode="a", format="%(created).6f,"+self.init_time+",%(processName)s,"+self.pid+",%(message)s", level=logging.INFO)
         logging.info("begin init")
 
         # Read plan
@@ -52,6 +54,7 @@ class worker:
         logging.info("begin work")
         def task(curr):
             jobs = []
+            self.pid = os.getpid()
             logging.info("running %s", curr) 
             subprocess.run(curr, shell=True)
             for i in self.plan.loc[self.plan["source"] == curr].index:
@@ -68,6 +71,6 @@ if __name__ == "__main__":
     parser.add_argument("plan", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    # if args.plan:
+    #instruction if args.plan:
     current_worker = worker(args.plan[0])
     current_worker.run()
