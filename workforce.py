@@ -17,7 +17,7 @@ class worker:
         logging.info("start %s", plan_file)
 
         # Load plan
-        logging.info("loading plan") 
+        logging.info("loading plan")
         self.plan_file = plan_file
         self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
         logging.info("plan loaded")
@@ -25,14 +25,14 @@ class worker:
     def run(self):
         # Run loaded plan beginning from the first row
         def task(curr):
-            logging.info("running %s", curr[1]) 
+            logging.info("running %s", curr[1])
             os.system(curr[1])
             for i, j in enumerate(self.plan):
                 if j[0] == curr[1]:
                     t = Process(target=task, args=[self.plan[i]])
                     t.start()
         logging.info("begin work")
-        logging.info("running %s", self.plan[0][0]) 
+        logging.info("running %s", self.plan[0][0])
         os.system(self.plan[0][0])
         task(self.plan[0])
         logging.info("work complete")
