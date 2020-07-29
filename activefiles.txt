@@ -1,0 +1,9 @@
+   1712 tty2     Ssl+   0:00 /usr/lib/gdm3/gdm-x-session --register-session --run-script i3
+   1714 tty2     Sl+   18:26 /usr/lib/xorg/Xorg vt2 -displayfd 3 -auth /run/user/1000/gdm/Xauthority -background none -noreset -keeptty -verbose 3
+   1984 tty2     S+     0:06 i3
+  14293 pts/1    Ss     0:00 bash
+  15610 pts/1    S+     0:00 /usr/bin/python3 /usr/local/bin/vd log.csv
+  15618 pts/2    Ss     0:00 bash
+  15660 pts/2    Sl+    0:00 python3 /home/theoportlock/workforce/workforce.py test.csv
+  15664 pts/2    S+     0:00 /bin/sh -c ps -h >> activefiles.txt
+  15665 pts/2    R+     0:00 ps -h

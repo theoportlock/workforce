@@ -5,4 +5,4 @@ mkdir temporary, mv activefiles.txt newname.txt
 mv activefiles.txt newname.txt, mv newname.txt temporary
 mv newname.txt temporary,rm -r temporary
 rm -r temporary, sleep 5
-sleep 5, ~/workforce/workforce.py test.csv
+sleep 5,

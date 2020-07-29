@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-#from multiprocessing import Process, Pool, Queue
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from multiprocessing import Process, Pool, Queue
+import multiprocessing
 from pathlib import Path
 from time import time
 import argparse
@@ -8,17 +8,6 @@ import csv
 import logging
 import os
 import subprocess
-
-class CachedProcessPoolExecutor(ProcessPoolExecutor):
-    def __init__(self):
-        super(CachedProcessPoolExecutor, self).__init__(max_workers=1)
-
-    def submit(self, fn, *args, **extra):
-        if self._work_queue.qsize() > 0:
-            print('increasing pool size from %d to %d' % (self._max_workers, self._max_workers+1))
-            self._max_workers +=1
-
-        return super(CachedProcessPoolExecutor, self).submit(fn, *args, **extra)
 
 class worker:
     ''' A method for running bash processes in parallel according to a csv file plan '''
@@ -32,8 +21,9 @@ class worker:
         logging.info("loading plan")
         self.plan_file = plan_file
         self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
-        self.pool = CachedProcessPoolExecutor()
         logging.info("plan loaded")
+
+        self.pool = multiprocessing.Pool(multiprocessing.cpu_count())
 
     def run(self):
         # Run loaded plan beginning from the first row
@@ -41,11 +31,16 @@ class worker:
             def task(curr):
                 logging.info("running %s", curr)
                 subprocess.call(curr, shell=True)
+                print("ran ", curr)
+                #self.pool.map(task, [k[1] for k in self.plan if k[0] == curr])
                 for i in [k[1] for k in self.plan if k[0] == curr]:
-                    print(i)
-                    self.pool.submit(task, i)
+                    self.pool.apply_async(task, args=i).start()
+                    #print(self.init_time)
+                    #print(i)
+
             logging.info("running %s", self.plan[0][0])
-            subprocess.call(self.plan[0][0], shell=True)
+            print("ran ", self.plan[0][0])
+            #subprocess.call(self.plan[0][0], shell=True)
             task(self.plan[0][1])
 
         logging.info("begin work")
