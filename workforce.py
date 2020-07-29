@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#from multiprocessing import Process, Pool, Queue
+from multiprocessing import Process, Pool, Queue
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 from time import time
@@ -21,7 +21,6 @@ class worker:
         logging.info("loading plan")
         self.plan_file = plan_file
         self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
-        self.pool = CachedProcessPoolExecutor()
         logging.info("plan loaded")
 
     def run(self):
@@ -31,11 +30,10 @@ class worker:
                 logging.info("running %s", curr)
                 subprocess.call(curr, shell=True)
                 for i in [k[1] for k in self.plan if k[0] == curr]:
-                    Process.pool.submit(task, i)
+                    Process(target=task, args=[i]).start()
             logging.info("running %s", self.plan[0][0])
             subprocess.call(self.plan[0][0], shell=True)
             task(self.plan[0][1])
-
         logging.info("begin work")
         begin()
         logging.info("work complete")
