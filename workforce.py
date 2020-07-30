@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-from multiprocessing import Process, Pool, Queue
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from multiprocessing import Process
 from pathlib import Path
 from time import time
 import argparse

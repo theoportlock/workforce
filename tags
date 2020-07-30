@@ -1,0 +1,15 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+__init__	workforce.py	/^    def __init__(self, plan_file):$/;"	m	class:worker
+args	workforce.py	/^    args = parser.parse_args()$/;"	v	class:worker
+begin	workforce.py	/^        def begin():$/;"	f	function:worker.run
+df	managers/scripts/log_graph.py	/^df = pd.read_csv("..\/..\/log.csv", names=["currtime", "starttime", "processname","message"], na_filter=False, skipinitialspace=True)$/;"	v
+graph	managers/scripts/graph_plan.py	/^def graph(plan_file):$/;"	f
+parser	workforce.py	/^    parser = argparse.ArgumentParser()$/;"	v	class:worker
+run	workforce.py	/^    def run(self):$/;"	m	class:worker
+task	workforce.py	/^            def task(curr):$/;"	f	function:worker.run.begin
+worker	workforce.py	/^class worker:$/;"	c
