@@ -15,7 +15,7 @@ def graph(plan_file):
     edge_alphas = [(5 + i) / (M + 4) for i in range(M)]
     plt.figure(figsize=(10, 7))
     nx.draw(G,
-            pos=nx.spring_layout(G,k=1),
+            pos=nx.spring_layout(G, k=1),
             with_labels=True,
             edge_color=edge_colors,
             edge_cmap=plt.cm.Blues,
@@ -24,4 +24,5 @@ def graph(plan_file):
     plt.savefig("plan.pdf")
 
 if __name__ == "__main__":
-    graph(sys.argv[1])
+    #graph(sys.argv[1])
+    graph("../../log.csv")
