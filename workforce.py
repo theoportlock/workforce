@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+'''
+                    _     __
+__      _____  _ __| | __/ _| ___  _ __ ___ ___
+\ \ /\ / / _ \| '__| |/ / |_ / _ \| '__/ __/ _ \
+ \ V  V / (_) | |  |   <|  _| (_) | | | (_|  __/
+  \_/\_/ \___/|_|  |_|\_\_|  \___/|_|  \___\___|
+
+
+'''
 from multiprocessing import Process
 from pathlib import Path
 from time import time
