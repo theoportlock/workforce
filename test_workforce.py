@@ -5,26 +5,32 @@ import os
 import workforce
 
 class TestWorker(unittest.TestCase):
+    def cleanup(self):
+        for testing_file in self.testing_files.values():
+            if os.path.isfile(testing_file):
+                os.remove(testing_file) 
+
+    def setUp(self):
+        self.testing_files = {
+            "test": "test_plan.csv",
+            "result": "multiproc_test"}
+        self.cleanup()
+
+    def tearDown(self):
+        self.cleanup()
+
     def test_schema(self):
         # Tests a simple plan to make sure multiprocessing works
-        test_plan = "test_plan.csv"
-        multi_test = "multiproc_test"
-
-        if os.path.exists(test_plan):
-            os.remove(test_plan)
-        if os.path.exists(multi_test):
-            os.remove(multi_test)
-
-        test_array = pd.DataFrame([["echo 1", "echo 2"],
-            ["echo 2", "touch multiproc_test"],
-            ["echo 2", "echo 3"]])
-        test_array.to_csv(test_plan, header=False, index=False)
-        worker = workforce.worker(test_plan)
+        test_array = pd.DataFrame(
+                    [["echo 1", "echo 2"],
+                    ["echo 2", "touch multiproc_test"],
+                    ["echo 2", "echo 3"]])
+        test_array.to_csv(self.testing_files["test"], header=False, index=False)
+        worker = workforce.worker(self.testing_files["test"])
         worker.run()
         time.sleep(1)
-        assert os.path.exists(multi_test)
+        assert os.path.exists(self.testing_files["result"])
 
-        if os.path.exists(test_plan):
-            os.remove(test_plan)
-        if os.path.exists(multi_test):
-            os.remove(multi_test)
+if __name__ == '__main__':
+    unittest.main()
+
