@@ -1,15 +1,4 @@
-#!/usr/bin/env python3
-'''
-                    _     __
-__      _____  _ __| | __/ _| ___  _ __ ___ ___
-\ \ /\ / / _ \| '__| |/ / |_ / _ \| '__/ __/ _ \
- \ V  V / (_) | |  |   <|  _| (_) | | | (_|  __/
-  \_/\_/ \___/|_|  |_|\_\_|  \___/|_|  \___\___|
-
-
-A method for running bash processes in parallel according to a csv file plan
-
-'''
+#!/usr/bin/env python
 from multiprocessing import Process
 from pathlib import Path
 from time import time
@@ -23,7 +12,11 @@ class worker:
     def __init__(self, plan_file):
         # Setup logging
         self.init_time = str(time())
-        logging.basicConfig(filename=str(Path.home())+"/workforce/log.csv", filemode="a", format="%(created).6f,"+self.init_time+","+str(os.getpid())+",%(processName)s,%(message)s", level=logging.INFO)
+        logging.basicConfig(
+                filename=str(Path.home())+"/workforce/log.csv",
+                filemode="a",
+                format="%(created).6f, "+self.init_time+", "+str(os.getpid())+", %(processName)s, %(message)s",
+                level=logging.INFO)
         logging.info("start %s", plan_file)
 
         # Load plan
