@@ -30,7 +30,7 @@ class worker:
         # Create graph based on a dataframe
         import matplotlib.pyplot as plt
         import networkx as nx
-        G = nx.DiGraph()
+        G = nx.MultiDiGraph()
         G.add_edges_from(self.plan)
         nx.draw(G, with_labels=True)
         #plt.savefig(self.instruction_file+".pdf")
