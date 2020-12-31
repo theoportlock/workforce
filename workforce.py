@@ -22,8 +22,19 @@ class worker:
         # Load plan
         logging.info("loading plan")
         self.plan_file = plan_file
-        self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
+        #self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
+        with open(self.plan_file) as csvfile: self.plan = list(csv.reader(csvfile, skipinitialspace=True))
         logging.info("plan loaded")
+
+    def graph(self):
+        # Create graph based on a dataframe
+        import matplotlib.pyplot as plt
+        import networkx as nx
+        G = nx.DiGraph()
+        G.add_edges_from(self.plan)
+        nx.draw(G, with_labels=True)
+        #plt.savefig(self.instruction_file+".pdf")
+        plt.show()
 
     def run(self):
         # Run loaded plan beginning from the first row
@@ -42,9 +53,13 @@ class worker:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--graph", action='store_true')
     parser.add_argument("plan", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if args.plan:
         current_worker = worker(args.plan[0])
-        current_worker.run()
+        if args.graph:
+            current_worker.graph()
+        else:
+            current_worker.run()
