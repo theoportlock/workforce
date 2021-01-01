@@ -22,7 +22,6 @@ class worker:
         # Load plan
         logging.info("loading plan")
         self.plan_file = plan_file
-        #self.plan = list(csv.reader(open(self.plan_file), skipinitialspace=True))
         with open(self.plan_file) as csvfile: self.plan = list(csv.reader(csvfile, skipinitialspace=True))
         logging.info("plan loaded")
 
@@ -32,9 +31,17 @@ class worker:
         import networkx as nx
         G = nx.MultiDiGraph()
         G.add_edges_from(self.plan)
-        nx.draw(G, with_labels=True)
-        #plt.savefig(self.instruction_file+".pdf")
-        plt.show()
+        print(G.nodes)
+        #from networkx.drawing.nx_pydot import write_dot
+        #import pygraphviz
+        #A = nx.nx_agraph.to_agraph(G)
+        #A.write(self.plan_file+".dot")
+        #A.write("A.dot")
+        #write_dot(G, self.plan_file+".dot")
+        nx.nx_agraph.write_dot(G, "test.dot")
+        #nx.draw(G, with_labels=True)
+        #plt.show()
+        #plt.savefig(self.plan_file+".pdf")
 
     def run(self):
         # Run loaded plan beginning from the first row
