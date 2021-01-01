@@ -6,7 +6,7 @@ To try a sample plan, run with:
 
 To view the program graph, networkx and matplotlib are required. The -g flag is required to plot:
 `python3 workforce.py -g example_plan.csv`
-![Graph](example_instructions.csv.png)
+![Graph](example_plan.png)
 
 The schema should be in the format of a csv with two columns. On the left and right column is the source and target command respectively (see example). Produces a logfile for each run. The following bashrc alias is recommended if this repository is in your home directory:
 `alias wf="python ~/workforce/workforce.py"`
