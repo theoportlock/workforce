@@ -3,7 +3,7 @@ import csv
 import os
 import time
 import unittest
-import workforce
+from src import workforce
 
 
 class TestWorker(unittest.TestCase):

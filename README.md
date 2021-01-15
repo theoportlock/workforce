@@ -1,6 +1,9 @@
 # workforce
 A tool for running bash commands with python multiprocessing according to a csv file edgelist. There are no requirements for the default program that are outside the Python Standard Library.
 
+## installation
+pip install workforce
+
 To try a sample plan, run with:
 
 `python workforce.py example_plan.csv`

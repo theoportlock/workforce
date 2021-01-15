@@ -26,7 +26,7 @@ class worker:
         logging.info("plan loaded")
 
     def graph(self):
-        # Create graph based on a dataframe
+        # Create graph based on a dataframe - maybe just show graph?
         import matplotlib.pyplot as plt
         import networkx as nx
         G = nx.MultiDiGraph()
@@ -59,8 +59,10 @@ class worker:
         logging.info("work complete")
 
 if __name__ == "__main__":
+    # if log then print the log
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--graph", action='store_true')
+    #parser.add_argument("-l", "--log", action='store_true')
     parser.add_argument("plan", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
