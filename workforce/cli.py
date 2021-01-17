@@ -4,7 +4,7 @@ import argparse
 import sys
 
 def main():
-    from . import worker
+    from .workforce import worker
     """Console script for workforce."""
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--graph", action='store_true')
