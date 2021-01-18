@@ -10,11 +10,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ["networkx", ]
-
-setup_requirements = ['pytest-runner', ]
-
-test_requirements = ['pytest>=3', ]
+requirements = ["networkx", "pydot",]
 
 setup(
     author="Theo Portlock",
@@ -40,21 +36,9 @@ setup(
     install_requires=requirements,
     license="MIT license",
     long_description=readme + '\n\n' + history,
-    include_package_data=True,
     keywords='workforce',
     name='workforce',
-    #packages=find_packages(include=['src', 'workforce.*']),
-    #packages=find_packages(include=['workforce.*']),
-    #packages=find_packages(where='workforce'),
-    packages=find_packages(),
-    #py_modules=['workforce/workforce.py'],
-    #scripts=['src/workforce.py'],
-    ####packages=['src'],
-    #package_dir={'workforce': 'workforce'},
-    setup_requires=setup_requirements,
-    test_suite='tests',
-    tests_require=test_requirements,
+    packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='0.1.2',
-    zip_safe=False,
+    version='0.2.0',
 )
