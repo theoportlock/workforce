@@ -26,7 +26,7 @@ class worker:
         # Run loaded plan beginning from the first row
         self.init_time = str(time())
         logging.basicConfig(
-                filename=str(Path.home())+"/workforce/log.csv",
+                filename=str(Path.home())+"/.wflog.csv",
                 filemode="a",
                 format="%(created).6f, "+self.init_time+", "+str(os.getpid())+", %(processName)s, %(message)s",
                 level=logging.INFO)
@@ -44,17 +44,3 @@ class worker:
             logging.info("%s, complete", self.plan[0][0])
             task(self.plan[0][1])
         begin()
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--graph", action='store_true')
-    #parser.add_argument("-l", "--log", action='store_true')
-    parser.add_argument("plan", nargs=argparse.REMAINDER)
-    args = parser.parse_args()
-
-    if args.plan:
-        current_worker = worker(args.plan[0])
-        if args.graph:
-            current_worker.graph()
-        else:
-            current_worker.run()

@@ -3,7 +3,7 @@ import csv
 import os
 import time
 import unittest
-import workforce
+from workforce.workforce import worker
 
 
 class TestWorker(unittest.TestCase):
@@ -28,8 +28,8 @@ class TestWorker(unittest.TestCase):
         with open(self.testfile, "w") as ff:
             writer = csv.writer(ff)
             writer.writerows(test_array)
-        worker = workforce.worker(self.testfile)
-        worker.run()
+        steve = worker(self.testfile)
+        steve.run()
         time.sleep(1)
         assert os.path.exists(self.testfile)
 
