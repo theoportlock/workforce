@@ -25,6 +25,7 @@ Installation
 Installation can be done with 
 
 .. code:: bash
+
         pip install workforce
 
 Running workforce
@@ -32,11 +33,13 @@ Running workforce
 To try a sample plan, run with:
 
 .. code:: bash
+
         workforce example_plan.csv
 
 To view the program graph, networkx and matplotlib are required. The -g flag is required to produce a dot file of the network:
 
 .. code:: bash
+
         workforce -g example_plan.csv
 
 To import and use in a python shell, use the following command:
@@ -51,6 +54,7 @@ Graph print
 Converting the graph to a dot can be done using an online dot viewer or using Graphviz software with the example command:
 
 .. code-block:: bash
+
         dot -Tpng -Kdot -o <DOT_FILENAME>.png <DOT_FILENAME>
 
 .. image:: example_plan.png
@@ -62,4 +66,5 @@ Testing
 Testing can be done within this directory by running:
 
 .. code-block:: bash
+
         python -m unittest -v
