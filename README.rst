@@ -20,26 +20,28 @@ Run bash commands with python multiprocessing according to a csv file edgelist.
 * Documentation: https://workforce.readthedocs.io.
 
 
-Features
+Installation
 --------
 Installation can be done with 
 
-.. code-block:: bash
+.. code:: bash
         pip install workforce
 
+Running workforce
+--------
 To try a sample plan, run with:
 
-.. code-block:: bash
+.. code:: bash
         workforce example_plan.csv
 
 To view the program graph, networkx and matplotlib are required. The -g flag is required to produce a dot file of the network:
 
-.. code-block:: bash
+.. code:: bash
         workforce -g example_plan.csv
 
 To import and use in a python shell, use the following command:
 
-.. code-block:: python
+.. code:: python3
         from workforce.workforce import worker
         steve = worker("<PLAN.CSV>")
         steve.run()
