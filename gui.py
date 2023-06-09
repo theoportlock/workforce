@@ -76,13 +76,15 @@ def parse_contents(contents, filename):
     decoded = base64.b64decode(content_string)
     try:
         if 'csv' in filename:
-            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), names=['source','target'])
+        if 'tsv' in filename:
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t', names=['source','target'])
         elif 'xls' in filename:
-            df = pd.read_excel(io.BytesIO(decoded))
+            df = pd.read_excel(io.BytesIO(decoded), names=['source','target'])
     except Exception as e:
         print(e)
         return html.Div([
-            'There was an error processing this file.'
+            'There was an error processing the edgelist'
         ])
     return df
 
