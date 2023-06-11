@@ -29,7 +29,7 @@ Installation can be done with
    pip install workforce
 
 Building a workforce workflow
------------------
+-----------------------------
 To build a workflow, simply run:
 
 .. code-block:: bash
