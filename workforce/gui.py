@@ -22,8 +22,27 @@ def gui():
         ]),
         cyto.Cytoscape(
             id='cytoscape-elements',
-            layout={'name': 'breadthfirst'},
-            style={'width': '100%', 'height': '450px'},
+            layout={'name': 'breadthfirst',
+                    'directed':True},
+            style={'width': '100%', 'height': '650px'},
+            stylesheet=[
+                {
+                    'selector': 'node',
+                    'style': {
+                        'background-color': 'steelblue',
+                        'label': 'data(id)',
+                        'font-size': '14px',
+                        'width': '30px',
+                        'height': '30px',
+                    }
+                },
+                {
+                    'selector': 'edge',
+                    'style': {
+                        'curve-style': 'taxi',
+                        'target-arrow-shape': 'triangle',
+                        #'events': 'yes'
+                    }}],
             elements=[]
         )
     ])
@@ -40,6 +59,7 @@ def gui():
                   prevent_initial_call=True)
     def load_data(contents, n_clicks, txt_from, txt_to, filename, last_modified, elements):
         # For data load
+        print(contents, n_clicks, txt_from, txt_to, filename, last_modified)
         if ctx.triggered_id == 'upload-data':
             edges = parse_contents(contents, filename)
             nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
@@ -51,9 +71,10 @@ def gui():
             elements = edges+nodes
         # For adding data
         elif ctx.triggered_id == 'btn-add':
-            edges = elements_to_edges(elements)
+            edges = elements_to_edges(elements) if elements else pd.DataFrame()
             edges = pd.concat([edges, pd.DataFrame([txt_from,txt_to], index=['source','target']).T], axis=0, ignore_index=True).drop_duplicates()
             elements = edges_to_elements(edges)
+            print(elements)
         return elements
 
     # Save data
@@ -74,14 +95,13 @@ def gui():
         decoded = base64.b64decode(content_string)
         try:
             if 'csv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), names=['source','target'])
-            if 'tsv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t', names=['source','target'])
+                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
             elif 'xls' in filename:
-                df = pd.read_excel(io.BytesIO(decoded), names=['source','target'])
+                df = pd.read_excel(io.BytesIO(decoded))
         except Exception as e:
+            print(e)
             return html.Div([
-                'There was an error processing the edgelist'
+                'There was an error processing this file.'
             ])
         return df
 
