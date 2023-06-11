@@ -33,6 +33,7 @@ Building a workforce workflow
 To build a workflow, simply run:
 
 .. code-block:: bash
+
    workforce
 
 Then, paste the IP address into into your browsers address bar and build your program.
