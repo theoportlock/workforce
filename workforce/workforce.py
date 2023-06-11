@@ -15,13 +15,6 @@ class worker:
         with open(self.plan_file) as csvfile:
             self.plan = list(csv.reader(csvfile, skipinitialspace=True))
 
-    def graph(self):
-        # Create graph based on a dataframe
-        import networkx as nx
-        G = nx.MultiDiGraph()
-        G.add_edges_from((({'' : '#'}.get(i, i), {'' : '#'}.get(j, j)) for (i, j) in self.plan))
-        nx.drawing.nx_pydot.write_dot(G, self.plan_file + ".dot")
-
     def run(self):
         # Run loaded plan beginning from the first row
         self.init_time = str(time())
