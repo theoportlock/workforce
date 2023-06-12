@@ -59,8 +59,8 @@ def gui():
                   prevent_initial_call=True)
     def load_data(contents, n_clicks, txt_from, txt_to, filename, last_modified, elements):
         # For data load
-        print(contents, n_clicks, txt_from, txt_to, filename, last_modified)
         if ctx.triggered_id == 'upload-data':
+            elements, edges, nodes =[], [], []
             edges = parse_contents(contents, filename)
             nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
             nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
@@ -74,7 +74,6 @@ def gui():
             edges = elements_to_edges(elements) if elements else pd.DataFrame()
             edges = pd.concat([edges, pd.DataFrame([txt_from,txt_to], index=['source','target']).T], axis=0, ignore_index=True).drop_duplicates()
             elements = edges_to_elements(edges)
-            print(elements)
         return elements
 
     # Save data
@@ -85,7 +84,7 @@ def gui():
     def save_data(n_clicks, elements):
         ele = pd.concat([pd.DataFrame.from_dict(i) for i in elements], axis=1).T.set_index('id')
         edges = ele.drop('label', axis=1).dropna().set_index('source')
-        return dcc.send_data_frame(edges.to_csv, 'mydf.csv')
+        return dcc.send_data_frame(edges.to_csv, 'mydf.csv', header=False)
 
     # Other functions
     def parse_contents(contents, filename):
@@ -95,11 +94,10 @@ def gui():
         decoded = base64.b64decode(content_string)
         try:
             if 'csv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), header=None, names=['source','target'])
             elif 'xls' in filename:
                 df = pd.read_excel(io.BytesIO(decoded))
         except Exception as e:
-            print(e)
             return html.Div([
                 'There was an error processing this file.'
             ])
