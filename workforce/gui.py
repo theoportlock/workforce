@@ -94,7 +94,7 @@ def gui():
         decoded = base64.b64decode(content_string)
         try:
             if 'csv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), header=None, names=['source','target'])
+                df = pd.read_csv(io.StringIO(decoded.decode('utf-8'))).set_axis(['source','target'], axis=1)
             elif 'xls' in filename:
                 df = pd.read_excel(io.BytesIO(decoded))
         except Exception as e:
