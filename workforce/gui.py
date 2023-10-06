@@ -22,14 +22,12 @@ def gui():
         ]),
         cyto.Cytoscape(
             id='cytoscape-elements',
-            layout={'name': 'breadthfirst',
-                    'directed':True},
+            layout={'name': 'breadthfirst', 'directed':True},
             style={'width': '100%', 'height': '650px'},
             stylesheet=[
                 {
                     'selector': 'node',
                     'style': {
-                        'background-color': 'steelblue',
                         'label': 'data(id)',
                         'font-size': '14px',
                         'width': '30px',
@@ -51,13 +49,15 @@ def gui():
     @app.callback(Output('cytoscape-elements', 'elements'),
                   Input('upload-data', 'contents'),
                   Input('btn-add', 'n_clicks_timestamp'),
+                  Input('btn-remove', 'n_clicks_timestamp'),
                   Input('txt_from', 'value'),
                   Input('txt_to', 'value'),
                   State('upload-data', 'filename'),
                   State('upload-data', 'last_modified'),
                   State('cytoscape-elements', 'elements'),
+                  State("cytoscape-elements", "selectedNodeData"),
                   prevent_initial_call=True)
-    def load_data(contents, n_clicks, txt_from, txt_to, filename, last_modified, elements):
+    def load_data(contents, an_clicks, dn_clicks, txt_from, txt_to, filename, last_modified, elements, selected):
         # For data load
         if ctx.triggered_id == 'upload-data':
             elements, edges, nodes =[], [], []
@@ -74,6 +74,11 @@ def gui():
             edges = elements_to_edges(elements) if elements else pd.DataFrame()
             edges = pd.concat([edges, pd.DataFrame([txt_from,txt_to], index=['source','target']).T], axis=0, ignore_index=True).drop_duplicates()
             elements = edges_to_elements(edges)
+        elif ctx.triggered_id == 'btn-remove':
+            if selected[0]:
+                edges = elements_to_edges(elements) if elements else pd.DataFrame()
+                edges = edges.loc[(edges.source != selected[0]['id']) & (edges.target != selected[0]['id'])] 
+                elements = edges_to_elements(edges)
         return elements
 
     # Save data
@@ -84,7 +89,7 @@ def gui():
     def save_data(n_clicks, elements):
         ele = pd.concat([pd.DataFrame.from_dict(i) for i in elements], axis=1).T.set_index('id')
         edges = ele.drop('label', axis=1).dropna().set_index('source')
-        return dcc.send_data_frame(edges.to_csv, 'mydf.csv', header=False)
+        return dcc.send_data_frame(edges.to_csv, 'mydf.tsv', sep='\t', header=False)
 
     # Other functions
     def parse_contents(contents, filename):
@@ -94,7 +99,9 @@ def gui():
         decoded = base64.b64decode(content_string)
         try:
             if 'csv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8'))).set_axis(['source','target'], axis=1)
+                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), header=None).set_axis(['source','target'], axis=1)
+            elif 'tsv' in filename:
+                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t', header=None).set_axis(['source','target'], axis=1)
             elif 'xls' in filename:
                 df = pd.read_excel(io.BytesIO(decoded))
         except Exception as e:
