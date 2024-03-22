@@ -1,12 +1,12 @@
 from dash import Dash, html, Input, Output, State, dcc, ctx
 import base64
 import dash_cytoscape as cyto
-import os
+import io
 import subprocess
 import numpy as np
 import pandas as pd
 
-def gui():
+def setup_gui():
     app = Dash(__name__)
     app.layout = create_layout()
     register_callbacks(app)
@@ -19,8 +19,7 @@ def create_layout():
             html.Button('Save', id='btn-download'),
             dcc.Download(id='download-data')
         ]),
-        html.Div([
-            'Input: ',
+        html.Div(['Input: ',
             dcc.Input(id='txt_from', value='from', type='text'),
             dcc.Input(id='txt_to', value='to', type='text')
         ]),
@@ -28,7 +27,6 @@ def create_layout():
             html.Button('Add Node', id='btn-add', n_clicks=0),
             html.Button('Remove Node', id='btn-remove', n_clicks=0),
             html.Button('Run Process', id='btn-run', n_clicks=0),
-            html.Button('Execute Pipeline', id='btn-exe', n_clicks=0),
         ]),
         html.Hr(),
         cyto.Cytoscape(
@@ -67,10 +65,10 @@ def register_callbacks(app):
         Output('cytoscape-elements', 'elements'),
         [Input('upload-data', 'contents'),
          Input('btn-add', 'n_clicks_timestamp'),
-         Input('btn-remove', 'n_clicks_timestamp')],
-        [State('txt_from', 'value'),
-         State('txt_to', 'value'),
-         State('upload-data', 'filename'),
+         Input('btn-remove', 'n_clicks_timestamp'),
+         Input('txt_from', 'value'),
+         Input('txt_to', 'value')],
+        [State('upload-data', 'filename'),
          State('upload-data', 'last_modified'),
          State('cytoscape-elements', 'elements'),
          State("cytoscape-elements", "selectedNodeData")],
@@ -79,7 +77,7 @@ def register_callbacks(app):
     def load_data(contents, add_clicks, remove_clicks, txt_from, txt_to, filename, last_modified, elements, selected):
         # For data load
         if ctx.triggered_id == 'upload-data':
-            elements, edges, nodes = [], [], []
+            elements, edges, nodes =[], [], []
             edges = parse_contents(contents, filename)
             nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
             nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
@@ -96,7 +94,7 @@ def register_callbacks(app):
         elif ctx.triggered_id == 'btn-remove':
             if selected[0]:
                 edges = elements_to_edges(elements) if elements else pd.DataFrame()
-                edges = edges.loc[(edges.source != selected[0]['id']) & (edges.target != selected[0]['id'])] 
+                edges = edges.loc[(edges.source != selected[0]['id']) & (edges.target != selected[0]['id'])]
                 elements = edges_to_elements(edges)
         return elements
     @app.callback(
@@ -115,10 +113,25 @@ def register_callbacks(app):
         [State('cytoscape-elements', 'selectedNodeData')],
         prevent_initial_call=True
     )
-    def run_process(n_clicks, data):
+    def display_tapped_node_data(n_clicks, data):
         for process in data:
+            #os.system(process['label'])
             subprocess.call(process['label'], shell=True)
 
+def edges_to_elements(edges):
+    nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
+    nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
+    edges = [
+        {'data': {'source': source, 'target': target}}
+        for source, target in edges[['source','target']].values
+    ]
+    elements = edges+nodes
+    return elements
+
+def elements_to_edges(elements):
+    ele = pd.concat([pd.DataFrame.from_dict(i) for i in elements], axis=1).T.set_index('id')
+    edges = ele.drop('label', axis=1).dropna().reset_index(drop=True)
+    return edges
 
 def parse_contents(contents, filename):
     content_type, content_string = contents.split(',')
@@ -136,20 +149,4 @@ def parse_contents(contents, filename):
         ])
     return df
 
-def elements_to_edges(elements):
-    ele = pd.concat([pd.DataFrame.from_dict(i) for i in elements], axis=1).T.set_index('id')
-    edges = ele.drop('label', axis=1).dropna().reset_index(drop=True)
-    return edges
-
-def edges_to_elements(edges):
-    nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
-    nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
-    edges = [
-        {'data': {'source': source, 'target': target}}
-        for source, target in edges[['source','target']].values
-    ]
-    elements = edges+nodes
-    return elements
-
 setup_gui()
-
