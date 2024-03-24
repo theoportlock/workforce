@@ -2,6 +2,7 @@ from dash import Dash, html, Input, Output, State, dcc, ctx
 import base64
 import dash_cytoscape as cyto
 import os
+import io
 import subprocess
 import numpy as np
 import pandas as pd
@@ -81,13 +82,14 @@ def register_callbacks(app):
         if ctx.triggered_id == 'upload-data':
             elements, edges, nodes = [], [], []
             edges = parse_contents(contents, filename)
-            nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
-            nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
-            edges = [
-                {'data': {'source': source, 'target': target}}
-                for source, target in edges[['source','target']].values
-            ]
-            elements = edges+nodes
+            if edges is not None:
+                nodes = np.concatenate([edges.source.unique(), edges.target.unique()])
+                nodes = [{'data': {'id': name, 'label': name}} for name in nodes]
+                edges = [
+                    {'data': {'source': source, 'target': target}}
+                    for source, target in edges[['source','target']].values
+                ]
+                elements = edges+nodes
         # For adding data
         elif ctx.triggered_id == 'btn-add':
             edges = elements_to_edges(elements) if elements else pd.DataFrame()
@@ -124,17 +126,11 @@ def parse_contents(contents, filename):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     try:
-        if 'csv' in filename:
-            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), header=None).set_axis(['source','target'], axis=1)
-        elif 'tsv' in filename:
-            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t', header=None).set_axis(['source','target'], axis=1)
-        elif 'xls' in filename:
-            df = pd.read_excel(io.BytesIO(decoded))
-    except Exception as e:
-        return html.Div([
-            'There was an error processing this file.'
-        ])
-    return df
+        edges = pd.read_csv(io.StringIO(decoded.decode('utf-8')), sep='\t', header=None).set_axis(['source','target'], axis=1)
+    except:
+        print('There was an error processing this file.')
+        edges = None
+    return edges
 
 def elements_to_edges(elements):
     ele = pd.concat([pd.DataFrame.from_dict(i) for i in elements], axis=1).T.set_index('id')
@@ -151,5 +147,5 @@ def edges_to_elements(edges):
     elements = edges+nodes
     return elements
 
-setup_gui()
+#setup_gui()
 

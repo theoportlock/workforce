@@ -55,11 +55,3 @@ To import and use in a python shell, use the following command:
    steve.run()
 
 The schema should be in the format of a csv with two columns. On the left and right column is the source and target command respectively (see example). Produces a logfile for each run.
-
-Testing
--------
-Testing can be done within the github directory by running:
-
-.. code-block:: bash
-
-   python -m unittest -v
