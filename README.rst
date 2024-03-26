@@ -14,7 +14,7 @@ workforce
         :alt: Documentation Status
 
 
-Run bash commands with python multiprocessing according to a csv file edgelist.
+Build and run a pipeline of bash commands with python multiprocessing according to a tsv file edgelist.
 
 * Free software: MIT license
 * Documentation: https://workforce.readthedocs.io.
@@ -22,7 +22,7 @@ Run bash commands with python multiprocessing according to a csv file edgelist.
 
 Installation
 ------------
-Installation can be done with 
+Installation can be done with:
 
 .. code-block:: bash
 
@@ -30,13 +30,17 @@ Installation can be done with
 
 Building a workforce workflow
 -----------------------------
-To build a workflow, simply run:
+To launch the pipeline builder, run:
 
 .. code-block:: bash
 
    workforce
 
-Then, paste the IP address into into your browsers address bar and build your program.
+To open a previously constructed pipeline, run:
+
+.. code-block:: bash
+
+   workforce <PIPELINE.tsv>
 
 Running workforce
 -----------------
@@ -44,7 +48,9 @@ To run a sample plan from workforce github project:
 
 .. code-block:: bash
 
-   workforce example_plan.csv
+   workforce -r example_plan.tsv
+
+To run individual process(es) from the builder, select the process(es) in the order that you wish them to be excecuted and click the 'Run Process' button. The command line from where the builder was launched will display the standard output and error for each process.
 
 To import and use in a python shell, use the following command:
 
@@ -54,4 +60,6 @@ To import and use in a python shell, use the following command:
    steve = worker("<PLAN.CSV>")
    steve.run()
 
-The schema should be in the format of a csv with two columns. On the left and right column is the source and target command respectively (see example). Produces a logfile for each run.
+The schema should be in the format of a tsv with two columns. On the left and right column is the source and target process respectively (see example).
+
+This is tested on mac and linux but requires work for windows integration.
