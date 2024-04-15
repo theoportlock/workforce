@@ -50,7 +50,11 @@ To run a sample plan from workforce github project:
 
    workforce -r example_plan.tsv
 
-To run individual process(es) from the builder, select the process(es) in the order that you wish them to be excecuted and click the 'Run Process' button. The command line from where the builder was launched will display the standard output and error for each process.
+To run individual process(es) from the builder, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
+
+Deleting processes from the project can be done by selecting a process and clicking the 'Delete' button
+
+The simplest way to edit a process is to click the edge that the process is connected to. This will fill the 'Input' box with the connection details. You can then add a new node with those connections and delete the old process.
 
 To import and use in a python shell, use the following command:
 

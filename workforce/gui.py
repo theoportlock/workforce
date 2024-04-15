@@ -32,9 +32,9 @@ def create_layout():
             dcc.Input(id='txt_to', value='to', type='text')
         ]),
         html.Div([
-            html.Button('Add Node', id='btn-add', n_clicks=0),
-            html.Button('Remove Node', id='btn-remove', n_clicks=0),
-            html.Button('Run Process', id='btn-runproc', n_clicks=0),
+            html.Button('Add', id='btn-add', n_clicks=0),
+            html.Button('Remove', id='btn-remove', n_clicks=0),
+            html.Button('Run', id='btn-runproc', n_clicks=0),
         ]),
         html.Hr(),
         cyto.Cytoscape(
@@ -109,6 +109,15 @@ def register_callbacks(app):
     def run_process(n_clicks, data):
         execute_process(data)
 
+    @app.callback(
+        [Output('txt_from', 'value'),
+         Output('txt_to', 'value')],
+        [Input('cytoscape-elements', 'tapEdgeData')],
+        prevent_initial_call=True
+    )
+    def update_text_boxes(tap_edge_data):
+        return tap_edge_data['source'], tap_edge_data['target']
+
 def handle_upload(contents):
     edges = decode(contents)
     if edges is not None:
@@ -164,3 +173,18 @@ def execute_process(data):
     for process in data:
         subprocess.call(process['label'], shell=True)
 
+if __name__ == '__main__':
+    import argparse
+    import sys
+    from workforce import worker
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--run", required=False)
+    parser.add_argument("pipeline", nargs='?')
+    args = parser.parse_args()
+    if args.run:
+        current_worker = worker(args.run)
+        current_worker.run()
+    elif args.pipeline:
+        gui(args.pipeline)
+    else:
+        gui()
