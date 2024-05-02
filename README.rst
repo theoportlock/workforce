@@ -61,9 +61,8 @@ To import and use in a python shell, use the following command:
 .. code-block:: python
 
    from workforce.workforce import worker
-   steve = worker("<PLAN.CSV>")
-   steve.run()
+   worker("<PLAN.CSV>")
 
 The schema should be in the format of a tsv with two columns. On the left and right column is the source and target process respectively (see example).
 
-This is tested on mac and linux but requires work for windows integration.
+This is tested on mac and linux but requires work for windows integration except for wsl2

@@ -11,8 +11,7 @@ def main():
     parser.add_argument("pipeline", nargs='?')
     args = parser.parse_args()
     if args.run:
-        current_worker = worker(args.run)
-        current_worker.run()
+        worker(args.run)
     elif args.pipeline:
         gui(args.pipeline)
     else:

@@ -28,8 +28,8 @@ def create_layout():
         ]),
         html.Div([
             'Input: ',
-            dcc.Input(id='txt_from', value='from', type='text'),
-            dcc.Input(id='txt_to', value='to', type='text')
+            dcc.Input(id='txt_from', value='echo "from"', type='text'),
+            dcc.Input(id='txt_to', value='echo "to"', type='text')
         ]),
         html.Div([
             html.Button('Add', id='btn-add', n_clicks=0),
@@ -40,8 +40,10 @@ def create_layout():
         cyto.Cytoscape(
             id='cytoscape-elements',
             layout={'name': 'breadthfirst', 'directed': True},
-            style={'width': '100%', 'height': '650px'},
+            style={'width': '100%', 'height': '85vh'},
             stylesheet=create_stylesheet(),
+            autoRefreshLayout=True,
+            responsive=True,
             elements=[]
         ),
         html.Hr()
@@ -57,7 +59,8 @@ def create_stylesheet():
                 'font-size': '14px',
                 'width': '30px',
                 'height': '30px',
-            }
+            },
+            "text-wrap": "wrap",
         },
         {
             'selector': 'edge',
@@ -182,8 +185,7 @@ if __name__ == '__main__':
     parser.add_argument("pipeline", nargs='?')
     args = parser.parse_args()
     if args.run:
-        current_worker = worker(args.run)
-        current_worker.run()
+        worker(args.run)
     elif args.pipeline:
         gui(args.pipeline)
     else:

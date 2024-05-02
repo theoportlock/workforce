@@ -10,3 +10,4 @@ cat another-file.txt	"echo ""3"""
 cp file.txt another-file.txt	cat another-file.txt
 "echo ""add text"" >> file.txt"	cp file.txt another-file.txt
 "echo ""add more text"" >> file.txt"	cp file.txt another-file.txt
+"echo ""begin2"""	"echo ""start"""
