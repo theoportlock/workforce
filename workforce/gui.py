@@ -35,6 +35,7 @@ def create_layout():
             html.Button('Add', id='btn-add', n_clicks=0),
             html.Button('Remove', id='btn-remove', n_clicks=0),
             html.Button('Run', id='btn-runproc', n_clicks=0),
+            html.Button('Swap', id='btn-swap', n_clicks=0),
         ]),
         html.Hr(),
         cyto.Cytoscape(
@@ -115,11 +116,18 @@ def register_callbacks(app):
     @app.callback(
         [Output('txt_from', 'value'),
          Output('txt_to', 'value')],
-        [Input('cytoscape-elements', 'tapEdgeData')],
+        [Input('cytoscape-elements', 'tapEdgeData'),
+         Input('btn-swap', 'n_clicks')],
+        [State('txt_to', 'value'),
+         State('txt_from', 'value')],
         prevent_initial_call=True
     )
-    def update_text_boxes(tap_edge_data):
-        return tap_edge_data['source'], tap_edge_data['target']
+    def update_text_boxes(tap_edge_data, n_clicks, txt_to, txt_from):
+        print(txt_to, txt_from)
+        if ctx.triggered_id == 'btn-swap':
+            return txt_to, txt_from
+        elif ctx.triggered_id == 'cytoscape-elements':
+            return tap_edge_data['source'], tap_edge_data['target']
 
 def handle_upload(contents):
     edges = decode(contents)
