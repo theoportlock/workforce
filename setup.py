@@ -27,7 +27,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    description="Run bash commands with python multiprocessing according to a csv file edgelist.",
+    description="Run bash commands with python multiprocessing according to a tsv file edgelist.",
     entry_points={
         'console_scripts': [
             'workforce=workforce.cli:main',
@@ -40,5 +40,5 @@ setup(
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.13',
+    version='1.0.14',
 )
