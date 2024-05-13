@@ -10,7 +10,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ["networkx", "pydot", "dash_cytoscape", "dash", "pandas", "matplotlib", "openpyxl", ]
+requirements = ["networkx", "pydot", "dash_cytoscape", "dash", "pandas", "matplotlib", "openpyxl", "filelock"]
 
 setup(
     author="Theo Portlock",
@@ -40,5 +40,5 @@ setup(
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.14',
+    version='1.0.15',
 )

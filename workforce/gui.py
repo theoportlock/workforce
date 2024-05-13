@@ -10,6 +10,7 @@ import webbrowser
 
 def gui(pipeline_file=None):
     app = Dash(__name__)
+    app.title = "Workforce"
     app.layout = create_layout()
     if pipeline_file:
         edges = pd.read_csv(pipeline_file, sep='\t', header=None).set_axis(['source','target'], axis=1)
@@ -24,19 +25,16 @@ def create_layout():
         html.Div([
             dcc.Upload(html.Button('Load'), id='upload-data'),
             html.Button('Save', id='btn-download'),
-            dcc.Download(id='download-data')
-        ]),
-        html.Div([
-            'Input: ',
-            dcc.Input(id='txt_from', value='echo "from"', type='text'),
-            dcc.Input(id='txt_to', value='echo "to"', type='text')
-        ]),
-        html.Div([
-            html.Button('Add', id='btn-add', n_clicks=0),
+            dcc.Download(id='download-data'),
             html.Button('Remove', id='btn-remove', n_clicks=0),
             html.Button('Run', id='btn-runproc', n_clicks=0),
             html.Button('Swap', id='btn-swap', n_clicks=0),
-        ]),
+        ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
+        html.Div([
+            html.Button('+', id='btn-add', n_clicks=0, style={'margin-right': '2px', 'background-color': 'lightgreen'}),
+            dcc.Input(id='txt_from', value='echo "from"', type='text', style={'width': '400px', 'margin-right': '2px'}),
+            dcc.Input(id='txt_to', value='echo "to"', type='text', style={'width': '400px', 'margin-right': '2px'})
+        ], style={'margin-top': '2px'}),
         html.Hr(),
         cyto.Cytoscape(
             id='cytoscape-elements',
@@ -68,6 +66,7 @@ def create_stylesheet():
             'style': {
                 'curve-style': 'taxi',
                 'target-arrow-shape': 'triangle',
+                'line-color': 'lightgray',
             }
         }
     ]
@@ -123,7 +122,6 @@ def register_callbacks(app):
         prevent_initial_call=True
     )
     def update_text_boxes(tap_edge_data, n_clicks, txt_to, txt_from):
-        print(txt_to, txt_from)
         if ctx.triggered_id == 'btn-swap':
             return txt_to, txt_from
         elif ctx.triggered_id == 'cytoscape-elements':
