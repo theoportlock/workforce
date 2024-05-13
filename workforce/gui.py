@@ -2,6 +2,7 @@
 from dash import Dash, html, Input, Output, State, dcc, ctx
 import base64
 import dash_cytoscape as cyto
+import datetime
 import io
 import numpy as np
 import pandas as pd
@@ -18,10 +19,10 @@ def gui(pipeline_file=None):
         app.layout['cytoscape-elements'].elements = elements
     register_callbacks(app)
     webbrowser.open_new('http://127.0.0.1:8050/')
-    app.run_server()
+    app.run_server(debug=False)
 
 def create_layout():
-    layout = html.Div([
+    return html.Div([
         html.Div([
             dcc.Upload(html.Button('Load'), id='upload-data'),
             html.Button('Save', id='btn-download'),
@@ -45,9 +46,9 @@ def create_layout():
             responsive=True,
             elements=[]
         ),
-        html.Hr()
+        html.Hr(),
+        'workforce: ' + str(datetime.datetime.now()),
     ])
-    return layout
 
 def create_stylesheet():
     return [

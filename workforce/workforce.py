@@ -5,8 +5,8 @@ import time
 import subprocess
 import pandas as pd
 import networkx as nx
-from multiprocessing import Process, Lock
-from filelock import SoftFileLock
+from multiprocessing import Process
+from filelock import FileLock
 
 def read_edges(filename):
     edges = pd.read_csv(filename, sep='\t', header=None)
@@ -16,9 +16,6 @@ def read_edges(filename):
     elif edges.shape[1] == 3:
         edges.columns = ['source', 'target', 'status']
     return edges
-
-def update_filename(filename):
-    return f"{os.getpid()}_{os.path.basename(filename)}"
 
 def save_edges(edges, filename):
     edges.to_csv(filename, sep='\t', index=False, header=None)
@@ -49,20 +46,14 @@ def ready_to_run(edges, node):
 def run(filename, node, action, lock):
     status = 'starting' if action == 'start' else 'running'
     column = 'source' if action == 'start' else 'target'
-    lock.acquire()
-    save_edges(set_edges(read_edges(filename), node, column, status), filename)
-    lock.release()
+    with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
     try:
         subprocess.run(node, shell=True, check=True)
         status = 'started' if action == 'start' else 'ran'
-        lock.acquire()
-        save_edges(set_edges(read_edges(filename), node, column, status), filename)
-        lock.release()
+        with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
     except subprocess.CalledProcessError:
         status = 'failed'
-        lock.acquire()
-        save_edges(set_edges(read_edges(filename), node, column, status), filename)
-        lock.release()
+        with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
 
 def scheduler(filename, lock):
     edges = read_edges(filename)
@@ -76,11 +67,8 @@ def scheduler(filename, lock):
             if ready_to_run(edges, node):
                 edges = set_edges(edges, node, 'source', 'run')
                 edges = set_edges(edges, node, 'target', np.nan)
-    lock.acquire()
-    save_edges(edges, filename)
-    lock.release()
+    with lock: save_edges(edges, filename)
     return True if edges['status'].isnull().all() else False
-
 
 def runner(filename, lock):
     edges = read_edges(filename)
@@ -91,17 +79,17 @@ def runner(filename, lock):
 
 def worker(filename=None):
     edges = read_edges(filename)
-    filename = update_filename(filename)
-    lock = SoftFileLock(filename + '.lock')
-    save_edges(edges, filename)
-
+    filename = f"{os.getpid()}_{os.path.basename(filename)}"
+    lock = FileLock(filename + '.lock')
+    with lock: save_edges(edges, filename)
     while True:
         time.sleep(1)
         completed = scheduler(filename, lock)
-        if completed: break
-        edges = read_edges(filename); edges
+        if completed:
+            os.remove(filename + '.lock')
+            os.remove(filename)
+            break
         runner(filename, lock)
-        edges = read_edges(filename); edges
 
 if __name__ == "__main__":
     filename = sys.argv[1]
