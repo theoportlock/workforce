@@ -19,7 +19,7 @@ def gui(pipeline_file=None):
         app.layout['cytoscape-elements'].elements = elements
     register_callbacks(app)
     webbrowser.open_new('http://127.0.0.1:8050/')
-    app.run_server(debug=False)
+    app.run_server(debug=False, use_reloader=False)
 
 def create_layout():
     return html.Div([
