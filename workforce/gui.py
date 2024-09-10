@@ -14,7 +14,9 @@ def gui(pipeline_file=None):
     app.title = "Workforce"
     app.layout = create_layout()
     if pipeline_file:
-        edges = pd.read_csv(pipeline_file, sep='\t', header=None).set_axis(['source','target'], axis=1)
+        edges = pd.read_csv(pipeline_file,
+                            sep='\t',
+                            header=None).set_axis(['source','target'], axis=1)
         elements = edges_to_elements(edges)
         app.layout['cytoscape-elements'].elements = elements
     register_callbacks(app)
@@ -32,9 +34,9 @@ def create_layout():
             html.Button('Swap', id='btn-swap', n_clicks=0),
         ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
         html.Div([
-            html.Button('+', id='btn-add', n_clicks=0, style={'margin-right': '2px', 'background-color': 'lightgreen'}),
             dcc.Input(id='txt_from', value='echo "from"', type='text', style={'width': '400px', 'margin-right': '2px'}),
-            dcc.Input(id='txt_to', value='echo "to"', type='text', style={'width': '400px', 'margin-right': '2px'})
+            dcc.Input(id='txt_to', value='echo "to"', type='text', style={'width': '400px', 'margin-right': '2px'}),
+            html.Button('+', id='btn-add', n_clicks=0, style={'margin-right': '2px', 'background-color': 'lightgreen'})
         ], style={'margin-top': '2px'}),
         html.Hr(),
         cyto.Cytoscape(
@@ -56,11 +58,12 @@ def create_stylesheet():
             'selector': 'node',
             'style': {
                 'label': 'data(id)',
-                'font-size': '14px',
+                'font-size': '13px',
                 'width': '30px',
                 'height': '30px',
-            },
-            "text-wrap": "wrap",
+                'text-max-width': '250px',
+                "text-wrap": "wrap",
+                },
         },
         {
             'selector': 'edge',
