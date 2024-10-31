@@ -30,6 +30,7 @@ def create_layout():
             html.Button('Remove', id='btn-remove', n_clicks=0),
             html.Button('Run', id='btn-runproc', n_clicks=0),
             html.Button('Connect', id='btn-connect', n_clicks=0),
+            html.Button('Update', id='btn-update', n_clicks=0),
         ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
         html.Div([
             dcc.Input(id='txt_node', value='echo "Input bash command"', type='text', style={'width': '400px', 'margin-right': '2px'}),
@@ -54,7 +55,7 @@ def create_stylesheet():
         {
             'selector': 'node',
             'style': {
-                'label': 'data(id)',
+                'label': 'data(label)',
                 'font-size': '10px',
                 'width': '30px',
                 'height': '30px',
@@ -78,7 +79,8 @@ def register_callbacks(app):
         [Input('upload-data', 'contents'),
          Input('btn-add', 'n_clicks'),
          Input('btn-remove', 'n_clicks'),
-         Input('btn-connect', 'n_clicks')],
+         Input('btn-connect', 'n_clicks'),
+         Input('btn-update', 'n_clicks')],
         [State('txt_node', 'value'),
          State('upload-data', 'filename'),
          State('upload-data', 'last_modified'),
@@ -87,7 +89,7 @@ def register_callbacks(app):
          State("cytoscape-elements", "selectedEdgeData")],
         prevent_initial_call=True
     )
-    def modify_network(contents, add_clicks, remove_clicks, connect_clicks, txt_node, filename, last_modified, elements, selected_nodes, selected_edges):
+    def modify_network(contents, add_clicks, remove_clicks, connect_clicks, update_clicks, txt_node, filename, last_modified, elements, selected_nodes, selected_edges):
         if ctx.triggered_id == 'upload-data':
             elements = handle_upload(contents)
         elif ctx.triggered_id == 'btn-add':
@@ -96,6 +98,8 @@ def register_callbacks(app):
             elements = remove(elements, selected_nodes, selected_edges)  # Pass selected edges to remove
         elif ctx.triggered_id == 'btn-connect':
             elements = connect_nodes(elements, selected_nodes)
+        elif ctx.triggered_id == 'btn-update':
+            elements = update_node(elements, selected_nodes, txt_node)
         return elements
     @app.callback(
         Output('download-data', 'data'),
@@ -127,15 +131,16 @@ def load(pipeline_file):
     return elements
 
 def add_node(elements, txt_node):
-    elements.append({'data':{'id':txt_node,'label':txt_node}})
+    #elements.append({'data':{'id':txt_node,'label':txt_node}})
+    elements.append({'data':{'label':txt_node}})
     return elements
 
 def remove(elements, selected_nodes, selected_edges):
-    selected_node_ids = {node['id'] for node in selected_nodes}
-    selected_edge_pairs = {(edge['source'], edge['target']) for edge in selected_edges}
+    selected_node_labels = {node['label'] for node in selected_nodes} if selected_nodes else set()
+    selected_edge_pairs = {(edge['source'], edge['target']) for edge in selected_edges} if selected_edges else set()
     elements = [
         el for el in elements
-        if el['data'].get('id') not in selected_node_ids and
+        if el['data'].get('label') not in selected_node_labels and
            (el['data'].get('source'), el['data'].get('target')) not in selected_edge_pairs
     ]
     return elements
@@ -147,6 +152,15 @@ def connect_nodes(elements, selected_nodes):
         source_node = selected_nodes[i]['id']
         target_node = selected_nodes[i + 1]['id']
         elements.append({'data': {'source': source_node, 'target': target_node}})
+    return elements
+
+def update_node(elements, selected_nodes, txt_node_value):
+    if len(selected_nodes) == 1:
+        selected_id = selected_nodes[0]['id']
+        for element in elements:
+            if element['data'].get('id') == selected_id:
+                element['data']['label'] = txt_node_value
+                break
     return elements
 
 def save_elements(elements):
