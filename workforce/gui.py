@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import subprocess
 import webbrowser
+import networkx as nx
+from networkx.readwrite import json_graph
 
 def gui(pipeline_file=None):
     app = Dash(__name__)
@@ -122,16 +124,39 @@ def register_callbacks(app):
 def handle_upload(contents):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
-    elements = json.load(io.StringIO(decoded.decode('utf-8')))
+    elements = load(io.BytesIO(decoded))
     return elements
 
 def load(pipeline_file):
-    with open(pipeline_file, 'r') as f:
-        elements = json.load(f)
-    return elements
+    # Reads graphml format and converts to dash-cytoscape json using nx
+    G = nx.read_graphml(pipeline_file)
+    graph = json_graph.node_link_data(G)
+    elements = graph['nodes'] + graph['links']
+    dash_cytoscape_data = []
+    for element in elements:
+        if 'source' in element and 'target' in element:
+            updated_element = {
+                'data': {
+                    'source': element.get('source'),
+                    'target': element.get('target'),
+                    'id': element.get('id')
+                }
+            }
+        else:
+            updated_element = {
+                'data': {
+                    'label': element.get('label'),
+                    'id': element.get('id')
+                },
+                'position': {
+                    'x': float(element.get('x', 0)),
+                    'y': float(element.get('y', 0))
+                }
+            }
+        dash_cytoscape_data.append(updated_element)
+    return dash_cytoscape_data
 
 def add_node(elements, txt_node):
-    #elements.append({'data':{'id':txt_node,'label':txt_node}})
     elements.append({'data':{'label':txt_node}})
     return elements
 
@@ -164,8 +189,20 @@ def update_node(elements, selected_nodes, txt_node_value):
     return elements
 
 def save_elements(elements):
-    json_data = json.dumps(elements)
-    return dcc.send_string(json_data, 'network_data.json')
+    G = nx.DiGraph()
+    for element in elements:
+        data = element['data']
+        if 'source' in data and 'target' in data:
+            G.add_edge(data['source'], data['target'], id=data['id'])
+        else:
+            node_id = data['id']
+            label = data.get('label', node_id)
+            pos = element.get('position', {})
+            G.add_node(node_id, label=label, x=pos.get('x', 0), y=pos.get('y', 0))
+    graphml_bytes = io.BytesIO()
+    nx.write_graphml(G, graphml_bytes)
+    graphml_bytes.seek(0)
+    return dcc.send_string(graphml_bytes.getvalue().decode('utf-8'), 'network_data.graphml')
 
 def execute_process(data):
     for process in data:

@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d4" for="edge" attr.name="id" attr.type="string"/>
+<key id="d3" for="node" attr.name="status" attr.type="string"/>
+<key id="d2" for="node" attr.name="y" attr.type="double"/>
+<key id="d1" for="node" attr.name="x" attr.type="double"/>
+<key id="d0" for="node" attr.name="label" attr.type="string"/>
+<graph edgedefault="directed"><node id="cc8eb939-7ec4-4a0f-a2a1-ca80c0497a54">
+  <data key="d0">echo one</data>
+  <data key="d1">95.69689410846884</data>
+  <data key="d2">-13.907507102268827</data>
+  <data key="d3">ran</data>
+</node>
+<node id="a1129b41-1841-46c7-ad5f-7012ee25f100">
+  <data key="d0">echo two</data>
+  <data key="d1">75.49789569803077</data>
+  <data key="d2">54.967766166110124</data>
+  <data key="d3">ran</data>
+</node>
+<node id="b26fc1b7-9183-42b8-bdf1-406a775c54ca">
+  <data key="d0">echo three</data>
+  <data key="d1">3.311311214825911</data>
+  <data key="d2">107.28648336035951</data>
+  <data key="d3">ran</data>
+</node>
+<node id="34247c10-0887-44f5-94f7-be3fdd9c87dc">
+  <data key="d0">echo four</data>
+  <data key="d1">128.81000625672792</data>
+  <data key="d2">106.95535223887693</data>
+  <data key="d3">ran</data>
+</node>
+<edge source="cc8eb939-7ec4-4a0f-a2a1-ca80c0497a54" target="a1129b41-1841-46c7-ad5f-7012ee25f100">
+  <data key="d4">d7fc3fc0-2220-43f9-b835-32e58813b37c</data>
+</edge>
+<edge source="a1129b41-1841-46c7-ad5f-7012ee25f100" target="b26fc1b7-9183-42b8-bdf1-406a775c54ca">
+  <data key="d4">8b812f1c-c4c8-4888-ad72-e25497f1e8bd</data>
+</edge>
+<edge source="a1129b41-1841-46c7-ad5f-7012ee25f100" target="34247c10-0887-44f5-94f7-be3fdd9c87dc">
+  <data key="d4">b7ef740b-9236-4edc-bb7c-e7df231d2607</data>
+</edge>
+</graph></graphml>

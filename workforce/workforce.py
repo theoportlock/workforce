@@ -1,97 +1,98 @@
-import numpy as np
-import sys
+#!/usr/bin/env python
 import os
 import time
 import subprocess
-import pandas as pd
 import networkx as nx
 from multiprocessing import Process
 from filelock import FileLock
+import argparse
 
-def read_edges(filename):
-    edges = pd.read_csv(filename, sep='\t', header=None)
-    if edges.shape[1] == 2:
-        edges.columns = ['source', 'target']
-        edges['status'] = np.nan
-    elif edges.shape[1] == 3:
-        edges.columns = ['source', 'target', 'status']
-    return edges
+def read_graph(filename):
+    return nx.read_graphml(filename)
 
-def save_edges(edges, filename):
-    edges.to_csv(filename, sep='\t', index=False, header=None)
+def write_graph(G, filename):
+    nx.write_graphml(G, filename)
 
-def set_edges(edges, node, column, status):
-    edges.loc[edges[column] == node, 'status'] = status
-    return edges
+def update_node_status(filename, node, status, lock):
+    with lock:
+        G = read_graph(filename)
+        nx.set_node_attributes(G, {node: status}, 'status')
+        write_graph(G, filename)
 
-def to_nodes(edges):
-    G = nx.from_pandas_edgelist(edges, create_using=nx.DiGraph())
-    indegree = pd.DataFrame(G.in_degree(), columns=['nodes', 'in_degree']).set_index('nodes')
-    outdegree = pd.DataFrame(G.out_degree(), columns=['nodes', 'out_degree']).set_index('nodes')
-    run = edges.loc[edges['status'] == 'run'].groupby('target').count().status.to_frame('run')
-    start = edges.loc[edges['status'] == 'start'].groupby('source').count().status.to_frame('start')
-    nodes = pd.concat([indegree, outdegree, run, start], axis=1)
-    nodes.loc[nodes['out_degree'] == nodes['start'], 'action'] = 'start'
-    nodes.loc[nodes['in_degree'] == nodes['run'], 'action'] = 'run'
-    return nodes
-
-def ready_to_run(edges, node):
-    df = edges.loc[edges.target == node, 'status']
-    if not df.empty:
-        if (df == 'ran').all():
-            return True
-    else:
-        return False
-
-def run(filename, node, action, lock):
-    status = 'starting' if action == 'start' else 'running'
-    column = 'source' if action == 'start' else 'target'
-    with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
+def execute_node(filename, node, lock):
+    """Execute a node's label as a command and update its status."""
+    with lock:
+        G = read_graph(filename)
+    update_node_status(filename, node, 'running', lock)
     try:
-        subprocess.run(node, shell=True, check=True)
-        status = 'started' if action == 'start' else 'ran'
-        with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
+        subprocess.run(G.nodes[node].get('label'), shell=True, check=True)
+        update_node_status(filename, node, 'ran', lock)
     except subprocess.CalledProcessError:
-        status = 'failed'
-        with lock: save_edges(set_edges(read_edges(filename), node, column, status), filename)
+        update_node_status(filename, node, 'fail', lock)
 
-def scheduler(filename, lock):
-    edges = read_edges(filename)
-    nodes = to_nodes(edges)
-    if edges['status'].isnull().all():
-        for node in nodes.loc[nodes.in_degree == 0].index.to_list():
-            edges = set_edges(edges, node, 'source', 'start')
-    else:
-        edges = set_edges(edges, 'started', 'status', 'run')
-        for node in nodes.index:
-            if ready_to_run(edges, node):
-                edges = set_edges(edges, node, 'source', 'run')
-                edges = set_edges(edges, node, 'target', np.nan)
-    with lock: save_edges(edges, filename)
-    return True if edges['status'].isnull().all() else False
+# FIX THIS
+def schedule_nodes(filename, lock):
+    """Set the run status for nodes that are ready to execute."""
+    with lock:
+        G = read_graph(filename)
+        nodes_with_status = nx.get_node_attributes(G, 'status')
+        for node in G.nodes:
+            predecessors = list(G.predecessors(node))
+            if not predecessors:
+                G.nodes[node]['status'] = 'to_run'
+            elif all(G.nodes[pred].get('status') == 'ran' for pred in predecessors):
+                G.nodes[node]['status'] = 'to_run'
+                [del G.nodes[pred].get('status') == 'ran' for pred in predecessors]
+        write_graph(G, filename)
+    remaining_nodes = [status for status in nx.get_node_attributes(G, 'status').values()]
+    return not any(status == 'to_run' for status in remaining_nodes) or 'fail' in remaining_nodes
+def schedule_nodes(filename, lock):
+    """Set the run status for nodes that are ready to execute."""
+    with lock:
+        G = read_graph(filename)
+        # Set all first runners to run
+        nodes_with_status = nx.get_node_attributes(G, 'status')
+        if not nodes_with_status:
+            to_run = {node: 'to_run' for node, degree in G.in_degree() if degree == 0}
+            nx.set_node_attributes(G, to_run, 'status')
+        else:
+            ran_nodes = [node for node, status in nodes_with_status.items() if status == 'ran']
+            successor_nodes = (G.successors(node) for node in ran_nodes)
+            successors_that_have_all_ran_nodes = 
+            for node in ran_nodes:
+                for successor in G.successors(node):
+                    if G.nodes[successor].get('status') != 'ran':
+                        G.nodes[successor]['status'] = 'to_run'
+        write_graph(G, filename)
+    return not bool(nx.get_node_attributes(G, 'status'))
 
-def runner(filename, lock):
-    edges = read_edges(filename)
-    nodes = to_nodes(edges).query('action == action')  # dropna
-    for node in nodes.index:
-        action = nodes.loc[node, 'action']
-        Process(target=run, args=[filename, node, action, lock]).start()
+def run_tasks(filename, lock):
+    with lock:
+        G = read_graph(filename)
+        nodes_to_run = [
+            node for node, status in nx.get_node_attributes(G, 'status').items() 
+            if status == 'to_run'
+        ]
+    processes = []
+    for node in nodes_to_run:
+        p = Process(target=execute_node, args=(filename, node, lock))
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()
 
-def worker(filename=None):
-    edges = read_edges(filename)
-    filename = f"{os.getpid()}_{os.path.basename(filename)}"
-    lock = FileLock(filename + '.lock')
-    with lock: save_edges(edges, filename)
+def worker(filename):
+    lock = FileLock(f"{filename}.lock")
     while True:
-        time.sleep(1)
-        completed = scheduler(filename, lock)
-        if completed:
-            os.remove(filename + '.lock')
-            os.remove(filename)
+        if schedule_nodes(filename, lock):  # Break if no more tasks or a failure is detected
+            os.remove(f"{filename}.lock")
             break
-        runner(filename, lock)
+        run_tasks(filename, lock)
 
 if __name__ == "__main__":
-    filename = sys.argv[1]
-    worker(filename)
+    parser = argparse.ArgumentParser(description="Process graph nodes with dependencies.")
+    parser.add_argument("filename", help="Path to the GraphML file")
+    args = parser.parse_args()
+    
+    worker(args.filename)
 
