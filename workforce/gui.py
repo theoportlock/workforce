@@ -33,6 +33,7 @@ def create_layout():
             html.Button('Run', id='btn-runproc', n_clicks=0),
             html.Button('Connect', id='btn-connect', n_clicks=0),
             html.Button('Update', id='btn-update', n_clicks=0),
+            html.Button('Clear', id='btn-clear', n_clicks=0),
         ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
         html.Div([
             dcc.Input(id='txt_node', value='echo "Input bash command"', type='text', style={'width': '400px', 'margin-right': '2px'}),
@@ -120,6 +121,18 @@ def register_callbacks(app):
     def run_process(n_clicks, data):
         execute_process(data)
         return dash.no_update
+    @app.callback(
+        Output('txt_node', 'value'),
+        [Input('cytoscape-elements', 'tapNodeData'),
+         Input('btn-clear', 'n_clicks')],
+        prevent_initial_call=True
+    )
+    def update_text_box(tap_node_data, n_clicks):
+        if ctx.triggered_id == 'cytoscape-elements':
+            text = tap_node_data['label']
+        elif ctx.triggered_id == 'btn-clear':
+            text = ''
+        return text
 
 def handle_upload(contents):
     content_type, content_string = contents.split(',')

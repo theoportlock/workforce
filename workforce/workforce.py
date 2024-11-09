@@ -7,6 +7,9 @@ from multiprocessing import Process
 from filelock import FileLock
 import argparse
 
+# WRITE FUNCTION TO BE CALLED BY CLI
+# UPDATE NETWORK (NODE/EDGE STATUS) - FOR LOOPS
+
 def read_graph(filename):
     return nx.read_graphml(filename)
 
@@ -30,48 +33,53 @@ def execute_node(filename, node, lock):
     except subprocess.CalledProcessError:
         update_node_status(filename, node, 'fail', lock)
 
-# FIX THIS
-def schedule_nodes(filename, lock):
+def schedule_tasks(filename, lock):
     """Set the run status for nodes that are ready to execute."""
     with lock:
         G = read_graph(filename)
-        nodes_with_status = nx.get_node_attributes(G, 'status')
-        for node in G.nodes:
-            predecessors = list(G.predecessors(node))
-            if not predecessors:
-                G.nodes[node]['status'] = 'to_run'
-            elif all(G.nodes[pred].get('status') == 'ran' for pred in predecessors):
-                G.nodes[node]['status'] = 'to_run'
-                [del G.nodes[pred].get('status') == 'ran' for pred in predecessors]
-        write_graph(G, filename)
-    remaining_nodes = [status for status in nx.get_node_attributes(G, 'status').values()]
-    return not any(status == 'to_run' for status in remaining_nodes) or 'fail' in remaining_nodes
-def schedule_nodes(filename, lock):
-    """Set the run status for nodes that are ready to execute."""
-    with lock:
-        G = read_graph(filename)
-        # Set all first runners to run
-        nodes_with_status = nx.get_node_attributes(G, 'status')
-        if not nodes_with_status:
-            to_run = {node: 'to_run' for node, degree in G.in_degree() if degree == 0}
-            nx.set_node_attributes(G, to_run, 'status')
+        node_status = nx.get_node_attributes(G, 'status')
+        edge_status = nx.get_edge_attributes(G, 'status')
+        node_updates, edge_updates = {}, {}
+        if not node_status:
+            node_updates |= {node:'run' for node, degree in G.in_degree() if degree == 0}
         else:
-            ran_nodes = [node for node, status in nodes_with_status.items() if status == 'ran']
-            successor_nodes = (G.successors(node) for node in ran_nodes)
-            successors_that_have_all_ran_nodes = 
-            for node in ran_nodes:
-                for successor in G.successors(node):
-                    if G.nodes[successor].get('status') != 'ran':
-                        G.nodes[successor]['status'] = 'to_run'
+# 1. for all ran nodes - mark all forward edges to_run and remove run status
+            ran_nodes = [node for node, status in node_status.items() if status == 'ran']
+            forward_edges = [list(G.out_edges(node)) for node in ran_nodes]
+# 2. run all nodes that have all target edges set to to_run and remove to_run on edges
+            successor_nodes = [list(G.successors(node)) for node in ran_nodes]
+            unique_nodes = set(node for sublist in successor_nodes for node in sublist)
+            to_run = {node: 'to_run' for node in unique_nodes}
+            nx.set_node_attributes(G, to_run, 'status')
+            # Run nodes that are marked to_run if all predecessors are ran
+            filtered_nodes = {
+                node for node in unique_nodes
+                if all(pred in ran_nodes for pred in G.predecessors(node))
+            }
+            run = {node: 'run' for node in filtered_nodes}
+            nx.set_node_attributes(G, run, 'status')
+            #the ran nodes that have no successors marked as to_run, delete attr
+            filtered_nodes = {
+                node for node in ran_nodes
+                if any(succ == 'to_run' in ran_nodes for succ in G.successors(node))
+            }
+            predecessor_nodes = [list(G.predecessors(node)) for node in filtered_nodes]
+            remove_nodes = ran_nodes if not predecessor_nodes else set(node for sublist in predecessor_nodes for node in sublist)
+            [G.nodes[node].pop('status', None) for node in remove_nodes]
+
+            nx.set_node_attributes(G, node_updates, 'status')
+            nx.set_edge_attributes(G, edge_updates, 'status')
+
         write_graph(G, filename)
-    return not bool(nx.get_node_attributes(G, 'status'))
+        run_complete = not bool(nx.get_node_attributes(G, 'status'))
+    return run_complete
 
 def run_tasks(filename, lock):
     with lock:
         G = read_graph(filename)
         nodes_to_run = [
             node for node, status in nx.get_node_attributes(G, 'status').items() 
-            if status == 'to_run'
+            if status == 'run'
         ]
     processes = []
     for node in nodes_to_run:
@@ -83,11 +91,11 @@ def run_tasks(filename, lock):
 
 def worker(filename):
     lock = FileLock(f"{filename}.lock")
-    while True:
-        if schedule_nodes(filename, lock):  # Break if no more tasks or a failure is detected
-            os.remove(f"{filename}.lock")
-            break
-        run_tasks(filename, lock)
+    tasks = [schedule_tasks, run_tasks]
+    processes = [Process(target=task, args=(filename, lock)) for task in tasks]
+    [p.start() for p in processes]
+    #[p.join() for p in processes]
+    os.remove(f"{filename}.lock")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process graph nodes with dependencies.")
