@@ -64,7 +64,6 @@ def run_tasks(filename, lock):
     with lock:
         G = read_graph(filename)
         nodes_to_run = [ node for node, status in nx.get_node_attributes(G, 'status').items() if status == 'run' ]
-    processes = []
     [multiprocessing.Process(target=execute_node, args=(filename, node, lock)).start() for node in nodes_to_run]
 
 def worker(filename):
