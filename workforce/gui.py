@@ -63,7 +63,17 @@ def create_stylesheet():
                 'width': '30px',
                 'height': '30px',
                 'text-max-width': '150px',
-                "text-wrap": "wrap",
+                'text-wrap': 'wrap',
+                'background-color': 'lightgray',
+            },
+        },
+        {
+            'selector': 'node:selected',
+            'style': {
+                'border-width': '1.5px',
+                'border-color': 'black',
+                'border-opacity': '1',
+                'background-color': 'gray',
             },
         },
         {
@@ -72,8 +82,16 @@ def create_stylesheet():
                 'curve-style': 'bezier',
                 'target-arrow-shape': 'triangle',
                 'line-color': 'lightgray',
-            }
-        }
+                'target-arrow-color': 'lightgray',
+            },
+        },
+        {
+            'selector': 'edge:selected',
+            'style': {
+                'line-color': 'gray',
+                'target-arrow-color': 'gray',
+            },
+        },
     ]
 
 def register_callbacks(app):
