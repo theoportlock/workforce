@@ -47,7 +47,10 @@ def create_layout():
             stylesheet=create_stylesheet(),
             autoRefreshLayout=False,
             responsive=True,
-            elements=[]
+            elements=[],
+            zoomingEnabled=True,
+            userZoomingEnabled=True,
+            wheelSensitivity=0.1,
         ),
         html.Hr(),
         'workforce: ' + str(datetime.datetime.now()),
@@ -70,9 +73,6 @@ def create_stylesheet():
         {
             'selector': 'node:selected',
             'style': {
-                'border-width': '1.5px',
-                'border-color': 'black',
-                'border-opacity': '1',
                 'background-color': 'gray',
             },
         },

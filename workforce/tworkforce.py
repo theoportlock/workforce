@@ -35,6 +35,9 @@ def schedule_tasks(filename, lock):
         G = read_graph(filename)
         node_status = nx.get_node_attributes(G, 'status')
         edge_status = nx.get_edge_attributes(G, 'status')
+        #
+        # If no statuses on the nodes or edges then start at first degree
+        #
         if not node_status or edge_status:
             node_updates = {node:'run' for node, degree in G.in_degree() if degree == 0}
             nx.set_node_attributes(G, node_updates, 'status')
@@ -52,13 +55,11 @@ def schedule_tasks(filename, lock):
             reverse_edges = [(u, v) for node in run for u, v in G.in_edges(node)]
             [G.edges[edge].pop('status', None) for edge in reverse_edges]
         write_graph(G, filename)
-        #run_complete = not bool(nx.get_node_attributes(G, 'status'))
         if bool(nx.get_node_attributes(G, 'status')):
             run_tasks(filename, lock)
         else:
             os.remove(filename + '.lock')
             os.remove(filename)
-    #return run_complete
 
 def run_tasks(filename, lock):
     with lock:
@@ -68,25 +69,11 @@ def run_tasks(filename, lock):
 
 def worker(filename):
     multiprocessing.set_start_method('fork')
-    #tasks = [schedule_tasks, run_tasks]
-    #processes = [Process(target=task, args=(filename, lock)) for task in tasks]
-    #[p.start() for p in processes]
-    #[p.join() for p in processes]
-    #os.remove(f"{filename}.lock")
     G = read_graph(filename)
     filename = f"{os.getpid()}_{os.path.basename(filename)}"
     write_graph(G, filename)
-    lock = FileLock(f"{filename}.lock")
+    lock = FileLock(f"{filename}.lock", thread_local=False) # Testing the thread_local
     schedule_tasks(filename, lock)
-    #completed = schedule_tasks(filename, lock)
-    #while True:
-        #time.sleep(1)
-        #completed = schedule_tasks(filename, lock)
-        #if completed:
-        #    os.remove(filename + '.lock')
-        #    os.remove(filename)
-        #    break
-        #run_tasks(filename, lock)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process graph nodes with dependencies.")
