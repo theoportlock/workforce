@@ -38,12 +38,13 @@
   <data key="d0">echo "three p1"</data>
   <data key="d1">-106.20025286073282</data>
   <data key="d2">82.20175416233344</data>
+  <data key="d3">run</data>
 </node>
 <node id="a99e51a9-66a1-443f-bce5-ff72c22e0cc0">
   <data key="d0">echo "three p2"</data>
   <data key="d1">51.30713514830209</data>
   <data key="d2">77.23654753507842</data>
-  <data key="d3">ran</data>
+  <data key="d3">run</data>
 </node>
 <node id="22f9abf7-50dc-440c-b302-312e6a6b1dbb">
   <data key="d0">echo "four"</data>

@@ -8,6 +8,7 @@
   <data key="d0">echo one</data>
   <data key="d1">-80.22320636260056</data>
   <data key="d2">-166.92909606763345</data>
+  <data key="d3">ran</data>
 </node>
 <node id="fa20471d-c97e-4676-ac11-20064bbee6fc">
   <data key="d0">echo two</data>
@@ -43,7 +44,6 @@
   <data key="d0">echo "three p2"</data>
   <data key="d1">51.30713514830209</data>
   <data key="d2">77.23654753507842</data>
-  <data key="d3">ran</data>
 </node>
 <node id="22f9abf7-50dc-440c-b302-312e6a6b1dbb">
   <data key="d0">echo "four"</data>
