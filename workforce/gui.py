@@ -116,7 +116,7 @@ def register_callbacks(app):
         elif ctx.triggered_id == 'btn-add':
             elements = add_node(elements, txt_node)
         elif ctx.triggered_id == 'btn-remove':
-            elements = remove(elements, selected_nodes, selected_edges)  # Pass selected edges to remove
+            elements = remove(elements, selected_nodes, selected_edges)
         elif ctx.triggered_id == 'btn-connect':
             elements = connect_nodes(elements, selected_nodes)
         elif ctx.triggered_id == 'btn-update':
@@ -148,6 +148,7 @@ def register_callbacks(app):
     def update_text_box(tap_node_data, n_clicks):
         if ctx.triggered_id == 'cytoscape-elements':
             text = tap_node_data['label']
+            #print(n_clicks) # Just for testing
         elif ctx.triggered_id == 'btn-clear':
             text = ''
         return text

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from dash import Dash, html, Input, Output, State, dcc, ctx
+from dash import Dash, html, Input, Output, State, dcc, ctx, callback_context
 import dash
 import base64
 import dash_cytoscape as cyto
@@ -12,13 +12,6 @@ import subprocess
 import webbrowser
 import networkx as nx
 from networkx.readwrite import json_graph
-
-status_colors = {
-    'running': 'lightblue',
-    'run': 'lightcyan',
-    'ran': 'lightgreen',
-    'fail': 'lightcoral'
-}
 
 def gui(pipeline_file=None):
     app = Dash(__name__)
@@ -61,10 +54,11 @@ def create_layout():
         ),
         html.Hr(),
         'workforce: ' + str(datetime.datetime.now()),
+        dcc.Store(id='store-double-click-node', data=None)
     ])
 
 def create_stylesheet():
-    stylesheet = [
+    return [
         {
             'selector': 'node',
             'style': {
@@ -74,7 +68,7 @@ def create_stylesheet():
                 'height': '30px',
                 'text-max-width': '150px',
                 'text-wrap': 'wrap',
-                'background-color': 'data(color)',
+                'background-color': 'lightgray',
             },
         },
         {
@@ -88,8 +82,8 @@ def create_stylesheet():
             'style': {
                 'curve-style': 'bezier',
                 'target-arrow-shape': 'triangle',
-                'line-color': 'data(color)',
-                'target-arrow-color': 'data(color)',
+                'line-color': 'lightgray',
+                'target-arrow-color': 'lightgray',
             },
         },
         {
@@ -100,23 +94,6 @@ def create_stylesheet():
             },
         },
     ]
-
-    for status, color in status_colors.items():
-        stylesheet.append({
-            'selector': f'node[status = "{status}"]',
-            'style': {
-                'background-color': color,
-            },
-        })
-        stylesheet.append({
-            'selector': f'edge[status = "{status}"]',
-            'style': {
-                'line-color': color,
-                'target-arrow-color': color,
-            },
-        })
-
-    return stylesheet
 
 def register_callbacks(app):
     @app.callback(
@@ -174,10 +151,45 @@ def register_callbacks(app):
     )
     def update_text_box(tap_node_data, n_clicks):
         if ctx.triggered_id == 'cytoscape-elements':
-            text = tap_node_data['label']
+            text = tap_node_data['label'] if tap_node_data else ''
         elif ctx.triggered_id == 'btn-clear':
             text = ''
         return text
+
+    # New callbacks for double-click edge creation
+    @app.callback(
+        Output('store-double-click-node', 'data'),
+        Input('cytoscape-elements', 'tapNode'),
+        prevent_initial_call=True
+    )
+    def store_double_clicked_node(tap_node):
+        if tap_node and tap_node.get('tapCount') == 2:
+            return tap_node['data']['id']
+        return dash.no_update
+
+    @app.callback(
+        Output('cytoscape-elements', 'elements', allow_duplicate=True),
+        Output('store-double-click-node', 'data', allow_duplicate=True),
+        Input('cytoscape-elements', 'tapNode'),
+        State('store-double-click-node', 'data'),
+        State('cytoscape-elements', 'elements'),
+        prevent_initial_call=True
+    )
+    def connect_nodes_on_double_then_single(tap_node, stored_node_id, elements):
+        if tap_node and tap_node.get('tapCount') == 1 and stored_node_id is not None:
+            target_node_id = tap_node['data']['id']
+            if stored_node_id != target_node_id:
+                edge_id = f"{stored_node_id}->{target_node_id}"
+                new_edge = {
+                    'data': {
+                        'source': stored_node_id,
+                        'target': target_node_id,
+                        'id': edge_id
+                    }
+                }
+                elements.append(new_edge)
+            return elements, None
+        return dash.no_update, dash.no_update
 
 def handle_upload(contents):
     content_type, content_string = contents.split(',')
@@ -196,18 +208,14 @@ def load(pipeline_file):
                 'data': {
                     'source': element.get('source'),
                     'target': element.get('target'),
-                    'id': element.get('id'),
-                    'status': element.get('status', ''),
-                    'color': status_colors.get(element.get('status', ''), 'lightgray')
+                    'id': element.get('id')
                 }
             }
         else:
             updated_element = {
                 'data': {
                     'label': element.get('label'),
-                    'id': element.get('id'),
-                    'status': element.get('status', ''),
-                    'color': status_colors.get(element.get('status', ''), 'lightgray')
+                    'id': element.get('id')
                 },
                 'position': {
                     'x': float(element.get('x', 0)),
@@ -218,24 +226,17 @@ def load(pipeline_file):
     return dash_cytoscape_data
 
 def add_node(elements, txt_node):
-    new_node = {
-        'data': {
-            'label': txt_node,
-            'id': str(len(elements) + 1),
-            'status': 'run',
-            'color': status_colors.get('run', 'lightgray')
-        }
-    }
-    elements.append(new_node)
+    new_id = f"node{len(elements) + 1}"
+    elements.append({'data': {'id': new_id, 'label': txt_node}})
     return elements
 
 def remove(elements, selected_nodes, selected_edges):
-    selected_node_labels = {node['label'] for node in selected_nodes} if selected_nodes else set()
-    selected_edge_pairs = {(edge['source'], edge['target']) for edge in selected_edges} if selected_edges else set()
+    selected_node_ids = {node['id'] for node in selected_nodes} if selected_nodes else set()
+    selected_edge_ids = {edge['id'] for edge in selected_edges} if selected_edges else set()
     elements = [
         el for el in elements
-        if el['data'].get('label') not in selected_node_labels and
-           (el['data'].get('source'), el['data'].get('target')) not in selected_edge_pairs
+        if el['data'].get('id') not in selected_node_ids and
+           el['data'].get('id') not in selected_edge_ids
     ]
     return elements
 
@@ -245,16 +246,8 @@ def connect_nodes(elements, selected_nodes):
     for i in range(len(selected_nodes) - 1):
         source_node = selected_nodes[i]['id']
         target_node = selected_nodes[i + 1]['id']
-        new_edge = {
-            'data': {
-                'source': source_node,
-                'target': target_node,
-                'id': f'{source_node}-{target_node}',
-                'status': 'to_run',
-                'color': status_colors.get('to_run', 'lightgray')
-            }
-        }
-        elements.append(new_edge)
+        edge_id = f"{source_node}->{target_node}"
+        elements.append({'data': {'source': source_node, 'target': target_node, 'id': edge_id}})
     return elements
 
 def update_node(elements, selected_nodes, txt_node_value):
@@ -271,12 +264,12 @@ def save_elements(elements):
     for element in elements:
         data = element['data']
         if 'source' in data and 'target' in data:
-            G.add_edge(data['source'], data['target'], id=data['id'], status=data.get('status', ''))
+            G.add_edge(data['source'], data['target'], id=data['id'])
         else:
             node_id = data['id']
             label = data.get('label', node_id)
             pos = element.get('position', {})
-            G.add_node(node_id, label=label, x=pos.get('x', 0), y=pos.get('y', 0), status=data.get('status', ''))
+            G.add_node(node_id, label=label, x=pos.get('x', 0), y=pos.get('y', 0))
     graphml_bytes = io.BytesIO()
     nx.write_graphml(G, graphml_bytes)
     graphml_bytes.seek(0)
