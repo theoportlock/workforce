@@ -35,9 +35,6 @@ def schedule_tasks(filename, lock):
         G = read_graph(filename)
         node_status = nx.get_node_attributes(G, 'status')
         edge_status = nx.get_edge_attributes(G, 'status')
-        #
-        # If no statuses on the nodes or edges then start at first degree
-        #
         if not node_status or edge_status:
             node_updates = {node:'run' for node, degree in G.in_degree() if degree == 0}
             nx.set_node_attributes(G, node_updates, 'status')
