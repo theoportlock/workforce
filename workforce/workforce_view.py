@@ -5,6 +5,16 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import textwrap
 
+def parse_args():
+    """Parse command-line arguments for network visualization."""
+    parser = argparse.ArgumentParser(description='Generate network graph PDF from GraphML')
+    parser.add_argument('graphml_file', help='Input GraphML file')
+    parser.add_argument('--output_file', help='Output PDF file (default: graphml_file.pdf)')
+    args = parser.parse_args()
+    if args.output_file is None:
+        args.output_file = args.graphml_file + '.pdf'
+    return args
+
 def plot_network(graphml_file, output_file, max_label_width=150):
     G = nx.read_graphml(graphml_file)
 
@@ -52,15 +62,11 @@ def plot_network(graphml_file, output_file, max_label_width=150):
             font_size=6,
             arrows=True,
             arrowsize=12,
-            #connectionstyle='arc3,rad=0.1')  # For better curved edges
             )
     
     plt.savefig(output_file, format='pdf', bbox_inches='tight')
     plt.close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Generate network graph PDF from GraphML')
-    parser.add_argument('graphml_file', help='Input GraphML file')
-    parser.add_argument('--output_file', default='network.pdf', help='Output PDF file')
-    args = parser.parse_args()
+    args = parse_args()
     plot_network(args.graphml_file, args.output_file)
