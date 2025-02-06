@@ -7,8 +7,7 @@ import argparse
 
 def update_node_status(filename, node, status):
     """Update the status of a node in the GraphML file."""
-    lock = FileLock(f"{filename}.lock")
-    with lock:
+    with FileLock(f"{filename}.lock"):
         G = nx.read_graphml(filename)
         nx.set_node_attributes(G, {node: status}, 'status')
         nx.write_graphml(G, filename)
@@ -21,7 +20,7 @@ def run_node(filename, node, prefix='bash -c'):
     try:
         label = G.nodes[node].get('label', '')
         escaped_label = label.replace('"', '\\"')
-        command = f"{prefix} \"echo \\\"{escaped_label}\\\"\""
+        command = f"{prefix} \"{escaped_label}\""
         subprocess.run(command, shell=True, check=True)
         update_node_status(filename, node, 'ran')
     except subprocess.CalledProcessError:

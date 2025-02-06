@@ -3,6 +3,7 @@ from workforce_schedule import schedule_tasks
 import argparse
 import networkx as nx
 import subprocess
+import time
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Schedule tasks with a graph.")
@@ -18,11 +19,13 @@ def run_tasks(filename, prefix='bash -c'):
     
     if run_nodes:
         node_to_run = run_nodes.pop()
-        subprocess.run(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}'", shell=True)
+        #subprocess.run(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}' &", shell=True)
+        subprocess.Popen(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}' &", shell=True)
 
 def worker(filename, prefix='bash -c'):
     while schedule_tasks(filename) != 'complete':
         run_tasks(filename, prefix)
+        time.sleep(2)
 
 if __name__ == "__main__":
     args = parse_arguments()

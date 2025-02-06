@@ -7,8 +7,7 @@ from filelock import FileLock
 import argparse
 
 def schedule_tasks(filename):
-    lock = FileLock(f"{filename}.lock")
-    with lock:
+    with FileLock(f"{filename}.lock"):
         G = nx.read_graphml(filename)
         node_status = nx.get_node_attributes(G, "status")
         if not node_status:
