@@ -20,7 +20,9 @@ def run_tasks(filename, prefix='bash -c'):
     if run_nodes:
         node_to_run = run_nodes.pop()
         #subprocess.run(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}' &", shell=True)
-        subprocess.Popen(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}' &", shell=True)
+        #subprocess.Popen(f"workforce_run_node.py {filename} {node_to_run} -p '{prefix}' &", shell=True)
+        command = ["workforce_run_node.py", filename, node_to_run, "-p", prefix]
+        subprocess.Popen(command)
 
 def worker(filename, prefix='bash -c'):
     while schedule_tasks(filename) != 'complete':
