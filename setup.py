@@ -38,6 +38,7 @@ setup(
              'workforce/workforce_run.py',
              'workforce/workforce_schedule.py',
              'workforce/workforce_edit.py',
+             'workforce/workforce_edit_element.py',
              'workforce/workforce_view.py'],
     license="MIT license",
     long_description=readme + '\n\n' + history,

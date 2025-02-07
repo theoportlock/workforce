@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-import os
-import time
-import subprocess
-import networkx as nx
+
 from filelock import FileLock
 import argparse
+import networkx as nx
 
 def schedule_tasks(filename):
     with FileLock(f"{filename}.lock"):
@@ -22,7 +20,7 @@ def schedule_tasks(filename):
                 edge_status = nx.get_edge_attributes(G, "status")
                 ready_nodes = {
                     node for node in G.nodes
-                    if G.in_degree(node) > 0 and  # Exclude nodes with in-degree of 0
+                    if G.in_degree(node) > 0 and
                     all(edge_status.get((u, node)) == 'to_run' for u, _ in G.in_edges(node))}
                 if ready_nodes:
                     nx.set_node_attributes(G, {node: 'run' for node in ready_nodes}, 'status')
