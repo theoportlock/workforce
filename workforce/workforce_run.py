@@ -22,13 +22,13 @@ def run_tasks(filename, prefix='bash -c'):
     
     if run_nodes:
         node_to_run = run_nodes.pop()
-        edit_element_status(filename,'node',node_to_run,'running')
+        edit_element_status(filename,'node',node_to_run,'run')
         subprocess.Popen(["workforce_run_node.py", filename, node_to_run, "-p", prefix])
 
 def worker(filename, prefix='bash -c', speed=2):
     while schedule_tasks(filename) != 'complete':
-        run_tasks(filename, prefix)
         time.sleep(speed)
+        run_tasks(filename, prefix)
 
 if __name__ == "__main__":
     args = parse_arguments()

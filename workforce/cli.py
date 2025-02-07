@@ -23,7 +23,7 @@ def main():
     if args.run:
         worker(args.pipeline)
     elif args.view:
-        plot_network(args.pipeline, args.pipeline+'.pdf')
+        plot_network(args.pipeline)
     elif args.pipeline:
         gui(args.pipeline)
     else:
