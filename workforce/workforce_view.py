@@ -5,6 +5,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import textwrap
 
+import matplotlib as mpl
+mpl.use('WebAgg')
+
 def parse_args():
     """Parse command-line arguments for network visualization."""
     parser = argparse.ArgumentParser(description='Generate network graph PDF from GraphML')
@@ -64,8 +67,9 @@ def plot_network(graphml_file, output_file, max_label_width=150):
             arrowsize=12,
             )
     
-    plt.savefig(output_file, format='pdf', bbox_inches='tight')
-    plt.close()
+    #plt.savefig(output_file, format='pdf', bbox_inches='tight')
+    #plt.close()
+    plt.show()
 
 if __name__ == "__main__":
     args = parse_args()
