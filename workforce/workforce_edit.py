@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
+
 from dash import Dash, html, Input, Output, State, dcc, ctx
-import dash
+from networkx.readwrite import json_graph
 import base64
+import dash
 import dash_cytoscape as cyto
 import datetime
 import io
 import json
+import networkx as nx
 import numpy as np
 import pandas as pd
 import subprocess
 import webbrowser
-import networkx as nx
-from networkx.readwrite import json_graph
 
 def gui(pipeline_file=None):
     app = Dash(__name__)

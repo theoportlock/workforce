@@ -55,14 +55,22 @@
 </node>
 <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
   <data key="d0">sleep 8; echo "start p6"</data>
-  <data key="d1">244.51064231686166</data>
-  <data key="d2">-233.2763695617627</data>
+  <data key="d1">164.84370271134375</data>
+  <data key="d2">-215.30638318457818</data>
+</node>
+<node id="ade6c799-c635-43fe-badb-a1be99bbce16">
+  <data key="d0">ls</data>
+  <data key="d1">65.29095050377038</data>
+  <data key="d2">-66.48894959558267</data>
 </node>
 <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="fa20471d-c97e-4676-ac11-20064bbee6fc">
   <data key="d3">fe91b12a-7fd5-4577-a25c-1b1767957ad3</data>
 </edge>
 <edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="03349b87-b2c7-440f-9e76-2f2b9e11ec1e">
   <data key="d3">fb1bd678-fc55-42ba-9cdb-e7a8303a7f2a</data>
+</edge>
+<edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="ade6c799-c635-43fe-badb-a1be99bbce16">
+  <data key="d3">92aa443a-6f7e-4d10-8a8b-350a3266bfaa</data>
 </edge>
 <edge source="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" target="4db400a9-6bd0-4539-ac3a-0aa55484b243">
   <data key="d3">e8184823-601e-4054-a833-a9c836f9799f</data>

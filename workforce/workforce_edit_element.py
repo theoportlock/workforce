@@ -5,7 +5,7 @@ import networkx as nx
 from filelock import FileLock
 
 # Allowed status values
-ALLOWED_VALUES = {"run", "ran", "running", "to_run"}
+ALLOWED_VALUES = {"run", "ran", "running", "to_run", "fail"}
 
 def edit_element_status(filename, element_type, element_id, value):
     """
