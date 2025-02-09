@@ -5,6 +5,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import textwrap
 import matplotlib as mpl
+from filelock import FileLock
 from matplotlib.animation import FuncAnimation
 
 mpl.use('WebAgg')
@@ -15,7 +16,7 @@ _animation = None
 def parse_args():
     """Parse command-line arguments for network visualization."""
     parser = argparse.ArgumentParser(description='Display network graph from GraphML')
-    parser.add_argument('graphml_file', help='Input GraphML file')
+    parser.add_argument('filename', help='Input GraphML file')
     return parser.parse_args()
 
 def wrap_label(text, max_pixels, font_size=6):
@@ -23,12 +24,12 @@ def wrap_label(text, max_pixels, font_size=6):
     max_chars = int(max_pixels / (font_size * 0.6))
     return "\n".join(textwrap.wrap(text, max_chars))
 
-def plot_network(graphml_file, interval=1000, max_label_width=150):
+def plot_network(filename, interval=100, max_label_width=150):
     """
     Load and display the network graph with automatic updates.
 
     Parameters:
-        graphml_file (str): Path to the GraphML file.
+        filename (str): Path to the GraphML file.
         interval (int): Update interval in milliseconds.
         max_label_width (int): Maximum width for node labels.
     """
@@ -39,7 +40,8 @@ def plot_network(graphml_file, interval=1000, max_label_width=150):
     def update(_):
         ax.clear()  # Clear the axis to prevent over-plotting
 
-        G = nx.read_graphml(graphml_file)
+        with FileLock(f"{filename}.lock"):
+            G = nx.read_graphml(filename)
 
         # Determine node positions
         if all('x' in G.nodes[node] and 'y' in G.nodes[node] for node in G.nodes):
@@ -86,7 +88,7 @@ def plot_network(graphml_file, interval=1000, max_label_width=150):
 
 def main():
     args = parse_args()
-    plot_network(args.graphml_file)
+    plot_network(args.filename)
 
 if __name__ == "__main__":
     main()

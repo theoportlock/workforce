@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from workforce_edit_element import edit_element_status
+from filelock import FileLock
 import argparse
 import networkx as nx
 import subprocess
@@ -12,6 +13,7 @@ def run_node(filename, node, prefix='bash -c'):
         label = G.nodes[node].get('label', '')
         escaped_label = label.replace('"', '\\"')
         command = f"{prefix} \"{escaped_label}\""
+        edit_element_status(filename,'node',node,'running')
         subprocess.run(command, shell=True, check=True)
         edit_element_status(filename,'node',node,'ran')
     except subprocess.CalledProcessError:

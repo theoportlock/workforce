@@ -2,6 +2,7 @@
 
 from workforce_schedule import schedule_tasks
 from workforce_edit_element import edit_element_status
+from filelock import FileLock
 import argparse
 import networkx as nx
 import subprocess
@@ -16,18 +17,23 @@ def parse_arguments():
     return parser.parse_args()
 
 def run_tasks(filename, prefix='bash -c'):
-    G = nx.read_graphml(filename)
-    node_status = nx.get_node_attributes(G, "status")
-    run_nodes = {node for node, status in node_status.items() if status == 'run'}
-    
-    if run_nodes:
-        node_to_run = run_nodes.pop()
-        edit_element_status(filename,'node',node_to_run,'run')
-        subprocess.Popen(["workforce_run_node.py", filename, node_to_run, "-p", prefix])
+    lock = FileLock(f"{filename}.lock")
+    with lock:
+        G = nx.read_graphml(filename)
+        node_status = nx.get_node_attributes(G, "status")
+        run_nodes = {node for node, status in node_status.items() if status == 'run'}
+        
+        if run_nodes:
+            node = run_nodes.pop()
+            #subprocess.Popen(["workforce_run_node.py", filename, node, "-p", prefix])
+            #edit_element_status(filename,'node',node,'running')
+            subprocess.run(f"workforce_run_node.py {filename} {node} -p '{prefix}' &", shell=True)
 
 def worker(filename, prefix='bash -c', speed=2):
-    while schedule_tasks(filename) != 'complete':
+    status = ''
+    while status != 'complete':
         time.sleep(speed)
+        status = schedule_tasks(filename)
         run_tasks(filename, prefix)
 
 if __name__ == "__main__":
