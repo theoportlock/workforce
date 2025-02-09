@@ -22,14 +22,11 @@ def run_tasks(filename, prefix='bash -c'):
         G = nx.read_graphml(filename)
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
-        
         if run_nodes:
             node = run_nodes.pop()
-            #subprocess.Popen(["workforce_run_node.py", filename, node, "-p", prefix])
-            #edit_element_status(filename,'node',node,'running')
-            subprocess.run(f"workforce_run_node.py {filename} {node} -p '{prefix}' &", shell=True)
+            subprocess.Popen(["workforce_run_node.py", filename, node, "-p", prefix])
 
-def worker(filename, prefix='bash -c', speed=2):
+def worker(filename, prefix='bash -c', speed=1):
     status = ''
     while status != 'complete':
         time.sleep(speed)
