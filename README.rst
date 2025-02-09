@@ -40,7 +40,7 @@ To open a previously constructed pipeline, run:
 
 .. code-block:: bash
 
-   workforce <PIPELINE.tsv>
+   workforce <PIPELINE.graphml>
 
 Running workforce
 -----------------
@@ -48,7 +48,7 @@ To run a sample plan from workforce github project:
 
 .. code-block:: bash
 
-   workforce -r example_plan.tsv
+   workforce -r example_plan.graphml
 
 To run individual process(es) from the builder, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
@@ -61,8 +61,7 @@ To import and use in a python shell, use the following command:
 .. code-block:: python
 
    from workforce.workforce import worker
-   worker("<PLAN.CSV>")
+   worker("<PLAN.GRAPHML>")
 
-The schema should be in the format of a tsv with two columns. On the left and right column is the source and target process respectively (see example).
 
 This is tested on mac and linux but requires work for windows integration except for wsl2

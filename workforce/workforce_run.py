@@ -13,7 +13,7 @@ def parse_arguments():
     parser.add_argument("filename", help="Path to the input GraphML file.")
     parser.add_argument("--prefix", '-p', default='bash -c', type=str, help="Prefix for node execution")
     parser.add_argument("--run_task", action="store_true", help="Run a single task and exit")
-    parser.add_argument("--speed", type=float, default=2, help="Seconds inbetween job submission")
+    parser.add_argument("--speed", type=float, default=0.5, help="Seconds inbetween job submission")
     return parser.parse_args()
 
 def run_tasks(filename, prefix='bash -c'):
@@ -26,7 +26,7 @@ def run_tasks(filename, prefix='bash -c'):
             node = run_nodes.pop()
             subprocess.Popen(["workforce_run_node.py", filename, node, "-p", prefix])
 
-def worker(filename, prefix='bash -c', speed=1):
+def worker(filename, prefix='bash -c', speed=0.5):
     status = ''
     while status != 'complete':
         time.sleep(speed)
