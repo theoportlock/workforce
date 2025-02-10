@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-"""The setup script."""
-
-from setuptools import setup, find_packages
+from setuptools import setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -10,7 +8,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ["networkx", "pydot", "dash_cytoscape", "dash", "pandas", "matplotlib", "openpyxl", "filelock"]
+requirements = ["networkx", "pydot", "dash_cytoscape", "dash", "pandas", "matplotlib", "openpyxl", "filelock", "tornado"]
 
 setup(
     author="Theo Portlock",
@@ -30,21 +28,18 @@ setup(
     description="Run bash commands with python multiprocessing according to a tsv file edgelist.",
     entry_points={
         'console_scripts': [
-            'workforce=workforce.cli:main',
+            'wf_edit=workforce.edit:main',
+            'wf_run=workforce.run:main',
+            'wf_run_node=workforce.run_node:main',
+            'wf_view=workforce.view:main',
         ],
     },
     install_requires=requirements,
-    scripts=['workforce/workforce_run_node.py',
-             'workforce/workforce_run.py',
-             'workforce/workforce_schedule.py',
-             'workforce/workforce_edit.py',
-             'workforce/workforce_edit_element.py',
-             'workforce/workforce_view.py'],
     license="MIT license",
     long_description=readme + '\n\n' + history,
     keywords='workforce',
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.24',
+    version='1.0.25',
 )

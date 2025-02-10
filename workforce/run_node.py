@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from workforce_edit_element import edit_element_status
+from .edit_element import edit_element_status
 from filelock import FileLock
 import argparse
 import networkx as nx
@@ -26,6 +26,9 @@ def parse_arguments():
     parser.add_argument("--prefix", '-p', default='bash -c', required=False, type=str, help="Prefix for command execution.")
     return parser.parse_args()
 
-if __name__ == '__main__':
+def main():
     args = parse_arguments()
     run_node(args.filename, args.node, args.prefix)
+
+if __name__ == '__main__':
+    main()

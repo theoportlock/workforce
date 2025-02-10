@@ -30,27 +30,35 @@ Installation can be done with:
 
 Building a workforce workflow
 -----------------------------
-To launch the pipeline builder, run:
+To launch the pipeline editor, run:
 
 .. code-block:: bash
 
-   workforce
+   wf_edit
 
 To open a previously constructed pipeline, run:
 
 .. code-block:: bash
 
-   workforce <PIPELINE.graphml>
+   wf_edit <PIPELINE.graphml>
 
-Running workforce
+Running workforce plan
 -----------------
 To run a sample plan from workforce github project:
 
 .. code-block:: bash
 
-   workforce -r example_plan.graphml
+   wf_run example_plan.graphml
 
-To run individual process(es) from the builder, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
+Live viewing workforce plan
+-----------------
+To view a plan as it is excecuting:
+
+.. code-block:: bash
+
+   wf_run example_plan.graphml
+
+To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
 Deleting processes from the project can be done by selecting a process and clicking the 'Delete' button
 
@@ -60,8 +68,12 @@ To import and use in a python shell, use the following command:
 
 .. code-block:: python
 
-   from workforce.workforce import worker
-   worker("<PLAN.GRAPHML>")
+   from workforce.run import run_tasks
+   from workforce.view import plot_network
+   from workforce.edit import gui
+   run_tasks("<PLAN.GRAPHML>")
+   plot_network("<PLAN.GRAPHML>")
+   gui("<PLAN.GRAPHML>")
 
 
 This is tested on mac and linux but requires work for windows integration except for wsl2

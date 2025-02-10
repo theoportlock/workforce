@@ -35,7 +35,10 @@ def parse_arguments():
     parser.add_argument("filename", type=str, help="Path to the input GraphML file.")
     return parser.parse_args()
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
     schedule_tasks(args.filename)
+
+if __name__ == "__main__":
+    main()
 

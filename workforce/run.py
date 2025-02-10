@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from workforce_schedule import schedule_tasks
-from workforce_edit_element import edit_element_status
+from .schedule import schedule_tasks
+from .edit_element import edit_element_status
 from filelock import FileLock
 import argparse
 import networkx as nx
@@ -24,7 +24,7 @@ def run_tasks(filename, prefix='bash -c'):
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
         if run_nodes:
             node = run_nodes.pop()
-            subprocess.Popen(["workforce_run_node.py", filename, node, "-p", prefix])
+            subprocess.Popen(["wf_run_node", filename, node, "-p", prefix])
 
 def worker(filename, prefix='bash -c', speed=0.5):
     status = ''
@@ -33,10 +33,12 @@ def worker(filename, prefix='bash -c', speed=0.5):
         status = schedule_tasks(filename)
         run_tasks(filename, prefix)
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
-
     if args.run_task:
         run_tasks(args.filename, args.prefix)
     else:
         worker(args.filename, args.prefix, args.speed)
+
+if __name__ == "__main__":
+    main()

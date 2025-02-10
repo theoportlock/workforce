@@ -2,6 +2,7 @@
 
 from dash import Dash, html, Input, Output, State, dcc, ctx
 from networkx.readwrite import json_graph
+import argparse
 import base64
 import dash
 import dash_cytoscape as cyto
@@ -12,6 +13,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import subprocess
+import sys
 import webbrowser
 
 def gui(pipeline_file=None):
@@ -241,17 +243,17 @@ def execute_process(data):
     for process in data:
         subprocess.call(process['label'], shell=True)
 
-if __name__ == '__main__':
-    import argparse
-    import sys
-    from workforce import worker
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--run", required=False)
+def parse_args():
+    parser = argparse.ArgumentParser('Platform for editing graphml pipelines')
     parser.add_argument("pipeline", nargs='?')
-    args = parser.parse_args()
-    if args.run:
-        worker(args.run)
-    elif args.pipeline:
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    if args.pipeline:
         gui(args.pipeline)
     else:
         gui()
+
+if __name__ == '__main__':
+    main()

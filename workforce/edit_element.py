@@ -66,12 +66,14 @@ def process_arguments(args):
 
     return element_id, args.value
 
-if __name__ == "__main__":
+def main():
     args = parse_arguments()
-
     try:
         element_id, value = process_arguments(args)
-        edit_element_status(args.filename, args.type, element_id, value)
+        main(args.filename, args.type, element_id, value)
     except Exception as e:
         print(f"Operation failed: {str(e)}")
         exit(1)
+
+if __name__ == "__main__":
+    main()
