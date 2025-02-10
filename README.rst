@@ -43,7 +43,7 @@ To open a previously constructed pipeline, run:
    wf_edit <PIPELINE.graphml>
 
 Running workforce plan
------------------
+----------------------
 To run a sample plan from workforce github project:
 
 .. code-block:: bash
@@ -51,7 +51,7 @@ To run a sample plan from workforce github project:
    wf_run example_plan.graphml
 
 Live viewing workforce plan
------------------
+---------------------------
 To view a plan as it is excecuting:
 
 .. code-block:: bash
