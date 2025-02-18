@@ -76,4 +76,4 @@ To import and use in a python shell, use the following command:
    gui("<PLAN.GRAPHML>")
 
 
-This is tested on mac and linux but requires work for windows integration except for wsl2
+This is tested on mac and linux but work requires work for windows integration except for wsl2

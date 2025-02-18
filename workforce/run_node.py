@@ -14,6 +14,7 @@ def run_node(filename, node, prefix='bash -c'):
         escaped_label = label.replace('"', '\\"')
         command = f"{prefix} \"{escaped_label}\""
         edit_element_status(filename,'node',node,'running')
+        print(command)
         subprocess.run(command, shell=True, check=True)
         edit_element_status(filename,'node',node,'ran')
     except subprocess.CalledProcessError:
