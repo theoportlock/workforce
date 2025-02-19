@@ -24,7 +24,7 @@ def run_tasks(filename, prefix='bash -c'):
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
         if run_nodes:
             node = run_nodes.pop()
-            subprocess.Popen(["wf_run_node", filename, node, "-p", prefix])
+            subprocess.Popen(["wf", "run_node", filename, node, "-p", prefix])
 
 def worker(filename, prefix='bash -c', speed=0.5):
     status = ''

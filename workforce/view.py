@@ -13,12 +13,6 @@ mpl.use('WebAgg')
 # Global variable to store the animation
 _animation = None  
 
-def parse_args():
-    """Parse command-line arguments for network visualization."""
-    parser = argparse.ArgumentParser(description='Display network graph from GraphML')
-    parser.add_argument('filename', help='Input GraphML file')
-    return parser.parse_args()
-
 def wrap_label(text, max_pixels, font_size=6):
     """Wrap node labels to fit within a given width."""
     max_chars = int(max_pixels / (font_size * 0.6))
@@ -85,11 +79,4 @@ def plot_network(filename, interval=100, max_label_width=150):
     
     # Start the WebAgg server
     plt.show()
-
-def main():
-    args = parse_args()
-    plot_network(args.filename)
-
-if __name__ == "__main__":
-    main()
 

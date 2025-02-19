@@ -28,10 +28,7 @@ setup(
     description="Run bash commands with python multiprocessing according to a tsv file edgelist.",
     entry_points={
         'console_scripts': [
-            'wf_edit=workforce.edit:main',
-            'wf_run=workforce.run:main',
-            'wf_run_node=workforce.run_node:main',
-            'wf_view=workforce.view:main',
+            'wf=workforce.cli:main',
         ],
     },
     install_requires=requirements,
