@@ -8,7 +8,8 @@ import subprocess
 
 def run_node(filename, node, prefix='bash -c'):
     """Execute a command associated with a node and update its status."""
-    G = nx.read_graphml(filename)
+    with FileLock(f"{filename}.lock"):
+        G = nx.read_graphml(filename)
     try:
         label = G.nodes[node].get('label', '')
         escaped_label = label.replace('"', '\\"')
