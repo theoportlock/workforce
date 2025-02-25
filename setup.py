@@ -8,7 +8,8 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ["networkx", "pydot", "dash_cytoscape", "dash", "pandas", "matplotlib", "openpyxl", "filelock", "tornado"]
+with open('requirements.txt') as req_file:
+    requirements = req_file.read().splitlines()
 
 setup(
     author="Theo Portlock",

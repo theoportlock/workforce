@@ -1,50 +1,47 @@
 #!/usr/bin/env python
 
 import argparse
-from workforce.edit_element import edit_element_status
-from workforce.run_node import run_node
-from workforce.run import worker
-from workforce.view import plot_network
-from workforce.edit import gui
-
-def edit(args):
-    edit_element_status(args.filename, args.type, args.identifier, args.value)
+import sys
+#import utils
+#import gui
+from . import utils
+from . import gui
 
 def run_node_cmd(args):
-    run_node(args.filename, args.node, args.prefix)
+    utils.run_node(args.filename, args.node, args.prefix)
 
 def run_tasks_cmd(args):
-    worker(args.filename, args.prefix, args.speed)
+    utils.worker(args.filename, args.prefix, args.speed)
 
-def view(args):
-    plot_network(args.filename)
+def view_cmd(args):
+    utils.plot_network(args.filename)
 
-def launch_gui(args):
-    gui(args.filename)
+def gui_cmd(args):
+    gui.Gui(args.filename)  # Pass only the filename, not the entire Namespace
 
 def main():
+        # Define valid commands. If the first argument isn't one of these (and isn't -h/--help),
+    # insert "gui" so that the GUI command is used by default.
+    valid_commands = {"run", "run_node", "view", "gui", "-h", "--help"}
+    if len(sys.argv) > 1 and sys.argv[1] not in valid_commands:
+        sys.argv.insert(1, "gui")
+    elif len(sys.argv) == 1:
+        # No arguments provided; default to gui command.
+        sys.argv.append("gui")
+
     parser = argparse.ArgumentParser(
-        prog="workforce", 
+        prog="workforce",
         description="Manage and run graph-based workflows."
     )
-    
-    subparsers = parser.add_subparsers(dest="command", required=False)
 
-    # Edit Command
-    edit_parser = subparsers.add_parser("edit", help="Edit node/edge status in a GraphML file")
-    edit_parser.add_argument("filename", help="GraphML file to edit")
-    edit_parser.add_argument("type", choices=["node", "edge"], help="Element type to edit")
-    edit_parser.add_argument("identifier", help="Identifier of the element")
-    edit_parser.add_argument("value", choices=["run", "ran", "running", "to_run", "fail"],
-                             help="New status value")
-    edit_parser.set_defaults(func=edit)
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Run Tasks Command
     run_parser = subparsers.add_parser("run", help="Run all scheduled workflow tasks")
     run_parser.add_argument("filename", help="GraphML file containing tasks")
     run_parser.add_argument("--prefix", '-p', default='bash -c', type=str, help="Prefix for node execution")
     run_parser.add_argument("--run_task", action="store_true", help="Run a single task and exit")
-    run_parser.add_argument("--speed", type=float, default=0.5, help="Seconds inbetween job submission")
+    run_parser.add_argument("--speed", type=float, default=0.5, help="Seconds in between job submission")
     run_parser.set_defaults(func=run_tasks_cmd)
 
     # Run Single Node Command
@@ -57,20 +54,16 @@ def main():
     # View Command
     view_parser = subparsers.add_parser("view", help="Visualize the GraphML workflow")
     view_parser.add_argument("filename", help="GraphML file to visualize")
-    view_parser.set_defaults(func=view)
+    view_parser.set_defaults(func=view_cmd)
 
     # GUI Command
-    gui_parser = subparsers.add_parser("gui", help="Open the Dash-based workflow editor")
-    gui_parser.add_argument("filename", nargs="?", default=None, help="GraphML file for the GUI")
-    gui_parser.set_defaults(func=launch_gui)
+    gui_parser = subparsers.add_parser("gui", help="Launch the GUI")
+    # Accept an optional filename argument (None if not provided)
+    gui_parser.add_argument("filename", nargs="?", help="Optional GraphML file to load")
+    gui_parser.set_defaults(func=gui_cmd)
 
-    # Handle default behavior when no subcommand is given
     args = parser.parse_args()
-
-    if args.command is None:
-        launch_gui(args)
-    else:
-        args.func(args)
+    args.func(args)
 
 if __name__ == "__main__":
     main()

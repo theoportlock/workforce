@@ -1,0 +1,7 @@
+networkx
+dash_cytoscape
+dash
+pandas
+matplotlib
+filelock
+tornado

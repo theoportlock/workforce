@@ -16,7 +16,7 @@ import subprocess
 import sys
 import webbrowser
 
-def gui(pipeline_file=None):
+def Gui(pipeline_file=None):
     app = Dash(__name__)
     app.title = "Workforce"
     app.layout = create_layout()
@@ -251,9 +251,9 @@ def parse_args():
 def main():
     args = parse_args()
     if args.pipeline:
-        gui(args.pipeline)
+        Gui(args.pipeline)
     else:
-        gui()
+        Gui()
 
 if __name__ == '__main__':
     main()
