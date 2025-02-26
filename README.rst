@@ -34,13 +34,13 @@ To launch the pipeline editor, run:
 
 .. code-block:: bash
 
-   wf_edit
+   wf
 
 To open a previously constructed pipeline, run:
 
 .. code-block:: bash
 
-   wf_edit <PIPELINE.graphml>
+   wf <PIPELINE.graphml>
 
 Running workforce plan
 ----------------------
@@ -48,7 +48,7 @@ To run a sample plan from workforce github project:
 
 .. code-block:: bash
 
-   wf_run example_plan.graphml
+   wf run example_plan.graphml
 
 Live viewing workforce plan
 ---------------------------
@@ -56,24 +56,14 @@ To view a plan as it is excecuting:
 
 .. code-block:: bash
 
-   wf_run example_plan.graphml
+   wf view example_plan.graphml
+
+Note that running and viewing the live plan can be done from the GUI directly.
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
-Deleting processes from the project can be done by selecting a process and clicking the 'Delete' button
+Deleting processes or edges on the project can be done by selecting a process and clicking the 'Delete' button
 
 The simplest way to edit a process is to click the edge that the process is connected to. This will fill the 'Input' box with the connection details. You can then add a new node with those connections and delete the old process.
-
-To import and use in a python shell, use the following command:
-
-.. code-block:: python
-
-   from workforce.run import run_tasks
-   from workforce.view import plot_network
-   from workforce.edit import gui
-   run_tasks("<PLAN.GRAPHML>")
-   plot_network("<PLAN.GRAPHML>")
-   gui("<PLAN.GRAPHML>")
-
 
 This is tested on mac and linux but work requires work for windows integration except for wsl2
