@@ -2,8 +2,6 @@
 
 import argparse
 import sys
-#import utils
-#import gui
 from . import utils
 from . import gui
 
@@ -20,13 +18,10 @@ def gui_cmd(args):
     gui.Gui(args.filename)  # Pass only the filename, not the entire Namespace
 
 def main():
-        # Define valid commands. If the first argument isn't one of these (and isn't -h/--help),
-    # insert "gui" so that the GUI command is used by default.
     valid_commands = {"run", "run_node", "view", "gui", "-h", "--help"}
     if len(sys.argv) > 1 and sys.argv[1] not in valid_commands:
         sys.argv.insert(1, "gui")
     elif len(sys.argv) == 1:
-        # No arguments provided; default to gui command.
         sys.argv.append("gui")
 
     parser = argparse.ArgumentParser(
@@ -58,7 +53,6 @@ def main():
 
     # GUI Command
     gui_parser = subparsers.add_parser("gui", help="Launch the GUI")
-    # Accept an optional filename argument (None if not provided)
     gui_parser.add_argument("filename", nargs="?", help="Optional GraphML file to load")
     gui_parser.set_defaults(func=gui_cmd)
 
