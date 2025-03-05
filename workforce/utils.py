@@ -34,7 +34,7 @@ def edit_status(G, element_type, element_id, value):
         G.edges[element_id]['status'] = value
     return G
 
-def run_tasks(filename, prefix='bash -c'):
+def run_tasks(filename, prefix='bash -c', suffix=''):
     with GraphMLAtomic(filename) as G:
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
@@ -44,14 +44,14 @@ def run_tasks(filename, prefix='bash -c'):
         else:
             node = None
     if node:
-        subprocess.Popen(["wf", "run_node", filename, node, "-p", prefix])
+        subprocess.Popen(["wf", "run_node", filename, node, "-p", prefix, "-s", suffix])
 
-def worker(filename, prefix='bash -c', speed=0.5):
+def worker(filename, prefix='bash -c', suffix='', speed=0.5):
     status = ''
     while status != 'complete':
         time.sleep(speed)
         status = schedule_tasks(filename)
-        run_tasks(filename, prefix)
+        run_tasks(filename, prefix, suffix)
 
 def schedule_tasks(filename):
     with GraphMLAtomic(filename) as G:
@@ -77,11 +77,11 @@ def schedule_tasks(filename):
     if not nx.get_node_attributes(G, "status"):
         return 'complete'
 
-def run_node(filename, node, prefix='bash -c'):
+def run_node(filename, node, prefix='bash -c', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
         escaped_label = label.replace('"', '\\"')
-        command = f"{prefix} \"{escaped_label}\""
+        command = f"{prefix} \"{escaped_label}\" {suffix}"
         G.nodes[node]['status'] = 'running'
     try:
         subprocess.run(command, shell=True, check=True)
