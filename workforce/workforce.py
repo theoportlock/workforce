@@ -3,6 +3,7 @@
 from filelock import FileLock, Timeout
 from matplotlib.animation import FuncAnimation
 import argparse
+import sys
 import subprocess
 import networkx as nx
 import textwrap
@@ -44,7 +45,10 @@ def run_tasks(filename, prefix='bash -c', suffix=''):
         else:
             node = None
     if node:
-        subprocess.Popen(["wf", "run_node", filename, node, "-p", prefix, "-s", suffix])
+        subprocess.Popen([
+            sys.executable, "-m", "workforce", "run_node",
+            filename, node, "-p", prefix, "-s", suffix
+        ])
 
 def worker(filename, prefix='bash -c', suffix='', speed=0.5):
     initialize_pipeline(filename)

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 from dash import Dash, html, Input, Output, State, dcc, ctx
+import argparse
+import base64
 import dash
 import dash_cytoscape as cyto
 import datetime
-import base64
 import io
 import networkx as nx
 import subprocess
+import sys
 import webbrowser
-import argparse
 
 def Gui(pipeline_file=None):
     # Initialize with empty elements and pipeline preview
@@ -216,7 +217,7 @@ def register_callbacks(app):
     )
     def view_pipeline(n_clicks, filename):
         if filename:
-            subprocess.run(f"wf view {filename}", shell=True)
+            subprocess.run([sys.executable, "-m", "workforce", "view", filename])
         return 0
 
     @app.callback(
@@ -227,7 +228,7 @@ def register_callbacks(app):
     )
     def run_pipeline(n_clicks, filename):
         if filename:
-            subprocess.run(f"wf run {filename}", shell=True)
+            subprocess.run([sys.executable, "-m", "workforce", "run", filename])
         return 0
 
 def handle_upload(contents):
