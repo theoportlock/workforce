@@ -2,17 +2,17 @@
 
 import argparse
 import sys
-from . import utils
+from . import workforce
 from . import gui
 
 def run_node_cmd(args):
-    utils.run_node(args.filename, args.node, args.prefix, args.suffix)
+    workforce.run_node(args.filename, args.node, args.prefix, args.suffix)
 
 def run_tasks_cmd(args):
-    utils.worker(args.filename, args.prefix, args.suffix, args.speed)
+    workforce.worker(args.filename, args.prefix, args.suffix, args.speed)
 
 def view_cmd(args):
-    utils.plot_network(args.filename)
+    workforce.plot_network(args.filename)
 
 def gui_cmd(args):
     gui.Gui(args.filename)  # Pass only the filename, not the entire Namespace

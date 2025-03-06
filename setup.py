@@ -32,7 +32,7 @@ setup(
     description="Run bash commands with python multiprocessing according to a tsv file edgelist.",
     entry_points={
         'console_scripts': [
-            'wf=workforce.cli:main',
+            'wf=workforce.__main__:main',
         ],
     },
     install_requires=requirements,
@@ -42,5 +42,5 @@ setup(
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.27',
+    version='1.0.28',
 )
