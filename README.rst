@@ -79,6 +79,7 @@ prefix setsid to launch each command in a new session, decoupling it from the cu
 prefix "strace -o trace.log" to trace system calls and signals for debugging, with output logged to a file.
 suffix ">> logfile 2>&1" to append both standard output and error to a log file for persistent logging.
 suffix "| tee output.log" to pipe command output to both the terminal and a file simultaneously.
+prefix powershell.exe, will run on windows powershell
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
