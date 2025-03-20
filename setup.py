@@ -36,11 +36,12 @@ setup(
         ],
     },
     install_requires=requirements,
+    long_description_content_type='text/x-rst',
     license="MIT license",
     long_description=readme + '\n\n' + history,
     keywords='workforce',
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.31',
+    version='1.0.32',
 )
