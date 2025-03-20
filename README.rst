@@ -62,6 +62,7 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command will add those prefix and suffixes to each command ran by the pipeline.
 
+
 | Prefix                           | Suffix               | Description                                                                                                                  |
 |----------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------|
 | `tmux send-keys`                 | `C-m`                | Sends each command to a tmux session and executes it.                                                                       |
@@ -82,6 +83,7 @@ Adding the following prefix and suffixes to the wf run command will add those pr
 |                                  | `>> logfile 2>&1`     | Appends both standard output and error to a log file named `logfile` for persistent logging.                                |
 |                                  | `| tee output.log`   | Pipes the command output simultaneously to the terminal and to a file named `output.log`.                                   |
 | `powershell.exe`                 |                      | Executes the command in Windows PowerShell, adapting it for a Windows environment.                                          |
+
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
