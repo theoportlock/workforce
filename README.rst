@@ -2,7 +2,6 @@
 workforce
 =========
 
-
 .. image:: https://img.shields.io/pypi/v/workforce.svg
         :target: https://pypi.python.org/pypi/workforce
 
@@ -13,12 +12,10 @@ workforce
         :target: https://workforce.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
 Build and run a pipeline of bash commands with python multiprocessing according to a tsv file edgelist.
 
 * Free software: MIT license
 * Documentation: https://workforce.readthedocs.io.
-
 
 Installation
 ------------
@@ -62,28 +59,45 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command will add those prefix and suffixes to each command ran by the pipeline.
 
-
-| Prefix                           | Suffix               | Description                                                                                                                  |
-|----------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------|
-| `tmux send-keys`                 | `C-m`                | Sends each command to a tmux session and executes it.                                                                       |
-| `ssh ADDRESS`                    |                      | Executes each command remotely on the specified server.                                                                     |
-| `parallel`                       | `FILENAMES`          | Runs the pipeline on each specified filename.                                                                               |
-| `docker run -it`                 |                      | Executes each command within a Docker container with an interactive terminal.                                               |
-| `echo`                           | `>> commands.sh`     | Exports the pipeline commands to a bash script named `commands.sh`.                                                         |
-| `conda activate ENV_NAME`        |                      | Activates a specified Conda environment before executing the commands.                                                      |
-| `nohup`                          |                      | Runs commands in the background, disassociating them from the terminal to prevent stoppage if the terminal closes.            |
-| `sbatch`                         |                      | Submits each command for execution on Slurm-managed servers.                                                                |
-| `kubectl run`                    |                      | Executes each command on a Kubernetes cluster.                                                                              |
-| `sudo`                           |                      | Executes commands with elevated privileges.                                                                                 |
-| `"env VAR1=value1 VAR2=value2"`   |                      | Sets environment variables for the command before execution.                                                                |
-| `"nice -n 10"`                   |                      | Adjusts the process priority by running commands with a lower CPU priority.                                                 |
-| `"/usr/bin/time -v"`             |                      | Times command execution and provides detailed resource usage statistics.                                                    |
-| `setsid`                         |                      | Launches each command in a new session, decoupling it from the current terminal.                                            |
-| `"strace -o trace.log"`          |                      | Traces system calls and signals for debugging, logging the output to `trace.log`.                                           |
-|                                  | `>> logfile 2>&1`     | Appends both standard output and error to a log file named `logfile` for persistent logging.                                |
-|                                  | `| tee output.log`   | Pipes the command output simultaneously to the terminal and to a file named `output.log`.                                   |
-| `powershell.exe`                 |                      | Executes the command in Windows PowerShell, adapting it for a Windows environment.                                          |
-
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| Prefix                            | Suffix                | Description                                                                     |
++===================================+=======================+=================================================================================+
+| ``tmux send-keys``                | ``C-m``               | Sends each command to a tmux session and executes it.                           |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``ssh ADDRESS``                   |                       | Executes each command remotely on the specified server.                         |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``parallel``                      | ``FILENAMES``         | Runs the pipeline on each specified filename.                                   |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``docker run -it``                |                       | Executes each command within a Docker container with an interactive terminal.   |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``echo``                          | ``>> commands.sh``    | Exports the pipeline commands to a bash script named ``commands.sh``.           |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``conda activate ENV_NAME``       |                       | Activates a specified Conda environment before executing the commands.          |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``nohup``                         |                       | Runs commands in the background.                                                |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``sbatch``                        |                       | Submits commands to Slurm-managed servers.                                      |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``kubectl run``                   |                       | Executes commands on a Kubernetes cluster.                                      |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``sudo``                          |                       | Executes commands with elevated privileges.                                     |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``env VAR1=value1 VAR2=value2``   |                       | Sets environment variables for the command.                                     |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``nice -n 10``                    |                       | Adjusts the process priority.                                                   |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``/usr/bin/time -v``              |                       | Times command execution with resource statistics.                               |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``setsid``                        |                       | Launches commands in a new session.                                             |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``strace -o trace.log``           |                       | Traces system calls for debugging.                                              |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+|                                   | ``>> logfile 2>&1``   | Appends output to log file.                                                     |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+|                                   | ``| tee output.log``  | Shows output in terminal and saves to file.                                     |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
+| ``powershell.exe``                |                       | Executes commands in Windows PowerShell.                                        |
++-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 
