@@ -2,6 +2,7 @@
 title: "Workforce"
 author:
   - Theo Portlock\inst{1}
+  - Justin O'Sullivan\inst{1}
 institute:
   - \inst{1}The University of Auckland
 date: 03-04-2024
@@ -16,6 +17,9 @@ output:
 
 # Science
 * Repeatablilty
+
+# Ingredients of reproducibility
+![](figures/codeenvdata.pdf){ width=50% }
 
 # Requirements of reproducibility
 * Easy to run/use
@@ -32,7 +36,9 @@ output:
 * Good data hygeine
 
 # Nextflow
-* Programming Language for creating bioinformatic processing pipelines
+* Pipeline writing language
+* Nf-core
+* Sequera - Phil Ewels
 * Meets *most* of these requirements
 * Containerised, version controlled, and can run on multiple platforms 
 * Steep learning curve
@@ -68,29 +74,23 @@ output:
 * Can interact with a run while it's still running
 * Collaberative development
 
-# Workforce - packages
+# Workforce
 * networkx
 * subprocess
 * multiprocessing
 * dash cytoscape
 
 # Workforce - case study
-![](figures/alldata.pdf){ width=60% }
+![](figures/alldata.pdf){ width=80% }
 
 # Workforce - case study
-![](figures/ex2.pdf){ width=70% }
+![](figures/ex2.pdf)
 
 # Workforce - case study
-![](figures/ex3.pdf){ width=60% }
+![](figures/ex3.pdf){ width=80% }
 
 # Workforce - case study
-![](figures/ex4.pdf){ width=40% }
-
-# Workforce - case study
-![](figures/covariate.pdf){ width=60% }
-
-# Workforce - online
-![](figures/collab.pdf){ width=100% }
+![](figures/ex4.pdf){ width=80% }
 
 # Future work
 * Continuous workflows for data recording

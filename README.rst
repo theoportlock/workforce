@@ -62,24 +62,26 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command will add those prefix and suffixes to each command ran by the pipeline.
 
-prefix tmux send-keys, suffix C-m will send each command to tmux and run in same session
-prefix ssh ADDRESS will run each command on a server
-prefix parallel, suffix FILENAMES will run the pipeline on each filename
-prefix docker run -it will run each command with the same environment
-prefix echo, suffix >> commands.sh will export the pipeline to a bash script
-prefix conda activate ENV_NAME will activate conda envionment before running
-prefix nohup Runs the command in the background and disowns it, preventing the command from being stopped even if the terminal is closed.
-prefix sbatch for running on slurm servers
-prefix kubectl run for running on kubernetes servers
-prefix sudo for enhanced privelages
-prefix "env VAR1=value1 VAR2=value2" to set environmental variables before running
-prefix "nice -n 10" to be nice
-prefix "/usr/bin/time -v" for time excecution and resource usage
-prefix setsid to launch each command in a new session, decoupling it from the current terminal.
-prefix "strace -o trace.log" to trace system calls and signals for debugging, with output logged to a file.
-suffix ">> logfile 2>&1" to append both standard output and error to a log file for persistent logging.
-suffix "| tee output.log" to pipe command output to both the terminal and a file simultaneously.
-prefix powershell.exe, will run on windows powershell
+| Prefix                           | Suffix               | Description                                                                                                                  |
+|----------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------|
+| `tmux send-keys`                 | `C-m`                | Sends each command to a tmux session and executes it.                                                                       |
+| `ssh ADDRESS`                    |                      | Executes each command remotely on the specified server.                                                                     |
+| `parallel`                       | `FILENAMES`          | Runs the pipeline on each specified filename.                                                                               |
+| `docker run -it`                 |                      | Executes each command within a Docker container with an interactive terminal.                                               |
+| `echo`                           | `>> commands.sh`     | Exports the pipeline commands to a bash script named `commands.sh`.                                                         |
+| `conda activate ENV_NAME`        |                      | Activates a specified Conda environment before executing the commands.                                                      |
+| `nohup`                          |                      | Runs commands in the background, disassociating them from the terminal to prevent stoppage if the terminal closes.            |
+| `sbatch`                         |                      | Submits each command for execution on Slurm-managed servers.                                                                |
+| `kubectl run`                    |                      | Executes each command on a Kubernetes cluster.                                                                              |
+| `sudo`                           |                      | Executes commands with elevated privileges.                                                                                 |
+| `"env VAR1=value1 VAR2=value2"`   |                      | Sets environment variables for the command before execution.                                                                |
+| `"nice -n 10"`                   |                      | Adjusts the process priority by running commands with a lower CPU priority.                                                 |
+| `"/usr/bin/time -v"`             |                      | Times command execution and provides detailed resource usage statistics.                                                    |
+| `setsid`                         |                      | Launches each command in a new session, decoupling it from the current terminal.                                            |
+| `"strace -o trace.log"`          |                      | Traces system calls and signals for debugging, logging the output to `trace.log`.                                           |
+|                                  | `>> logfile 2>&1`     | Appends both standard output and error to a log file named `logfile` for persistent logging.                                |
+|                                  | `| tee output.log`   | Pipes the command output simultaneously to the terminal and to a file named `output.log`.                                   |
+| `powershell.exe`                 |                      | Executes the command in Windows PowerShell, adapting it for a Windows environment.                                          |
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 

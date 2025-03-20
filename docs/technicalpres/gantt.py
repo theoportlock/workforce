@@ -21,22 +21,23 @@ df['End'] = pd.to_datetime(df['End'])
 
 # Convert dates to months from project start
 project_start = df['Start'].min()
-df['StartMonth'] = ((df['Start'] - project_start) / np.timedelta64(1, 'M')).astype(int) + 1
-df['EndMonth'] = ((df['End'] - project_start) / np.timedelta64(1, 'M')).astype(int) + 1
+df['StartWeek'] = ((df['Start'] - project_start) / np.timedelta64(1, 'W')).astype(int) + 1
+df['EndWeek'] = ((df['End'] - project_start) / np.timedelta64(1, 'W')).astype(int) + 1
 
 # Plotting the Gantt chart with months from project start on the x-axis
 fig, ax = plt.subplots(figsize=(12, 8))
 
-ax.barh(df['Task'], df['EndMonth'] - df['StartMonth'], left=df['StartMonth'], color='skyblue')
+ax.barh(df['Task'], df['EndWeek'] - df['StartWeek'], left=df['StartWeek'], color='skyblue')
 ax.set_yticks(np.arange(len(df)))
 ax.set_yticklabels(df['Task'])
-ax.set_xlabel('Months')
+ax.set_xlabel('Weeks')
 ax.set_ylabel('Tasks')
 
 # Set the x-ticks to show months
-max_month = df['EndMonth'].max()
-ax.set_xticks(np.arange(1, max_month + 1))
+max_week = df['EndWeek'].max()
+ax.set_xticks(np.arange(1, max_week + 1))
 
 plt.title('Research Project Gantt Chart')
 plt.tight_layout()
-plt.savefig('gantt.png')
+plt.savefig('figures/gantt.pdf')
+plt.show()
