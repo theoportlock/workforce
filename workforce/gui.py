@@ -34,7 +34,7 @@ def Gui(pipeline_file=None):
     app.layout = create_layout(initial_elements, initial_pipeline, initial_pipeline_file)
     register_callbacks(app)
     webbrowser.open_new('http://127.0.0.1:8050/')
-    app.run_server(debug=False, use_reloader=False)
+    app.run(debug=False, use_reloader=False)
 
 def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
     return html.Div([
