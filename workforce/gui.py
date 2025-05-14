@@ -62,6 +62,12 @@ def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
                 type='text',
                 style={'width': '400px', 'margin-right': '2px'}
             ),
+            dcc.Input(
+                id='txt_flags',
+                placeholder='Optional flags (e.g., -p bash -s pwd)',
+                type='text',
+                style={'width': '300px', 'margin-right': '2px'}
+            ),
             html.Button('+', id='btn-add', n_clicks=0,
                         style={'margin-right': '2px', 'background-color': 'lightgreen'})
         ], style={'margin-top': '2px'}),
