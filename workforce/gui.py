@@ -19,7 +19,7 @@ def Gui(pipeline_file=None):
 
     if pipeline_file:
         # Load graph elements from the file
-        initial_elements = load(pipeline_file)
+        initial_elements, prefix, suffix = load(pipeline_file)
         try:
             with open(pipeline_file, 'r') as f:
                 content = f.read()
@@ -50,6 +50,18 @@ def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
             html.Button('Clear', id='btn-clear', n_clicks=0),
             html.Button('View Pipeline', id='btn-view-pipeline', n_clicks=0),
             html.Button('Run Pipeline', id='btn-run-pipeline', n_clicks=0),
+            dcc.Input(
+                id='txt_prefix',
+                placeholder='prefix flags',
+                type='text',
+                style={'width': '100px', 'margin-right': '2px'}
+            ),
+            dcc.Input(
+                id='txt_suffix',
+                placeholder='suffix flags',
+                type='text',
+                style={'width': '100px', 'margin-right': '2px'}
+            ),
             # Store the current pipeline filename
             dcc.Store(id='pipeline-file-store', data=initial_pipeline_file)
         ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
@@ -61,12 +73,6 @@ def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
                 value='echo "Input bash command"',
                 type='text',
                 style={'width': '400px', 'margin-right': '2px'}
-            ),
-            dcc.Input(
-                id='txt_flags',
-                placeholder='Optional flags (e.g., -p bash -s pwd)',
-                type='text',
-                style={'width': '300px', 'margin-right': '2px'}
             ),
             html.Button('+', id='btn-add', n_clicks=0,
                         style={'margin-right': '2px', 'background-color': 'lightgreen'})
@@ -140,7 +146,9 @@ def create_stylesheet():
 def register_callbacks(app):
     # Callback for updating the network elements and processing file uploads
     @app.callback(
-        Output('cytoscape-elements', 'elements'),
+        [Output('cytoscape-elements', 'elements'),
+         Output('txt_prefix', 'value'),
+         Output('txt_suffix', 'value')],
         [Input('upload-data', 'contents'),
          Input('btn-add', 'n_clicks'),
          Input('btn-remove', 'n_clicks'),
@@ -156,7 +164,8 @@ def register_callbacks(app):
     def modify_network(contents, add_clicks, remove_clicks, connect_clicks, update_clicks,
                        txt_node, filename, elements, selected_nodes, selected_edges):
         if ctx.triggered_id == 'upload-data' and contents is not None:
-            elements = handle_upload(contents)
+            elements, prefix, suffix = load(io.BytesIO(base64.b64decode(contents.split(',')[1])))
+            return elements, prefix, suffix
         elif ctx.triggered_id == 'btn-add':
             elements = add_node(elements, txt_node)
         elif ctx.triggered_id == 'btn-remove':
@@ -165,12 +174,14 @@ def register_callbacks(app):
             elements = connect_nodes(elements, selected_nodes)
         elif ctx.triggered_id == 'btn-update':
             elements = update_node(elements, selected_nodes, txt_node)
-        return elements
+        return elements, dash.no_update, dash.no_update
 
-    # Callback for updating the pipeline file display and store when a new file is uploaded
     @app.callback(
-        [Output('pipeline-output', 'children'),
-         Output('pipeline-file-store', 'data')],
+        [Output('cytoscape-elements', 'elements'),
+        Output('txt_prefix', 'value'),
+        Output('txt_suffix', 'value'),
+        Output('pipeline-output', 'children'),
+        Output('pipeline-file-store', 'data')],
         [Input('upload-data', 'contents')],
         [State('upload-data', 'filename')],
         prevent_initial_call=True
@@ -178,28 +189,72 @@ def register_callbacks(app):
     def update_pipeline_upload(contents, filename):
         if contents and filename:
             content_type, content_string = contents.split(',')
-            decoded = base64.b64decode(content_string).decode('utf-8')
-            preview = decoded[:500] + ('...' if len(decoded) > 500 else '')
-            return f"Pipeline File: {filename}\n\n{preview}", filename
+            decoded = base64.b64decode(content_string)
+            elements, prefix, suffix = load(io.BytesIO(decoded))
+            preview = decoded.decode('utf-8')[:500]
+            if len(decoded) > 500:
+                preview += '...'
+            return elements, prefix, suffix, f"Pipeline File: {filename}\n\n{preview}", filename
         raise dash.exceptions.PreventUpdate
 
     @app.callback(
         Output('download-data', 'data'),
         [Input('btn-download', 'n_clicks')],
-        [State('cytoscape-elements', 'elements')],
+        [State('cytoscape-elements', 'elements'),
+         State('txt_prefix', 'value'),
+         State('txt_suffix', 'value')],
         prevent_initial_call=True
     )
-    def save_data(n_clicks, elements):
-        return save_elements(elements)
+    def save_data(n_clicks, elements, prefix, suffix):
+        # Build the DiGraph
+        G = nx.DiGraph()
+        G.graph['prefix'] = prefix or ""
+        G.graph['suffix'] = suffix or ""
+        for el in elements:
+            d = el['data']
+            if 'source' in d:
+                G.add_edge(d['source'], d['target'], id=d.get('id'))
+            else:
+                G.add_node(
+                    d['id'],
+                    label=d.get('label', d['id']),
+                    **el.get('position', {})
+                )
+
+        # Dump directly to bytes
+        buf = io.BytesIO()
+        nx.write_graphml(G, buf)
+        buf.seek(0)
+        return dcc.send_bytes(buf.read(), 'network_data.graphml')
 
     @app.callback(
         Output('btn-runproc', 'n_clicks'),
         [Input('btn-runproc', 'n_clicks')],
-        [State('cytoscape-elements', 'selectedNodeData')],
+        [State('cytoscape-elements', 'elements'),
+         State('cytoscape-elements', 'selectedNodeData')],
         prevent_initial_call=True
     )
-    def run_process(n_clicks, data):
-        execute_process(data)
+
+    @app.callback(
+        Output('btn-runproc', 'n_clicks'),
+        [Input('btn-runproc', 'n_clicks')],
+        [State('cytoscape-elements', 'elements'),
+        State('cytoscape-elements', 'selectedNodeData'),
+        State('txt_prefix', 'value'),
+        State('txt_suffix', 'value')],
+        prevent_initial_call=True
+    )
+    def run_process(n_clicks, elements, selected_data, prefix, suffix):
+        G = nx.DiGraph()
+        for el in elements:
+            d = el['data']
+            if 'source' in d:
+                G.add_edge(d['source'], d['target'], id=d.get('id'))
+            else:
+                G.add_node(d['id'], label=d.get('label', d['id']), **el.get('position', {}))
+        G.graph['prefix'] = prefix or 'bash -c'
+        G.graph['suffix'] = suffix or ''
+        execute_process(selected_data, G)
         return 0
 
     @app.callback(
@@ -240,35 +295,40 @@ def register_callbacks(app):
 def handle_upload(contents):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
-    return load(io.BytesIO(decoded))
+    elements, _, _ = load(io.BytesIO(decoded))
+    return elements
 
 def load(pipeline_file):
-    # Read GraphML and convert it to dash-cytoscape elements using networkx
     G = nx.read_graphml(pipeline_file)
-    graph = nx.readwrite.json_graph.node_link_data(G)
-    elements = graph['nodes'] + graph['links']
-    dash_elements = []
-    for element in elements:
-        if 'source' in element and 'target' in element:
-            dash_elements.append({
-                'data': {
-                    'source': element.get('source'),
-                    'target': element.get('target'),
-                    'id': element.get('id')
-                }
-            })
-        else:
-            dash_elements.append({
-                'data': {
-                    'label': element.get('label'),
-                    'id': element.get('id')
-                },
-                'position': {
-                    'x': float(element.get('x', 0)),
-                    'y': float(element.get('y', 0))
-                }
-            })
-    return dash_elements
+    prefix = G.graph.get('prefix', '')
+    suffix = G.graph.get('suffix', '')
+
+    elements = []
+    for node_id, node_data in G.nodes(data=True):
+        node_el = {
+            'data': {
+                'id': node_id,
+                'label': node_data.get('label', node_id)
+            },
+            'position': {
+                'x': float(node_data.get('x', 0)),
+                'y': float(node_data.get('y', 0))
+            }
+        }
+        elements.append(node_el)
+
+    for source, target, edge_data in G.edges(data=True):
+        edge_el = {
+            'data': {
+                'id': edge_data.get('id', f'{source}-{target}'),
+                'source': source,
+                'target': target
+            }
+        }
+        elements.append(edge_el)
+
+    return elements, prefix, suffix
+
 
 def add_node(elements, txt_node):
     elements.append({'data': {'label': txt_node}})
@@ -301,26 +361,13 @@ def update_node(elements, selected_nodes, txt_node_value):
                 break
     return elements
 
-def save_elements(elements):
-    G = nx.DiGraph()
-    for element in elements:
-        data = element['data']
-        if 'source' in data and 'target' in data:
-            G.add_edge(data['source'], data['target'], id=data.get('id'))
-        else:
-            node_id = data.get('id')
-            label = data.get('label', node_id)
-            pos = element.get('position', {})
-            G.add_node(node_id, label=label, x=pos.get('x', 0), y=pos.get('y', 0))
-    graphml_bytes = io.BytesIO()
-    nx.write_graphml(G, graphml_bytes)
-    graphml_bytes.seek(0)
-    return dcc.send_string(graphml_bytes.getvalue().decode('utf-8'), 'network_data.graphml')
-
-def execute_process(data):
+def execute_process(data, G):
+    prefix = G.graph.get('prefix', 'bash -c')  # Default to 'bash -c'
+    suffix = G.graph.get('suffix', '')  # Default to empty string
     if data:
         for process in data:
-            subprocess.call(process['label'], shell=True)
+            command = f"{prefix} \"{process['label']}\" {suffix}"
+            subprocess.call(command, shell=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
