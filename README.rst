@@ -12,7 +12,7 @@ workforce
         :target: https://workforce.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-Build and run a pipeline of bash commands with python multiprocessing according to a tsv file edgelist.
+Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
 
 * Free software: MIT license
 * Documentation: https://workforce.readthedocs.io.
@@ -38,6 +38,12 @@ To open a previously constructed pipeline, run:
 .. code-block:: bash
 
    wf <PIPELINE.graphml>
+    
+If a `Workfile` is in the current directory:
+
+.. code-block:: bash
+
+   wf
 
 Running workforce plan
 ----------------------
@@ -59,45 +65,45 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command will add those prefix and suffixes to each command ran by the pipeline.
 
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| Prefix                            | Suffix                | Description                                                                     |
-+===================================+=======================+=================================================================================+
-| ``tmux send-keys``                | ``C-m``               | Sends each command to a tmux session and executes it.                           |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``ssh ADDRESS``                   |                       | Executes each command remotely on the specified server.                         |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``parallel``                      | ``FILENAMES``         | Runs the pipeline on each specified filename.                                   |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``docker run -it``                |                       | Executes each command within a Docker container with an interactive terminal.   |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``echo``                          | ``>> commands.sh``    | Exports the pipeline commands to a bash script named ``commands.sh``.           |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``conda activate ENV_NAME``       |                       | Activates a specified Conda environment before executing the commands.          |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``nohup``                         |                       | Runs commands in the background.                                                |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``sbatch``                        |                       | Submits commands to Slurm-managed servers.                                      |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``kubectl run``                   |                       | Executes commands on a Kubernetes cluster.                                      |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``sudo``                          |                       | Executes commands with elevated privileges.                                     |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``env VAR1=value1 VAR2=value2``   |                       | Sets environment variables for the command.                                     |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``nice -n 10``                    |                       | Adjusts the process priority.                                                   |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``/usr/bin/time -v``              |                       | Times command execution with resource statistics.                               |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``setsid``                        |                       | Launches commands in a new session.                                             |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``strace -o trace.log``           |                       | Traces system calls for debugging.                                              |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-|                                   | ``>> logfile 2>&1``   | Appends output to log file.                                                     |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-|                                   | ``| tee output.log``  | Shows output in terminal and saves to file.                                     |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
-| ``powershell.exe``                |                       | Executes commands in Windows PowerShell.                                        |
-+-----------------------------------+-----------------------+---------------------------------------------------------------------------------+
++-------------------------------+---------------------------------------------------------------------------------+
+| Options                       | Description                                                                     |
++===============================+=================================================================================+
+| -p "tmux send-keys" -s "C-m"  | Sends each command to a tmux session and executes it.                           |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "ssh ADDRESS"              | Executes each command remotely on the specified server.                         |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "parallel" -s "FILENAMES"  | Runs the pipeline on each specified filename.                                   |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "docker run -it"           | Executes each command within a Docker container with an interactive terminal.   |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "echo" -s ">> commands.sh" | Exports the pipeline commands to a bash script named ``commands.sh``.           |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "conda activate ENV_NAME"  | Activates a specified Conda environment before executing the commands.          |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "nohup"                    | Runs commands in the background.                                                |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "sbatch"                   | Submits commands to Slurm-managed servers.                                      |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "kubectl run"              | Executes commands on a Kubernetes cluster.                                      |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "sudo"                     | Executes commands with elevated privileges.                                     |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "env VAR1=value1"          | Sets environment variables for the command.                                     |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "nice -n 10"               | Adjusts the process priority.                                                   |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "/usr/bin/time -v"         | Times command execution with resource statistics.                               |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "setsid"                   | Launches commands in a new session.                                             |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "strace -o trace.log"      | Traces system calls for debugging.                                              |
++-------------------------------+---------------------------------------------------------------------------------+
+| -s ">> logfile 2>&1"          | Appends output to log file.                                                     |
++-------------------------------+---------------------------------------------------------------------------------+
+| -s "| tee output.log"         | Shows output in terminal and saves to file.                                     |
++-------------------------------+---------------------------------------------------------------------------------+
+| -p "powershell.exe"           | Executes commands in Windows PowerShell.                                        |
++-------------------------------+---------------------------------------------------------------------------------+
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-import argparse
-import sys
-from . import workforce
 from . import gui
+from . import workforce
+import argparse
+import os
+import sys
 
 def run_node_cmd(args):
     workforce.run_node(args.filename, args.node, args.prefix, args.suffix)
@@ -19,10 +20,14 @@ def gui_cmd(args):
 
 def main():
     valid_commands = {"run", "run_node", "view", "gui", "-h", "--help"}
-    if len(sys.argv) > 1 and sys.argv[1] not in valid_commands:
+
+    if len(sys.argv) == 1:
+        if os.path.exists("Workfile"):
+            sys.argv.extend(["gui", "Workfile"])
+        else:
+            sys.argv.append("gui")
+    elif sys.argv[1] not in valid_commands:
         sys.argv.insert(1, "gui")
-    elif len(sys.argv) == 1:
-        sys.argv.append("gui")
 
     parser = argparse.ArgumentParser(
         prog="workforce",
@@ -30,6 +35,8 @@ def main():
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # (rest of your code remains the same)
 
     # Run Tasks Command
     run_parser = subparsers.add_parser("run", help="Run all scheduled workflow tasks")

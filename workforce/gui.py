@@ -315,7 +315,7 @@ def save_elements(elements):
     graphml_bytes = io.BytesIO()
     nx.write_graphml(G, graphml_bytes)
     graphml_bytes.seek(0)
-    return dcc.send_string(graphml_bytes.getvalue().decode('utf-8'), 'network_data.graphml')
+    return dcc.send_string(graphml_bytes.getvalue().decode('utf-8'), 'Workfile')
 
 def execute_process(data):
     if data:
