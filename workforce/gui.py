@@ -10,16 +10,16 @@ import networkx as nx
 import subprocess
 import sys
 import webbrowser
+import xml.etree.ElementTree as ET
+
 
 def Gui(pipeline_file=None):
-    # Initialize with empty elements and pipeline preview
     initial_elements = []
     initial_pipeline = ""
     initial_pipeline_file = None
 
     if pipeline_file:
-        # Load graph elements from the file
-        initial_elements = load(pipeline_file)
+        initial_elements, prefix, suffix = load(pipeline_file)
         try:
             with open(pipeline_file, 'r') as f:
                 content = f.read()
@@ -34,11 +34,11 @@ def Gui(pipeline_file=None):
     app.layout = create_layout(initial_elements, initial_pipeline, initial_pipeline_file)
     register_callbacks(app)
     webbrowser.open_new('http://127.0.0.1:8050/')
-    app.run(debug=False, use_reloader=False)
+    app.run(debug=True, use_reloader=False)
+
 
 def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
     return html.Div([
-        # Top controls
         html.Div([
             dcc.Upload(html.Button('Load'), id='upload-data'),
             html.Button('Save', id='btn-download'),
@@ -50,31 +50,18 @@ def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
             html.Button('Clear', id='btn-clear', n_clicks=0),
             html.Button('View Pipeline', id='btn-view-pipeline', n_clicks=0),
             html.Button('Run Pipeline', id='btn-run-pipeline', n_clicks=0),
-            # Store the current pipeline filename
+            dcc.Input(id='txt_prefix', placeholder='prefix flags', type='text', style={'width': '100px', 'margin-right': '2px'}),
+            dcc.Input(id='txt_suffix', placeholder='suffix flags', type='text', style={'width': '100px', 'margin-right': '2px'}),
             dcc.Store(id='pipeline-file-store', data=initial_pipeline_file)
         ], style={'display': 'flex', 'flex-direction': 'row', 'gap': '2px'}),
 
-        # Node text input and add button
         html.Div([
-            dcc.Input(
-                id='txt_node',
-                value='echo "Input bash command"',
-                type='text',
-                style={'width': '400px', 'margin-right': '2px'}
-            ),
-            dcc.Input(
-                id='txt_flags',
-                placeholder='Optional flags (e.g., -p bash -s pwd)',
-                type='text',
-                style={'width': '300px', 'margin-right': '2px'}
-            ),
-            html.Button('+', id='btn-add', n_clicks=0,
-                        style={'margin-right': '2px', 'background-color': 'lightgreen'})
+            dcc.Input(id='txt_node', value='echo "Input bash command"', type='text', style={'width': '400px', 'margin-right': '2px'}),
+            html.Button('+', id='btn-add', n_clicks=0, style={'margin-right': '2px', 'background-color': 'lightgreen'})
         ], style={'margin-top': '2px'}),
 
         html.Hr(),
 
-        # Cytoscape graph area
         cyto.Cytoscape(
             id='cytoscape-elements',
             layout={'name': 'preset', 'directed': True},
@@ -90,57 +77,25 @@ def create_layout(initial_elements, initial_pipeline, initial_pipeline_file):
 
         html.Hr(),
 
-        # Pipeline file display area
-        html.Div(id='pipeline-output',
-                 children=initial_pipeline,
-                 style={'margin-top': '20px', 'white-space': 'pre-wrap'}),
-
-        # Footer with timestamp
-        html.Div('workforce: ' + str(datetime.datetime.now()))
+        html.Div(id='pipeline-output', children=initial_pipeline, style={'margin-top': '20px', 'white-space': 'pre-wrap'}),
+        html.Div('workforce: ' + str(datetime.datetime.now()), style={'margin-top': '10px'})
     ])
+
 
 def create_stylesheet():
     return [
-        {
-            'selector': 'node',
-            'style': {
-                'label': 'data(label)',
-                'font-size': '10px',
-                'width': '30px',
-                'height': '30px',
-                'text-max-width': '150px',
-                'text-wrap': 'wrap',
-                'background-color': 'lightgray',
-            },
-        },
-        {
-            'selector': 'node:selected',
-            'style': {
-                'background-color': 'gray',
-            },
-        },
-        {
-            'selector': 'edge',
-            'style': {
-                'curve-style': 'bezier',
-                'target-arrow-shape': 'triangle',
-                'line-color': 'lightgray',
-                'target-arrow-color': 'lightgray',
-            },
-        },
-        {
-            'selector': 'edge:selected',
-            'style': {
-                'line-color': 'gray',
-                'target-arrow-color': 'gray',
-            },
-        },
+        {'selector': 'node', 'style': {'label': 'data(label)', 'font-size': '10px', 'width': '30px', 'height': '30px', 'text-max-width': '150px', 'text-wrap': 'wrap', 'background-color': 'lightgray'}},
+        {'selector': 'node:selected', 'style': {'background-color': 'gray'}},
+        {'selector': 'edge', 'style': {'curve-style': 'bezier', 'target-arrow-shape': 'triangle', 'line-color': 'lightgray', 'target-arrow-color': 'lightgray'}},
+        {'selector': 'edge:selected', 'style': {'line-color': 'gray', 'target-arrow-color': 'gray'}},
     ]
 
+
 def register_callbacks(app):
-    # Callback for updating the network elements and processing file uploads
     @app.callback(
-        Output('cytoscape-elements', 'elements'),
+        [Output('cytoscape-elements', 'elements'),
+         Output('txt_prefix', 'value'),
+         Output('txt_suffix', 'value')],
         [Input('upload-data', 'contents'),
          Input('btn-add', 'n_clicks'),
          Input('btn-remove', 'n_clicks'),
@@ -149,76 +104,99 @@ def register_callbacks(app):
         [State('txt_node', 'value'),
          State('upload-data', 'filename'),
          State('cytoscape-elements', 'elements'),
-         State("cytoscape-elements", "selectedNodeData"),
-         State("cytoscape-elements", "selectedEdgeData")],
+         State('cytoscape-elements', 'selectedNodeData'),
+         State('cytoscape-elements', 'selectedEdgeData')],
         prevent_initial_call=True
     )
     def modify_network(contents, add_clicks, remove_clicks, connect_clicks, update_clicks,
                        txt_node, filename, elements, selected_nodes, selected_edges):
-        if ctx.triggered_id == 'upload-data' and contents is not None:
-            elements = handle_upload(contents)
-        elif ctx.triggered_id == 'btn-add':
-            elements = add_node(elements, txt_node)
-        elif ctx.triggered_id == 'btn-remove':
-            elements = remove(elements, selected_nodes, selected_edges)
-        elif ctx.triggered_id == 'btn-connect':
-            elements = connect_nodes(elements, selected_nodes)
-        elif ctx.triggered_id == 'btn-update':
-            elements = update_node(elements, selected_nodes, txt_node)
-        return elements
+        trigger = ctx.triggered_id
+        if trigger == 'upload-data' and contents:
+            content_type, content_string = contents.split(',')
+            decoded = base64.b64decode(content_string)
+            elements, prefix, suffix = load(io.BytesIO(decoded))
+            return elements, prefix, suffix
 
-    # Callback for updating the pipeline file display and store when a new file is uploaded
+        if trigger == 'btn-add': elements = add_node(elements, txt_node)
+        if trigger == 'btn-remove': elements = remove(elements, selected_nodes, selected_edges)
+        if trigger == 'btn-connect': elements = connect_nodes(elements, selected_nodes)
+        if trigger == 'btn-update': elements = update_node(elements, selected_nodes, txt_node)
+
+        return elements, dash.no_update, dash.no_update
+
     @app.callback(
-        [Output('pipeline-output', 'children'),
+        [Output('pipeline-output', 'children', allow_duplicate=True),
          Output('pipeline-file-store', 'data')],
-        [Input('upload-data', 'contents')],
-        [State('upload-data', 'filename')],
+        Input('upload-data', 'contents'),
+        State('upload-data', 'filename'),
         prevent_initial_call=True
     )
     def update_pipeline_upload(contents, filename):
-        if contents and filename:
-            content_type, content_string = contents.split(',')
-            decoded = base64.b64decode(content_string).decode('utf-8')
-            preview = decoded[:500] + ('...' if len(decoded) > 500 else '')
-            return f"Pipeline File: {filename}\n\n{preview}", filename
-        raise dash.exceptions.PreventUpdate
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        preview = decoded.decode('utf-8')[:500] + ('...' if len(decoded) > 500 else '')
+        return f"Pipeline File: {filename}\n\n{preview}", filename
 
     @app.callback(
         Output('download-data', 'data'),
-        [Input('btn-download', 'n_clicks')],
-        [State('cytoscape-elements', 'elements')],
+        Input('btn-download', 'n_clicks'),
+        State('cytoscape-elements', 'elements'),
+        State('txt_prefix', 'value'),
+        State('txt_suffix', 'value'),
         prevent_initial_call=True
     )
-    def save_data(n_clicks, elements):
-        return save_elements(elements)
+    def save_data(n_clicks, elements, prefix, suffix):
+        G = nx.DiGraph()
+        G.graph['prefix'], G.graph['suffix'] = prefix or '', suffix or ''
+        for el in elements:
+            d = el['data']
+            if 'source' in d and 'target' in d:
+                G.add_edge(d['source'], d['target'], id=d.get('id'))
+            else:
+                G.add_node(d['id'], label=d.get('label', d['id']), x=el.get('position', {}).get('x', 0), y=el.get('position', {}).get('y', 0))
+        buf = io.BytesIO()
+        nx.write_graphml(G, buf)
+        buf.seek(0)
+        return dcc.send_bytes(buf.read(), filename='Workfile')
 
     @app.callback(
-        Output('btn-runproc', 'n_clicks'),
-        [Input('btn-runproc', 'n_clicks')],
-        [State('cytoscape-elements', 'selectedNodeData')],
+        Output('pipeline-output', 'children', allow_duplicate=True),
+        Input('btn-runproc', 'n_clicks'),
+        State('cytoscape-elements', 'elements'),
+        State('cytoscape-elements', 'selectedNodeData'),
+        State('txt_prefix', 'value'),
+        State('txt_suffix', 'value'),
         prevent_initial_call=True
     )
-    def run_process(n_clicks, data):
-        execute_process(data)
-        return 0
+    def run_process(n_clicks, elements, selected_data, prefix, suffix):
+        print("Triggered runproc:", ctx.triggered_id)
+        G = nx.DiGraph()
+        for el in elements:
+            d = el['data']
+            if 'source' in d:
+                G.add_edge(d['source'], d['target'], id=d.get('id'))
+            else:
+                G.add_node(d['id'], label=d.get('label', d['id']), x=el['position']['x'], y=el['position']['y'])
+        G.graph['prefix'], G.graph['suffix'] = prefix or 'bash -c', suffix or ''
+        execute_process(selected_data, G)
+        return f"Process run on: {selected_data}"
 
     @app.callback(
         Output('txt_node', 'value'),
-        [Input('cytoscape-elements', 'tapNodeData'),
-         Input('btn-clear', 'n_clicks')],
+        [Input('cytoscape-elements', 'tapNodeData'), Input('btn-clear', 'n_clicks')],
         prevent_initial_call=True
     )
     def update_text_box(tap_node_data, n_clicks):
-        if ctx.triggered_id == 'cytoscape-elements' and tap_node_data is not None:
+        if ctx.triggered_id == 'cytoscape-elements' and tap_node_data:
             return tap_node_data['label']
-        elif ctx.triggered_id == 'btn-clear':
+        if ctx.triggered_id == 'btn-clear':
             return ''
         return dash.no_update
 
     @app.callback(
         Output('btn-view-pipeline', 'n_clicks'),
-        [Input('btn-view-pipeline', 'n_clicks')],
-        [State('pipeline-file-store', 'data')],
+        Input('btn-view-pipeline', 'n_clicks'),
+        State('pipeline-file-store', 'data'),
         prevent_initial_call=True
     )
     def view_pipeline(n_clicks, filename):
@@ -228,8 +206,8 @@ def register_callbacks(app):
 
     @app.callback(
         Output('btn-run-pipeline', 'n_clicks'),
-        [Input('btn-run-pipeline', 'n_clicks')],
-        [State('pipeline-file-store', 'data')],
+        Input('btn-run-pipeline', 'n_clicks'),
+        State('pipeline-file-store', 'data'),
         prevent_initial_call=True
     )
     def run_pipeline(n_clicks, filename):
@@ -237,97 +215,81 @@ def register_callbacks(app):
             subprocess.run([sys.executable, "-m", "workforce", "run", filename])
         return 0
 
-def handle_upload(contents):
-    content_type, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
-    return load(io.BytesIO(decoded))
-
 def load(pipeline_file):
-    # Read GraphML and convert it to dash-cytoscape elements using networkx
-    G = nx.read_graphml(pipeline_file)
-    graph = nx.readwrite.json_graph.node_link_data(G)
-    elements = graph['nodes'] + graph['links']
-    dash_elements = []
-    for element in elements:
-        if 'source' in element and 'target' in element:
-            dash_elements.append({
-                'data': {
-                    'source': element.get('source'),
-                    'target': element.get('target'),
-                    'id': element.get('id')
-                }
-            })
-        else:
-            dash_elements.append({
-                'data': {
-                    'label': element.get('label'),
-                    'id': element.get('id')
-                },
-                'position': {
-                    'x': float(element.get('x', 0)),
-                    'y': float(element.get('y', 0))
-                }
-            })
-    return dash_elements
+    # Read file content
+    if isinstance(pipeline_file, (str, bytes)):
+        with open(pipeline_file, 'rb') as f:
+            content = f.read()
+    else:
+        content = pipeline_file.read()
+
+    # Use NetworkX to read the graph
+    f = io.BytesIO(content)
+    G = nx.read_graphml(f)
+
+    # Extract prefix and suffix from graph attributes
+    prefix = G.graph.get('prefix', '')
+    suffix = G.graph.get('suffix', '')
+
+    # Build cytoscape-compatible elements
+    elements = []
+    for node_id, node_data in G.nodes(data=True):
+        elements.append({
+            'data': {
+                'id': node_id,
+                'label': node_data.get('label', node_id),
+                'status': node_data.get('status', '')
+            },
+            'position': {
+                'x': float(node_data.get('x', 0)),
+                'y': float(node_data.get('y', 0))
+            }
+        })
+
+    for source, target, edge_data in G.edges(data=True):
+        elements.append({
+            'data': {
+                'id': edge_data.get('id', f'{source}-{target}'),
+                'source': source,
+                'target': target
+            }
+        })
+
+    return elements, prefix, suffix
 
 def add_node(elements, txt_node):
-    elements.append({'data': {'label': txt_node}})
+    elements.append({'data': {'id': txt_node, 'label': txt_node, 'status': ''}})
     return elements
+
 
 def remove(elements, selected_nodes, selected_edges):
-    selected_node_labels = {node['label'] for node in selected_nodes} if selected_nodes else set()
-    selected_edge_pairs = {(edge['source'], edge['target']) for edge in selected_edges} if selected_edges else set()
-    return [
-        el for el in elements
-        if el['data'].get('label') not in selected_node_labels and
-           (el['data'].get('source'), el['data'].get('target')) not in selected_edge_pairs
-    ]
+    sel_n = {n['id'] for n in (selected_nodes or [])}
+    sel_e = {(e['source'], e['target']) for e in (selected_edges or [])}
+    return [el for el in elements if not (el['data'].get('id') in sel_n or (el['data'].get('source'), el['data'].get('target')) in sel_e)]
+
 
 def connect_nodes(elements, selected_nodes):
-    if not selected_nodes or len(selected_nodes) < 2:
-        return elements
-    for i in range(len(selected_nodes) - 1):
-        source = selected_nodes[i]['id']
-        target = selected_nodes[i+1]['id']
-        elements.append({'data': {'source': source, 'target': target}})
+    if not selected_nodes or len(selected_nodes)<2: return elements
+    for i in range(len(selected_nodes)-1): elements.append({'data': {'source': selected_nodes[i]['id'], 'target': selected_nodes[i+1]['id']}})
     return elements
 
-def update_node(elements, selected_nodes, txt_node_value):
-    if selected_nodes and len(selected_nodes) == 1:
-        selected_id = selected_nodes[0]['id']
-        for element in elements:
-            if element['data'].get('id') == selected_id:
-                element['data']['label'] = txt_node_value
-                break
+
+def update_node(elements, selected_nodes, txt):
+    if selected_nodes and len(selected_nodes)==1:
+        sel=selected_nodes[0]['id']
+        for el in elements:
+            if el['data'].get('id')==sel: el['data']['label']=txt; break
     return elements
 
-def save_elements(elements):
-    G = nx.DiGraph()
-    for element in elements:
-        data = element['data']
-        if 'source' in data and 'target' in data:
-            G.add_edge(data['source'], data['target'], id=data.get('id'))
-        else:
-            node_id = data.get('id')
-            label = data.get('label', node_id)
-            pos = element.get('position', {})
-            G.add_node(node_id, label=label, x=pos.get('x', 0), y=pos.get('y', 0))
-    graphml_bytes = io.BytesIO()
-    nx.write_graphml(G, graphml_bytes)
-    graphml_bytes.seek(0)
-    return dcc.send_string(graphml_bytes.getvalue().decode('utf-8'), 'Workfile')
 
-def execute_process(data):
+def execute_process(data, G):
     if data:
-        for process in data:
-            subprocess.call(process['label'], shell=True)
+        for proc in data:
+            cmd=f"{G.graph.get('prefix','bash -c')} \"{proc['label']}\" {G.graph.get('suffix','')}"
+            subprocess.call(cmd, shell=True)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="workforce",
-        description="Manage and run graph-based workflows."
-    )
+    parser = argparse.ArgumentParser(prog="workforce", description="Manage and run graph-based workflows.")
     parser.add_argument("filename", nargs="?", help="Optional GraphML file to load")
     args = parser.parse_args()
     Gui(args.filename)
-

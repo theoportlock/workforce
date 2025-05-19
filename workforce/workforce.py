@@ -103,6 +103,12 @@ def run_node(filename, node, prefix='bash -c', suffix=''):
     except subprocess.CalledProcessError:
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
 
+def execute_process(data, prefix='bash -c', suffix=''):
+    if data:
+        for process in data:
+            command = f"{prefix} \"{process['label']}\" {suffix}"
+            subprocess.call(command, shell=True)
+
 def safe_load(filename, lock_timeout=0.1):
     lock = FileLock(f"{filename}.lock")
     try:
