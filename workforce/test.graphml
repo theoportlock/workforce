@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d4" for="node" attr.name="y" attr.type="long"/>
+<key id="d3" for="node" attr.name="x" attr.type="long"/>
+<key id="d2" for="node" attr.name="label" attr.type="string"/>
+<key id="d1" for="graph" attr.name="suffix" attr.type="string"/>
+<key id="d0" for="graph" attr.name="prefix" attr.type="string"/>
+<graph edgedefault="directed"><data key="d0">bash -c</data>
+<data key="d1"></data>
+<node id="n0">
+  <data key="d2">echo 'test'</data>
+  <data key="d3">364</data>
+  <data key="d4">149</data>
+</node>
+<node id="n1">
+  <data key="d2">echo 'test2'</data>
+  <data key="d3">615</data>
+  <data key="d4">225</data>
+</node>
+<edge source="n0" target="n1"/>
+</graph></graphml>

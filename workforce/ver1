@@ -1,0 +1,155 @@
+import tkinter as tk
+from tkinter import filedialog, simpledialog
+import networkx as nx
+import math
+
+class NodeEditor:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Tkinter Node Editor")
+
+        self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.zoom_scale = 1.0
+        self.offset_x = 0
+        self.offset_y = 0
+
+        self.G = nx.DiGraph()
+        self.nodes = {}
+
+        self.selected_node = None
+        self.dragging_node = None
+
+        self.canvas.bind("<Button-1>", self.on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
+        self.canvas.bind("<ButtonPress-1>", self.on_mouse_press)
+        self.canvas.bind("<ButtonRelease-1>", self.on_mouse_release)
+        self.canvas.bind("<MouseWheel>", self.on_mousewheel)
+
+        self.last_mouse_x = 0
+        self.last_mouse_y = 0
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        frame = tk.Frame(self.root)
+        frame.pack()
+
+        tk.Button(frame, text="Zoom In (+)", command=self.zoom_in).pack(side=tk.LEFT)
+        tk.Button(frame, text="Zoom Out (-)", command=self.zoom_out).pack(side=tk.LEFT)
+        tk.Button(frame, text="Reset View", command=self.reset_view).pack(side=tk.LEFT)
+        tk.Button(frame, text="Add Node", command=self.manual_add_node).pack(side=tk.LEFT)
+        tk.Button(frame, text="Remove Selected", command=self.remove_selected_node).pack(side=tk.LEFT)
+
+    def to_canvas_coords(self, x, y):
+        return self.offset_x + x * self.zoom_scale, self.offset_y + y * self.zoom_scale
+
+    def from_canvas_coords(self, x, y):
+        return (x - self.offset_x) / self.zoom_scale, (y - self.offset_y) / self.zoom_scale
+
+    def on_mouse_press(self, event):
+        self.last_mouse_x = event.x
+        self.last_mouse_y = event.y
+        # Check if pressed on a node
+        for node, (x, y) in self.nodes.items():
+            cx, cy = self.to_canvas_coords(x, y)
+            if math.hypot(event.x - cx, event.y - cy) <= 15:
+                self.dragging_node = node
+                return
+        self.dragging_node = None
+
+    def on_mouse_release(self, event):
+        self.dragging_node = None
+
+    def on_mouse_drag(self, event):
+        dx = event.x - self.last_mouse_x
+        dy = event.y - self.last_mouse_y
+
+        if self.dragging_node:
+            # Move the node
+            x, y = self.nodes[self.dragging_node]
+            self.nodes[self.dragging_node] = (x + dx / self.zoom_scale, y + dy / self.zoom_scale)
+            self.G.nodes[self.dragging_node]['pos'] = self.nodes[self.dragging_node]
+        else:
+            # Pan the view
+            self.offset_x += dx
+            self.offset_y += dy
+
+        self.last_mouse_x = event.x
+        self.last_mouse_y = event.y
+        self.draw()
+
+    def on_mousewheel(self, event):
+        if event.delta > 0:
+            self.zoom_in()
+        else:
+            self.zoom_out()
+
+    def zoom_in(self):
+        self.zoom_scale *= 1.1
+        self.draw()
+
+    def zoom_out(self):
+        self.zoom_scale /= 1.1
+        self.draw()
+
+    def reset_view(self):
+        self.zoom_scale = 1.0
+        self.offset_x = 0
+        self.offset_y = 0
+        self.draw()
+
+    def on_canvas_click(self, event):
+        clicked_node = None
+        for node, (x, y) in self.nodes.items():
+            cx, cy = self.to_canvas_coords(x, y)
+            if math.hypot(event.x - cx, event.y - cy) <= 15:
+                clicked_node = node
+                break
+
+        if clicked_node:
+            self.selected_node = clicked_node
+        else:
+            self.selected_node = None
+            label = simpledialog.askstring("Input", "Enter node label:")
+            if label:
+                x, y = self.from_canvas_coords(event.x, event.y)
+                self.G.add_node(label, pos=(x, y))
+                self.nodes[label] = (x, y)
+
+        self.draw()
+
+    def manual_add_node(self):
+        label = simpledialog.askstring("Input", "Enter node label:")
+        if label:
+            x, y = self.from_canvas_coords(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2)
+            self.G.add_node(label, pos=(x, y))
+            self.nodes[label] = (x, y)
+            self.draw()
+
+    def remove_selected_node(self):
+        if self.selected_node and self.selected_node in self.G:
+            self.G.remove_node(self.selected_node)
+            del self.nodes[self.selected_node]
+            self.selected_node = None
+            self.draw()
+
+    def draw(self):
+        self.canvas.delete("all")
+        for u, v in self.G.edges():
+            x1, y1 = self.to_canvas_coords(*self.G.nodes[u]['pos'])
+            x2, y2 = self.to_canvas_coords(*self.G.nodes[v]['pos'])
+            self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST)
+
+        for node, (x, y) in self.nodes.items():
+            cx, cy = self.to_canvas_coords(x, y)
+            fill_color = "orange" if self.selected_node == node else "lightgray"
+            self.canvas.create_oval(cx-15, cy-15, cx+15, cy+15, fill=fill_color)
+            self.canvas.create_text(cx, cy, text=node)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = NodeEditor(root)
+    root.mainloop()
+
