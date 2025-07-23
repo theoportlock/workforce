@@ -12,14 +12,11 @@ def run_node_cmd(args):
 def run_tasks_cmd(args):
     workforce.worker(args.filename, args.prefix, args.suffix, args.speed)
 
-def view_cmd(args):
-    workforce.plot_network(args.filename)
-
 def gui_cmd(args):
     gui.Gui(args.filename)  # Pass only the filename, not the entire Namespace
 
 def main():
-    valid_commands = {"run", "run_node", "view", "gui", "-h", "--help"}
+    valid_commands = {"run", "run_node", "gui", "-h", "--help"}
 
     if len(sys.argv) == 1:
         if os.path.exists("Workfile"):
@@ -54,11 +51,6 @@ def main():
     run_node_parser.add_argument("--prefix", '-p', default='bash -c', required=False, type=str, help="Prefix for command execution.")
     run_node_parser.add_argument("--suffix", '-s', default='', required=False, type=str, help="Suffix for command execution.")
     run_node_parser.set_defaults(func=run_node_cmd)
-
-    # View Command
-    view_parser = subparsers.add_parser("view", help="Visualize the GraphML workflow")
-    view_parser.add_argument("filename", help="GraphML file to visualize")
-    view_parser.set_defaults(func=view_cmd)
 
     # GUI Command
     gui_parser = subparsers.add_parser("gui", help="Launch the GUI")
