@@ -215,7 +215,7 @@ class WorkflowApp:
             self.draw_node(node_id)
         self.node_label_popup("", on_save)
 
-    def draw_node(self, node_id):
+    def draw_node(self, node_id, font_size=None):
         data = self.graph.nodes[node_id]
         x, y = data.get('x', 100), data.get('y', 100)
         label = data.get('label', node_id)
@@ -225,8 +225,13 @@ class WorkflowApp:
         status = data.get('status', '').lower()
         fill_color = status_colors.get(status, 'lightgray')
 
+        # Use current font size for both text and rectangle
+        if font_size is None:
+            font_size = getattr(self, 'current_font_size', self.base_font_size)
+        font_tuple = ("TkDefaultFont", font_size)
+
         # Temporary text to measure size
-        temp_text = self.canvas.create_text(0, 0, text=label, anchor='nw', font=("TkDefaultFont", 10))
+        temp_text = self.canvas.create_text(0, 0, text=label, anchor='nw', font=font_tuple)
         bbox = self.canvas.bbox(temp_text)
         self.canvas.delete(temp_text)
 
@@ -241,7 +246,7 @@ class WorkflowApp:
         rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, outline="")
 
         # Draw left-aligned text inside the rectangle
-        text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left')
+        text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
 
         self.node_widgets[node_id] = (rect, text)
         for item in (rect, text):
@@ -428,20 +433,32 @@ class WorkflowApp:
         factor = 1.1 if event.delta > 0 or getattr(event, 'num', 0) == 4 else 0.9
         self.scale *= factor
 
-        # Scale all coordinates and rectangles
-        self.canvas.scale("all", event.x, event.y, factor, factor)
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # Scale node positions so nodes move closer/farther
+        for node_id in self.graph.nodes:
+            x = self.graph.nodes[node_id].get('x', 100)
+            y = self.graph.nodes[node_id].get('y', 100)
+            # Center zoom on mouse position
+            cx = self.canvas.canvasx(event.x)
+            cy = self.canvas.canvasy(event.y)
+            new_x = cx + (x - cx) * factor
+            new_y = cy + (y - cy) * factor
+            self.graph.nodes[node_id]['x'] = new_x
+            self.graph.nodes[node_id]['y'] = new_y
 
-        # Update all node fonts
-        new_font_size = max(6, int(self.base_font_size * self.scale))
-        for rect, text in self.node_widgets.values():
-            font_info = self.canvas.itemcget(text, "font").split()
-            font_family = font_info[0] if font_info else "TkDefaultFont"
-            self.canvas.itemconfig(text, font=(font_family, new_font_size))
-
-        # Update all edge thicknesses
-        for edge_id in self.canvas.find_withtag("edge"):
-            self.canvas.itemconfig(edge_id, width=self.base_edge_width * self.scale)
+        # Update font size and redraw all nodes to keep ratio
+        self.current_font_size = max(6, int(self.base_font_size * self.scale))
+        # Remove all node widgets and redraw
+        for node_id in list(self.node_widgets.keys()):
+            for item in self.node_widgets[node_id]:
+                self.canvas.delete(item)
+        self.node_widgets.clear()
+        # Remove all edge widgets before redrawing
+        self.canvas.delete("edge")
+        for node_id in self.graph.nodes:
+            self.draw_node(node_id, font_size=self.current_font_size)
+        # Redraw all edges to match new node positions
+        for src, tgt in self.graph.edges():
+            self.draw_edge(src, tgt)
 
     def on_pan_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
