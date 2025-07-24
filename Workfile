@@ -9,66 +9,82 @@
   <graph edgedefault="directed">
     <node id="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d2">echo one</data>
-      <data key="d3">160.6550089684887</data>
-      <data key="d4">-79.79562195471328</data>
+      <data key="d3">-181.9987677076963</data>
+      <data key="d4">-254.64370557240738</data>
     </node>
     <node id="fa20471d-c97e-4676-ac11-20064bbee6fc">
-      <data key="d2">echo two
-echo two</data>
-      <data key="d3">350.80390818880835</data>
-      <data key="d4">57.524192079534885</data>
+      <data key="d2">echo two</data>
+      <data key="d3">-185.16665746289675</data>
+      <data key="d4">-197.6216899787987</data>
     </node>
     <node id="03349b87-b2c7-440f-9e76-2f2b9e11ec1e">
       <data key="d2">echo three</data>
-      <data key="d3">97.24214694131956</data>
-      <data key="d4">73.72048361880547</data>
+      <data key="d3">-190.23528107121763</data>
+      <data key="d4">-150.73692160183066</data>
     </node>
     <node id="648a7ff3-98a0-4f4b-83a8-77b13e895fae">
       <data key="d2">echo "start p1"</data>
-      <data key="d3">-15.87839501370945</data>
-      <data key="d4">-157.62246143723826</data>
+      <data key="d3">-286.786307784821</data>
+      <data key="d4">-345.12248841582596</data>
     </node>
     <node id="8b1b0510-e2d7-4328-bbaa-229a4621754e">
       <data key="d2">echo "start p2"</data>
-      <data key="d3">325.10657647156734</data>
-      <data key="d4">-180.88391894212543</data>
+      <data key="d3">-43.05161531509725</data>
+      <data key="d4">-327.398208124167</data>
     </node>
     <node id="b64ae446-a898-4205-aaa0-6d3a4a940678">
       <data key="d2">echo "start p3"</data>
-      <data key="d3">-138.25257464356287</data>
-      <data key="d4">-55.0774662642653</data>
+      <data key="d3">-401.2502164080611</data>
+      <data key="d4">-250.33741580857554</data>
     </node>
     <node id="4db400a9-6bd0-4539-ac3a-0aa55484b243">
       <data key="d2">echo "three p1"</data>
-      <data key="d3">-8.624625833930736</data>
-      <data key="d4">246.51379825006285</data>
+      <data key="d3">-235.80510545145137</data>
+      <data key="d4">-63.91553755591701</data>
     </node>
     <node id="a99e51a9-66a1-443f-bce5-ff72c22e0cc0">
-      <data key="d2">echo "three p2"
-echo 'three p4'</data>
-      <data key="d3">263.21082005462165</data>
-      <data key="d4">166.0198612518248</data>
+      <data key="d2">echo "three p2"</data>
+      <data key="d3">-27.731339975876267</data>
+      <data key="d4">-52.04609608500232</data>
     </node>
     <node id="22f9abf7-50dc-440c-b302-312e6a6b1dbb">
       <data key="d2">echo "four"</data>
-      <data key="d3">203.0894684647514</data>
-      <data key="d4">328.011239058436</data>
+      <data key="d3">-8.168131966358601</data>
+      <data key="d4">76.59385067874126</data>
     </node>
     <node id="b8128031-6b2b-404c-996f-039a30a9d35c">
       <data key="d2">echo "start p4"</data>
-      <data key="d3">118.5157419298215</data>
-      <data key="d4">-184.50670153158103</data>
+      <data key="d3">-103.20792883970273</data>
+      <data key="d4">-379.5580924629621</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
       <data key="d2">sleep 8; echo "start p6"</data>
-      <data key="d3">332.13229678218687</data>
-      <data key="d4">-75.04257168966626</data>
+      <data key="d3">54.1786584829556</data>
+      <data key="d4">-254.9386955151591</data>
+    </node>
+    <node id="ade6c799-c635-43fe-badb-a1be99bbce16">
+      <data key="d2">ls; ls</data>
+      <data key="d3">110.70457774946533</data>
+      <data key="d4">-166.7204220354604</data>
+    </node>
+    <node id="node12">
+      <data key="d2">pwd</data>
+      <data key="d3">390.8671291455534</data>
+      <data key="d4">-83.5135641181908</data>
+    </node>
+    <node id="node13">
+      <data key="d2">echo $test</data>
+      <data key="d3">501.5421342830002</data>
+      <data key="d4">18.271007261999785</data>
     </node>
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="fa20471d-c97e-4676-ac11-20064bbee6fc">
       <data key="d5">fe91b12a-7fd5-4577-a25c-1b1767957ad3</data>
     </edge>
     <edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="03349b87-b2c7-440f-9e76-2f2b9e11ec1e">
       <data key="d5">fb1bd678-fc55-42ba-9cdb-e7a8303a7f2a</data>
+    </edge>
+    <edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="ade6c799-c635-43fe-badb-a1be99bbce16">
+      <data key="d5">92aa443a-6f7e-4d10-8a8b-350a3266bfaa</data>
     </edge>
     <edge source="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" target="4db400a9-6bd0-4539-ac3a-0aa55484b243">
       <data key="d5">e8184823-601e-4054-a833-a9c836f9799f</data>
@@ -100,7 +116,10 @@ echo 'three p4'</data>
     <edge source="1ecbcbc6-35db-4ab5-852c-0aff0d79b909" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d5">f53f077a-15ee-4938-9dbe-7e8a199eb30d</data>
     </edge>
-    <data key="d0">bash -c</data>
+    <edge source="ade6c799-c635-43fe-badb-a1be99bbce16" target="node12" />
+    <edge source="node12" target="node13" />
+    <data key="d0">export test='one'
+bash -c</data>
     <data key="d1" />
   </graph>
 </graphml>

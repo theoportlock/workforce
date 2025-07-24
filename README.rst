@@ -51,15 +51,7 @@ To run a sample plan from workforce github project:
 
 .. code-block:: bash
 
-   wf run example_plan.graphml
-
-Live viewing workforce plan
----------------------------
-To view a plan as it is excecuting:
-
-.. code-block:: bash
-
-   wf view example_plan.graphml
+   wf run Workfile
 
 Prefix and Suffix
 -----------------
@@ -106,9 +98,5 @@ Adding the following prefix and suffixes to the wf run command will add those pr
 +-------------------------------+---------------------------------------------------------------------------------+
 
 To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
-
-Deleting processes or edges on the project can be done by selecting a process and clicking the 'Delete' button
-
-The simplest way to edit a process is to click the edge that the process is connected to. This will fill the 'Input' box with the connection details. You can then add a new node with those connections and delete the old process.
 
 This is tested on mac and linux but work requires work for windows integration except for wsl2

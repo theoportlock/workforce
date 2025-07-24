@@ -25,18 +25,13 @@ class WorkflowApp:
 
         self.create_toolbar()
 
-        # Bind Ctrl+S to save to current file
-        self.master.bind_all('<Control-s>', lambda event: self.save_to_current_file())
-        # Bind 'r' key to run selected node(s)
-        self.master.bind_all('r', lambda event: self.run_selected())
-        # Bind Shift+R to run pipeline
-        self.master.bind_all('<Shift-R>', lambda event: self.run_pipeline())
-        # Bind Shift+C to clear all
-        self.master.bind_all('<Shift-C>', lambda event: self.clear_all())
-        # Bind 'd' to delete selected nodes
-        self.master.bind_all('d', lambda event: self.remove_node())
-        # Bind 'c' to clear status of selected nodes
-        self.master.bind_all('c', lambda event: self.clear_selected_status())
+        # Bind keys only when main window is focused
+        self.master.bind('<Control-s>', lambda event: self.save_to_current_file())
+        self.master.bind('r', lambda event: self.run_selected())
+        self.master.bind('<Shift-R>', lambda event: self.run_pipeline())
+        self.master.bind('<Shift-C>', lambda event: self.clear_all())
+        self.master.bind('d', lambda event: self.remove_node())
+        self.master.bind('c', lambda event: self.clear_selected_status())
 
         # Zoom and pan
         self.scale = 1.0
@@ -58,6 +53,51 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+
+    def prefix_suffix_popup(self):
+        editor = tk.Toplevel(self.master)
+        editor.title("Prefix/Suffix")
+        editor.geometry("500x180")
+        editor.minsize(500, 180)
+
+        frame = tk.Frame(editor)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Prefix
+        prefix_label = tk.Label(frame, text="Prefix:")
+        prefix_label.grid(row=0, column=0, sticky="w")
+        prefix_text = tk.Text(frame, wrap='word', font=("TkDefaultFont", 10), height=4, width=25)
+        prefix_text.grid(row=1, column=0, sticky="nsew", padx=(0,10))
+        prefix_text.insert("1.0", self.prefix)
+
+        # Suffix
+        suffix_label = tk.Label(frame, text="Suffix:")
+        suffix_label.grid(row=0, column=1, sticky="w")
+        suffix_text = tk.Text(frame, wrap='word', font=("TkDefaultFont", 10), height=4, width=25)
+        suffix_text.grid(row=1, column=1, sticky="nsew")
+        suffix_text.insert("1.0", self.suffix)
+
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
+
+        def save_and_close():
+            self.prefix = prefix_text.get("1.0", "end-1c")
+            self.suffix = suffix_text.get("1.0", "end-1c")
+            editor.destroy()
+
+        def cancel_and_close():
+            editor.destroy()
+
+        btn_frame = tk.Frame(editor)
+        btn_frame.pack(fill=tk.X, padx=10, pady=(0,10))
+        save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+
+        editor.transient(self.master)
+        editor.grab_set()
+        prefix_text.focus_set()
     
     def clear_selected_status(self):
         # Remove status from selected nodes only
@@ -154,6 +194,7 @@ class WorkflowApp:
         tk.Button(toolbar, text="Remove", command=self.remove_node).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Connect", command=self.connect_nodes).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Update", command=self.update_node).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Prefix/Suffix", command=self.prefix_suffix_popup).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Clear", command=self.clear_all).pack(side=tk.LEFT)
@@ -242,6 +283,7 @@ class WorkflowApp:
         cancel_btn.pack(side=tk.LEFT, padx=5)
 
         editor.transient(self.master)
+        editor.wait_visibility()  # Ensure window is visible before grab_set
         editor.grab_set()
         text_widget.focus_set()
 
@@ -307,7 +349,8 @@ class WorkflowApp:
             self.save_to_current_file()
             for node_id in self.selected_nodes:
                 subprocess.Popen([
-                    sys.executable, "-m", "workforce", "run_node", self.filename, node_id
+                    sys.executable, "-m", "workforce", "run_node", self.filename, node_id,
+                    "--prefix", self.prefix, "--suffix", self.suffix
                 ])
 
     def run_pipeline(self):
@@ -315,8 +358,10 @@ class WorkflowApp:
             self.save_graph()
         if self.filename:
             self.save_to_current_file()
+            print(self.prefix, self.suffix) # THEO ADDED
             subprocess.Popen([
-                sys.executable, "-m", "workforce", "run", self.filename
+                sys.executable, "-m", "workforce", "run", self.filename,
+                "--prefix", self.prefix, "--suffix", self.suffix
             ])
 
     def load_graph(self):
@@ -329,6 +374,9 @@ class WorkflowApp:
     def _reload_graph(self):
         # internal reload without dialog
         self.graph = nx.read_graphml(self.filename)
+        # Load prefix/suffix from graph attributes if present
+        self.prefix = self.graph.graph.get('prefix', self.prefix)
+        self.suffix = self.graph.graph.get('suffix', self.suffix)
         self.canvas.delete("all")
         self.node_widgets.clear()
         self.selected_nodes.clear()

@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
 from filelock import FileLock, Timeout
-from matplotlib.animation import FuncAnimation
-import argparse
 import sys
 import subprocess
 import networkx as nx
-import textwrap
 import time
-import matplotlib as mpl
-mpl.use('WebAgg')  # Set backend before importing pyplot
-import matplotlib.pyplot as plt
+import shlex
 
 class GraphMLAtomic:
     def __init__(self, filename):
@@ -94,8 +89,7 @@ def schedule_tasks(filename):
 def run_node(filename, node, prefix='bash -c', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
-        escaped_label = label.replace('"', '\\"')
-        command = f"{prefix} \"{escaped_label}\" {suffix}"
+        command = f"{prefix} {shlex.quote(label)} {suffix}".strip()
         G.nodes[node]['status'] = 'running'
     try:
         subprocess.run(command, shell=True, check=True)
@@ -106,7 +100,7 @@ def run_node(filename, node, prefix='bash -c', suffix=''):
 def execute_process(data, prefix='bash -c', suffix=''):
     if data:
         for process in data:
-            command = f"{prefix} \"{process['label']}\" {suffix}"
+            command = f"{prefix} {shlex.quote(process['label'])} {suffix}".strip()
             subprocess.call(command, shell=True)
 
 def safe_load(filename, lock_timeout=0.1):

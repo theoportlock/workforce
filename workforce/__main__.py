@@ -41,7 +41,7 @@ def main():
     run_parser.add_argument("--prefix", '-p', default='bash -c', type=str, help="Prefix for node execution")
     run_parser.add_argument("--suffix", '-s', default='', type=str, help="Suffix for node execution")
     run_parser.add_argument("--run_task", action="store_true", help="Run a single task and exit")
-    run_parser.add_argument("--speed", type=float, default=0.5, help="Seconds in between job submission")
+    run_parser.add_argument("--speed", type=float, default=1, help="Seconds in between job submission")
     run_parser.set_defaults(func=run_tasks_cmd)
 
     # Run Single Node Command
