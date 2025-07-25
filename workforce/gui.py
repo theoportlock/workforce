@@ -9,8 +9,14 @@ import sys
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
+        # Use grid layout for toolbar on top, canvas below
+        self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
+        self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
+        self.master.grid_columnconfigure(0, weight=1)
+
+        self.create_toolbar()
         self.canvas = tk.Canvas(master, width=1000, height=600, bg='white')
-        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.canvas.grid(row=1, column=0, sticky="nsew")
 
         self.graph = nx.DiGraph()
         self.node_widgets = {}
@@ -22,6 +28,11 @@ class WorkflowApp:
         self.filename = None
         self.last_mtime = None
         self.reload_interval = 1000  # ms
+        
+        # Selection rectangle state
+        self._select_rect_id = None
+        self._select_rect_start = None
+        self._select_rect_active = False
 
         self.create_toolbar()
 
@@ -32,6 +43,8 @@ class WorkflowApp:
         self.master.bind('<Shift-C>', lambda event: self.clear_all())
         self.master.bind('d', lambda event: self.remove_node())
         self.master.bind('c', lambda event: self.clear_selected_status())
+        self.master.bind('e', lambda event: self.connect_nodes())
+        self.master.bind('E', lambda event: self.delete_edges_from_selected())
 
         # Zoom and pan
         self.scale = 1.0
@@ -42,6 +55,10 @@ class WorkflowApp:
         self.canvas.bind("<ButtonPress-1>", self.on_left_press)
         self.canvas.bind("<B1-Motion>", self.on_left_motion)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
+        self.canvas.bind("<Shift-ButtonPress-1>", self.on_shift_left_press)
+        self.canvas.bind("<Shift-B1-Motion>", self.on_shift_left_motion)
+        self.canvas.bind("<Shift-ButtonRelease-1>", self.on_shift_left_release)
+
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
         self.dragging_node = None
         self.drag_offset = (0, 0)
@@ -53,6 +70,57 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+
+    def delete_edges_from_selected(self):
+        # Remove all edges connected to selected nodes (in or out)
+        to_remove = []
+        for u, v in list(self.graph.edges()):
+            if u in self.selected_nodes or v in self.selected_nodes:
+                to_remove.append((u, v))
+        for u, v in to_remove:
+            self.graph.remove_edge(u, v)
+        # Redraw edges
+        self.canvas.delete("edge")
+        for src, tgt in self.graph.edges():
+            self.draw_edge(src, tgt)
+
+    def on_shift_left_press(self, event):
+        # Start selection rectangle
+        self._select_rect_active = True
+        self._select_rect_start = (self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+        self._select_rect_id = self.canvas.create_rectangle(
+            self._select_rect_start[0], self._select_rect_start[1],
+            self._select_rect_start[0], self._select_rect_start[1],
+            outline="blue", dash=(2,2), width=2, tags="select_rect"
+        )
+
+    def on_shift_left_motion(self, event):
+        if not self._select_rect_active or self._select_rect_id is None:
+            return
+        x0, y0 = self._select_rect_start
+        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.canvas.coords(self._select_rect_id, x0, y0, x1, y1)
+
+    def on_shift_left_release(self, event):
+        if not self._select_rect_active or self._select_rect_id is None:
+            return
+        x0, y0 = self._select_rect_start
+        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        x_min, x_max = min(x0, x1), max(x0, x1)
+        y_min, y_max = min(y0, y1), max(y0, y1)
+        # Select all nodes whose rectangles intersect the selection rectangle
+        for node_id, (rect, text) in self.node_widgets.items():
+            rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
+            # Check for intersection
+            if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
+                if node_id not in self.selected_nodes:
+                    self.selected_nodes.append(node_id)
+                    self.canvas.itemconfig(rect, fill="#555555")
+        # Remove selection rectangle
+        self.canvas.delete(self._select_rect_id)
+        self._select_rect_id = None
+        self._select_rect_start = None
+        self._select_rect_active = False
 
     def draw_node(self, node_id, font_size=None):
         data = self.graph.nodes[node_id]
@@ -100,7 +168,7 @@ class WorkflowApp:
 
     def create_toolbar(self):
         toolbar = tk.Frame(self.master)
-        toolbar.pack(fill=tk.X)
+        toolbar.grid(row=0, column=0, sticky="ew")
 
         tk.Button(toolbar, text="Load", command=self.load_graph).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Save", command=self.save_graph).pack(side=tk.LEFT)
@@ -355,7 +423,6 @@ class WorkflowApp:
             self.save_graph()
         if self.filename:
             self.save_to_current_file()
-            print(self.prefix, self.suffix) # THEO ADDED
             subprocess.Popen([
                 sys.executable, "-m", "workforce", "run", self.filename,
                 "--prefix", self.prefix, "--suffix", self.suffix
@@ -369,17 +436,6 @@ class WorkflowApp:
             self._reload_graph()
 
     def _reload_graph(self):
-        # Save current canvas view and zoom
-        if not hasattr(self, '_last_canvas_state'):
-            self._last_canvas_state = {
-                'xview': self.canvas.xview(),
-                'yview': self.canvas.yview(),
-                'scale': self.scale
-            }
-        xview = self._last_canvas_state['xview']
-        yview = self._last_canvas_state['yview']
-        prev_scale = self._last_canvas_state['scale']
-
         # Reload graph
         self.graph = nx.read_graphml(self.filename)
         self.prefix = self.graph.graph.get('prefix', self.prefix)
@@ -389,19 +445,9 @@ class WorkflowApp:
         self.selected_nodes.clear()
         for node_id, data in self.graph.nodes(data=True):
             data['x'], data['y'] = float(data.get('x', 100)), float(data.get('y', 100))
-            self.draw_node(node_id, font_size=max(1, int(self.base_font_size * prev_scale)))
+            self.draw_node(node_id)
         for src, tgt in self.graph.edges():
             self.draw_edge(src, tgt)
-
-        # Restore zoom (scale) and font/edge style
-        if abs(self.scale - prev_scale) > 1e-6:
-            factor = prev_scale / self.scale
-            self.zoom(factor)
-
-        # Ensure canvas is updated before restoring scroll position
-        self.canvas.update_idletasks()
-        self.canvas.xview_moveto(xview[0])
-        self.canvas.yview_moveto(yview[0])
 
     def add_node(self):
         def on_save(label):
