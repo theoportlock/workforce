@@ -54,6 +54,65 @@ class WorkflowApp:
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
 
+    def draw_node(self, node_id, font_size=None):
+        data = self.graph.nodes[node_id]
+        # Use virtual coordinates, apply scale for display
+        vx, vy = data.get('x', 100), data.get('y', 100)
+        x = vx * self.scale
+        y = vy * self.scale
+        label = data.get('label', node_id)
+
+        # Node color by status
+        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
+        status = data.get('status', '').lower()
+        fill_color = status_colors.get(status, 'lightgray')
+
+        # Use current font size for both text and rectangle
+        if font_size is None:
+            font_size = getattr(self, 'current_font_size', self.base_font_size)
+        font_tuple = ("TkDefaultFont", font_size)
+
+        # Temporary text to measure size
+        temp_text = self.canvas.create_text(0, 0, text=label, anchor='nw', font=font_tuple)
+        bbox = self.canvas.bbox(temp_text)
+        self.canvas.delete(temp_text)
+
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        padding_x, padding_y = 10 * self.scale, 6 * self.scale
+        box_width = text_width + 2 * padding_x
+        box_height = text_height + 2 * padding_y
+
+        # Draw rectangle
+        rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, outline="")
+
+        # Draw left-aligned text inside the rectangle
+        text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
+
+        self.node_widgets[node_id] = (rect, text)
+        for item in (rect, text):
+            self.canvas.tag_bind(item, "<Button-1>", lambda e, nid=node_id: self.handle_node_click(e, nid))
+            self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
+            self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
+            self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
+            self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
+
+    def create_toolbar(self):
+        toolbar = tk.Frame(self.master)
+        toolbar.pack(fill=tk.X)
+
+        tk.Button(toolbar, text="Load", command=self.load_graph).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Save", command=self.save_graph).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Add", command=self.add_node).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Remove", command=self.remove_node).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Connect", command=self.connect_nodes).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Update", command=self.update_node).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Prefix/Suffix", command=self.prefix_suffix_popup).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Clear", command=self.clear_all).pack(side=tk.LEFT)
+
     def prefix_suffix_popup(self):
         editor = tk.Toplevel(self.master)
         editor.title("Prefix/Suffix")
@@ -123,13 +182,17 @@ class WorkflowApp:
             self.add_node_at(x, y)
 
     def add_node_at(self, x, y):
+        # Store node positions as virtual (unscaled) coordinates
         def on_save(label):
             if not label.strip():
                 return
             node_id = f"node{len(self.graph.nodes)}"
-            self.graph.add_node(node_id, label=label, x=x, y=y)
+            vx = x / self.scale
+            vy = y / self.scale
+            self.graph.add_node(node_id, label=label, x=vx, y=vy)
             self.draw_node(node_id)
         self.node_label_popup("", on_save)
+
     def on_left_press(self, event):
         # Check if clicked on a node
         item = self.canvas.find_withtag(tk.CURRENT)
@@ -157,10 +220,11 @@ class WorkflowApp:
 
     def save_to_current_file(self):
         if self.filename:
+            # Save virtual coordinates
             for node_id in self.graph.nodes():
-                x1, y1, *_ = self.canvas.coords(self.node_widgets[node_id][0])
-                self.graph.nodes[node_id]['x'] = x1
-                self.graph.nodes[node_id]['y'] = y1
+                vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
+                self.graph.nodes[node_id]['x'] = vx
+                self.graph.nodes[node_id]['y'] = vy
             self.graph.graph['prefix'] = self.prefix
             self.graph.graph['suffix'] = self.suffix
             nx.write_graphml(self.graph, self.filename)
@@ -183,78 +247,6 @@ class WorkflowApp:
 
         # Start periodic file check
         self.master.after(self.reload_interval, self.check_reload)
-
-    def create_toolbar(self):
-        toolbar = tk.Frame(self.master)
-        toolbar.pack(fill=tk.X)
-
-        tk.Button(toolbar, text="Load", command=self.load_graph).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Save", command=self.save_graph).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Add", command=self.add_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Remove", command=self.remove_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Connect", command=self.connect_nodes).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Update", command=self.update_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Prefix/Suffix", command=self.prefix_suffix_popup).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Clear", command=self.clear_all).pack(side=tk.LEFT)
-
-    def on_canvas_click(self, event):
-        self.clear_selection()
-        self.canvas.scan_mark(event.x, event.y)
-        self.dragging_node = None  # cancel node drag just in case
-
-    def add_node(self):
-        def on_save(label):
-            if not label.strip():
-                return
-            node_id = f"node{len(self.graph.nodes)}"
-            x = 100 + len(self.graph.nodes) * 50
-            y = 100
-            self.graph.add_node(node_id, label=label, x=x, y=y)
-            self.draw_node(node_id)
-        self.node_label_popup("", on_save)
-
-    def draw_node(self, node_id, font_size=None):
-        data = self.graph.nodes[node_id]
-        x, y = data.get('x', 100), data.get('y', 100)
-        label = data.get('label', node_id)
-
-        # Node color by status
-        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
-        status = data.get('status', '').lower()
-        fill_color = status_colors.get(status, 'lightgray')
-
-        # Use current font size for both text and rectangle
-        if font_size is None:
-            font_size = getattr(self, 'current_font_size', self.base_font_size)
-        font_tuple = ("TkDefaultFont", font_size)
-
-        # Temporary text to measure size
-        temp_text = self.canvas.create_text(0, 0, text=label, anchor='nw', font=font_tuple)
-        bbox = self.canvas.bbox(temp_text)
-        self.canvas.delete(temp_text)
-
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-
-        padding_x, padding_y = 10, 6
-        box_width = text_width + 2 * padding_x
-        box_height = text_height + 2 * padding_y
-
-        # Draw rectangle
-        rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, outline="")
-
-        # Draw left-aligned text inside the rectangle
-        text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
-
-        self.node_widgets[node_id] = (rect, text)
-        for item in (rect, text):
-            self.canvas.tag_bind(item, "<Button-1>", lambda e, nid=node_id: self.handle_node_click(e, nid))
-            self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
-            self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
-            self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
-            self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
 
     def edit_node_label(self, node_id):
         current_label = self.graph.nodes[node_id].get('label', '')
@@ -377,28 +369,63 @@ class WorkflowApp:
             self._reload_graph()
 
     def _reload_graph(self):
-        # internal reload without dialog
+        # Save current canvas view and zoom
+        if not hasattr(self, '_last_canvas_state'):
+            self._last_canvas_state = {
+                'xview': self.canvas.xview(),
+                'yview': self.canvas.yview(),
+                'scale': self.scale
+            }
+        xview = self._last_canvas_state['xview']
+        yview = self._last_canvas_state['yview']
+        prev_scale = self._last_canvas_state['scale']
+
+        # Reload graph
         self.graph = nx.read_graphml(self.filename)
-        # Load prefix/suffix from graph attributes if present
         self.prefix = self.graph.graph.get('prefix', self.prefix)
         self.suffix = self.graph.graph.get('suffix', self.suffix)
         self.canvas.delete("all")
         self.node_widgets.clear()
         self.selected_nodes.clear()
-        # restore positions
         for node_id, data in self.graph.nodes(data=True):
             data['x'], data['y'] = float(data.get('x', 100)), float(data.get('y', 100))
-            self.draw_node(node_id)
+            self.draw_node(node_id, font_size=max(1, int(self.base_font_size * prev_scale)))
         for src, tgt in self.graph.edges():
             self.draw_edge(src, tgt)
+
+        # Restore zoom (scale) and font/edge style
+        if abs(self.scale - prev_scale) > 1e-6:
+            factor = prev_scale / self.scale
+            self.zoom(factor)
+
+        # Ensure canvas is updated before restoring scroll position
+        self.canvas.update_idletasks()
+        self.canvas.xview_moveto(xview[0])
+        self.canvas.yview_moveto(yview[0])
+
+    def add_node(self):
+        def on_save(label):
+            if not label.strip():
+                return
+            node_id = f"node{len(self.graph.nodes)}"
+            x = 100 + len(self.graph.nodes) * 50
+            y = 100
+            self.graph.add_node(node_id, label=label, x=x, y=y)
+            self.draw_node(node_id)
+        self.node_label_popup("", on_save)
+
+    def on_zoom(self, event):
+        factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
+        self.zoom(factor)
 
     def save_graph(self):
         filename = filedialog.asksaveasfilename()
         if filename:
+            # Save virtual coordinates
             for node_id in self.graph.nodes():
-                x1, y1, *_ = self.canvas.coords(self.node_widgets[node_id][0])
-                self.graph.nodes[node_id]['x'] = x1
-                self.graph.nodes[node_id]['y'] = y1
+                vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
+                self.graph.nodes[node_id]['x'] = vx
+                self.graph.nodes[node_id]['y'] = vy
             self.graph.graph['prefix'] = self.prefix
             self.graph.graph['suffix'] = self.suffix
             nx.write_graphml(self.graph, filename)
@@ -429,36 +456,24 @@ class WorkflowApp:
             self.canvas.itemconfig(rect, fill=fill_color)
             self.canvas.itemconfig(text, text=label)
 
-    def on_zoom(self, event):
-        factor = 1.1 if event.delta > 0 or getattr(event, 'num', 0) == 4 else 0.9
+    def zoom(self, factor):
         self.scale *= factor
+        self.canvas.scale("all", 0, 0, factor, factor)
 
-        # Scale node positions so nodes move closer/farther
-        for node_id in self.graph.nodes:
-            x = self.graph.nodes[node_id].get('x', 100)
-            y = self.graph.nodes[node_id].get('y', 100)
-            # Center zoom on mouse position
-            cx = self.canvas.canvasx(event.x)
-            cy = self.canvas.canvasy(event.y)
-            new_x = cx + (x - cx) * factor
-            new_y = cy + (y - cy) * factor
-            self.graph.nodes[node_id]['x'] = new_x
-            self.graph.nodes[node_id]['y'] = new_y
+        # Style updates only
+        new_font = max(1, int(self.base_font_size * self.scale))
+        new_width = max(1, int(self.base_edge_width * self.scale))
 
-        # Update font size and redraw all nodes to keep ratio
-        self.current_font_size = max(6, int(self.base_font_size * self.scale))
-        # Remove all node widgets and redraw
-        for node_id in list(self.node_widgets.keys()):
-            for item in self.node_widgets[node_id]:
-                self.canvas.delete(item)
-        self.node_widgets.clear()
-        # Remove all edge widgets before redrawing
-        self.canvas.delete("edge")
-        for node_id in self.graph.nodes:
-            self.draw_node(node_id, font_size=self.current_font_size)
-        # Redraw all edges to match new node positions
-        for src, tgt in self.graph.edges():
-            self.draw_edge(src, tgt)
+        for node_id, (rect, text) in self.node_widgets.items():
+            self.canvas.itemconfig(rect, width=new_width)
+            self.canvas.itemconfig(text, font=("Arial", new_font))
+
+        for edge in self.canvas.find_withtag("edge"):
+            self.canvas.itemconfig(edge, width=new_width)
+
+    def on_mousewheel(self, event):
+        factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
+        self.zoom(factor)
 
     def on_pan_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
@@ -523,39 +538,41 @@ class WorkflowApp:
         self.dragging_node = node_id
         x1, y1, x2, y2 = self._get_node_bounds(node_id)
         self.drag_offset = (event.x - x1, event.y - y1)
-        # Store initial positions for all selected nodes
+        # Store initial positions for all selected nodes (virtual coordinates)
         self._multi_drag_initial = {}
         for nid in self.selected_nodes:
-            rx1, ry1, _, _ = self._get_node_bounds(nid)
-            self._multi_drag_initial[nid] = (rx1, ry1)
+            vx = self.graph.nodes[nid].get('x', 100)
+            vy = self.graph.nodes[nid].get('y', 100)
+            self._multi_drag_initial[nid] = (vx, vy)
 
     def on_node_drag(self, event, node_id):
         if self.dragging_node:
             dx, dy = self.drag_offset
-            new_x = event.x - dx
-            new_y = event.y - dy
-            box_w = self.canvas.coords(self.node_widgets[node_id][0])[2] - self.canvas.coords(self.node_widgets[node_id][0])[0]
-            box_h = self.canvas.coords(self.node_widgets[node_id][0])[3] - self.canvas.coords(self.node_widgets[node_id][0])[1]
+            # Convert mouse event to virtual coordinates
+            new_x = (event.x - dx) / self.scale
+            new_y = (event.y - dy) / self.scale
 
-            # Calculate movement delta
+            # Calculate movement delta in virtual coordinates
             x0, y0 = self._multi_drag_initial.get(node_id, (new_x, new_y))
             delta_x = new_x - x0
             delta_y = new_y - y0
 
-            # Move all selected nodes
+            # Move all selected nodes in virtual coordinates
             for nid in self.selected_nodes:
                 ix, iy = self._multi_drag_initial.get(nid, (new_x, new_y))
                 nx_ = ix + delta_x
                 ny_ = iy + delta_y
-                box_w_ = self.canvas.coords(self.node_widgets[nid][0])[2] - self.canvas.coords(self.node_widgets[nid][0])[0]
-                box_h_ = self.canvas.coords(self.node_widgets[nid][0])[3] - self.canvas.coords(self.node_widgets[nid][0])[1]
-                self.canvas.coords(self.node_widgets[nid][0], nx_, ny_, nx_ + box_w_, ny_ + box_h_)
-                self.canvas.coords(self.node_widgets[nid][1], nx_ + 10, ny_ + 6)
                 self.graph.nodes[nid]['x'] = nx_
                 self.graph.nodes[nid]['y'] = ny_
 
-            # Redraw all edges
+            # Redraw all nodes and edges
+            for node_id2 in list(self.node_widgets.keys()):
+                for item in self.node_widgets[node_id2]:
+                    self.canvas.delete(item)
+            self.node_widgets.clear()
             self.canvas.delete("edge")
+            for node_id2 in self.graph.nodes:
+                self.draw_node(node_id2, font_size=max(1, int(self.base_font_size * self.scale)))
             for src, tgt in self.graph.edges():
                 self.draw_edge(src, tgt)
 
