@@ -327,7 +327,9 @@ class WorkflowApp:
         current_label = self.graph.nodes[node_id].get('label', '')
         def on_save(new_label):
             self.graph.nodes[node_id]['label'] = new_label
-            self.canvas.itemconfig(self.node_widgets[node_id][1], text=new_label)
+            self.save_to_current_file()
+            if self.filename:
+                self._reload_graph()
         self.node_label_popup(current_label, on_save)
 
     def node_label_popup(self, initial_value, on_save):
@@ -382,6 +384,9 @@ class WorkflowApp:
                 self.canvas.delete(item)
             del self.node_widgets[node_id]
         self.selected_nodes.clear()
+        self.save_to_current_file()
+        if self.filename:
+            self._reload_graph()
 
     def connect_nodes(self):
         if len(self.selected_nodes) >= 2:
