@@ -150,7 +150,7 @@ class WorkflowApp:
         status = data.get('status', '').lower()
         fill_color = status_colors.get(status, 'lightgray')
 
-        # Use current font size for both text and rectangle
+        # Use passed font_size, or the instance's current_font_size, or fallback to base
         if font_size is None:
             font_size = getattr(self, 'current_font_size', self.base_font_size)
         font_tuple = ("TkDefaultFont", font_size)
@@ -163,23 +163,27 @@ class WorkflowApp:
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
 
+        # Padding should also scale with zoom for consistent appearance
         padding_x, padding_y = 10 * self.scale, 6 * self.scale
         box_width = text_width + 2 * padding_x
         box_height = text_height + 2 * padding_y
 
-        # Draw rectangle
+        # Draw rectangle at scaled virtual coordinates
         rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, outline="")
 
-        # Draw left-aligned text inside the rectangle
+        # Draw left-aligned text inside the rectangle at scaled virtual coordinates
         text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
 
         self.node_widgets[node_id] = (rect, text)
         for item in (rect, text):
+            # Rebind events as new items are created
             self.canvas.tag_bind(item, "<Button-1>", lambda e, nid=node_id: self.handle_node_click(e, nid))
             self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
             self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
+
+        self.canvas.tag_lower(rect)  # Ensure rectangle is behind text
 
     def create_toolbar(self):
         toolbar = tk.Frame(self.master)
@@ -506,19 +510,28 @@ class WorkflowApp:
             self.canvas.itemconfig(text, text=label)
 
     def zoom(self, factor):
+        # Keep track of old scale before updating
+        old_scale = self.scale
         self.scale *= factor
-        self.canvas.scale("all", 0, 0, factor, factor)
 
-        # Style updates only
+        # Calculate new font size and edge width based on new scale
         new_font = max(1, int(self.base_font_size * self.scale))
         new_width = max(1, int(self.base_edge_width * self.scale))
 
-        for node_id, (rect, text) in self.node_widgets.items():
-            self.canvas.itemconfig(rect, width=new_width)
-            self.canvas.itemconfig(text, font=("Arial", new_font))
+        # Store the current font size for draw_node to use
+        self.current_font_size = new_font
 
-        for edge in self.canvas.find_withtag("edge"):
-            self.canvas.itemconfig(edge, width=new_width)
+        # Clear existing nodes and edges
+        self.canvas.delete("all")
+        self.node_widgets.clear()
+
+        # Redraw all nodes with the new scale and font size
+        for node_id, data in self.graph.nodes(data=True):
+            self.draw_node(node_id, font_size=new_font)
+
+        # Redraw all edges with the new scale and line width
+        for src, tgt in self.graph.edges():
+            self.draw_edge(src, tgt)
 
     def on_mousewheel(self, event):
         factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
