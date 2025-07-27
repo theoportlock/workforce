@@ -53,9 +53,6 @@ class WorkflowApp:
         self.canvas.bind("<Button-4>", self.on_zoom)
         self.canvas.bind("<Button-5>", self.on_zoom)
         self.canvas.bind("<ButtonPress-3>", self.on_right_press)
-        # For edge dragging
-        self._edge_drag_start_node = None
-        self._edge_drag_line = None
         self.canvas.bind("<ButtonPress-1>", self.on_left_press)
         self.canvas.bind("<B1-Motion>", self.on_left_motion)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
@@ -74,6 +71,10 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+        
+        # For edge dragging
+        self._edge_drag_start_node = None
+        self._edge_drag_line = None
 
     def on_right_press(self, event):
         # Check if right-clicked on a node
