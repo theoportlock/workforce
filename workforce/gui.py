@@ -294,17 +294,24 @@ class WorkflowApp:
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def save_to_current_file(self):
+        # If a filename is already set, save to it directly
         if self.filename:
             # Save virtual coordinates
             for node_id in self.graph.nodes():
+                # Ensure 'x' and 'y' are stored as floats
                 vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
-                self.graph.nodes[node_id]['x'] = vx
-                self.graph.nodes[node_id]['y'] = vy
+                self.graph.nodes[node_id]['x'] = float(vx)
+                self.graph.nodes[node_id]['y'] = float(vy)
             self.graph.graph['prefix'] = self.prefix
             self.graph.graph['suffix'] = self.suffix
-            nx.write_graphml(self.graph, self.filename)
-            print(f"[Saved] {self.filename}")
+            try:
+                nx.write_graphml(self.graph, self.filename)
+                print(f"[Saved] {self.filename}")
+                self.last_mtime = os.path.getmtime(self.filename) # Update mtime after saving
+            except Exception as e:
+                messagebox.showerror("Save Error", f"Failed to save {self.filename}:\n{e}")
         else:
+            # If no filename is set, call save_graph to prompt the user
             self.save_graph()
 
     def try_load_workfile(self):
@@ -477,16 +484,14 @@ class WorkflowApp:
         self.zoom(factor)
 
     def save_graph(self):
-        filename = filedialog.asksaveasfilename()
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".graphml",
+            filetypes=[("GraphML files", "*.graphml"), ("All files", "*.*")]
+        )
         if filename:
-            # Save virtual coordinates
-            for node_id in self.graph.nodes():
-                vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
-                self.graph.nodes[node_id]['x'] = vx
-                self.graph.nodes[node_id]['y'] = vy
-            self.graph.graph['prefix'] = self.prefix
-            self.graph.graph['suffix'] = self.suffix
-            nx.write_graphml(self.graph, filename)
+            self.filename = filename # Store the chosen filename
+            self.master.title(f"Workforce - {os.path.basename(filename)}") # Update window title
+            self.save_to_current_file() # Now save to the newly chosen file
 
     def clear_selection(self):
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
