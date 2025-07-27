@@ -45,6 +45,7 @@ class WorkflowApp:
         self.master.bind('c', lambda event: self.clear_selected_status())
         self.master.bind('e', lambda event: self.connect_nodes())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
+        self.master.bind('<Shift-Q>', lambda event: self.save_and_exit())
 
         # Zoom and pan
         self.scale = 1.0
@@ -70,6 +71,10 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+    
+    def save_and_exit(self):
+        self.save_to_current_file()
+        self.master.quit()
 
     def add_node_at(self, x, y, label=None):
         # Store node positions as virtual (unscaled) coordinates
@@ -362,12 +367,12 @@ class WorkflowApp:
         text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10,0))
         text_widget.insert("1.0", initial_value)
 
-        def save_and_close():
+        def save_and_close(event=None):
             new_label = text_widget.get("1.0", "end-1c")
             on_save(new_label)
             editor.destroy()
 
-        def cancel_and_close():
+        def cancel_and_close(event=None):
             editor.destroy()
 
         btn_frame = tk.Frame(editor)
@@ -376,6 +381,11 @@ class WorkflowApp:
         save_btn.pack(side=tk.LEFT, padx=5)
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
         cancel_btn.pack(side=tk.LEFT, padx=5)
+
+        # Keyboard shortcuts
+        editor.bind('<Escape>', cancel_and_close)
+        text_widget.bind('<Control-Return>', save_and_close)
+        text_widget.bind('<Control-KP_Enter>', save_and_close)
 
         editor.transient(self.master)
         editor.wait_visibility()  # Ensure window is visible before grab_set
@@ -535,6 +545,10 @@ class WorkflowApp:
             fill_color = status_colors.get(status, 'lightgray')
             self.canvas.itemconfig(rect, fill=fill_color)
             self.canvas.itemconfig(text, text=label)
+        # Save and reload
+        self.save_to_current_file()
+        if self.filename:
+            self._reload_graph()
 
     def zoom(self, factor):
         # Keep track of old scale before updating
