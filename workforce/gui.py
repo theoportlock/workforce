@@ -71,6 +71,21 @@ class WorkflowApp:
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
 
+    def add_node_at(self, x, y, label=None):
+        # Store node positions as virtual (unscaled) coordinates
+        def on_save(lbl):
+            if not lbl.strip():
+                return
+            node_id = f"node{len(self.graph.nodes)}"
+            vx = x / self.scale
+            vy = y / self.scale
+            self.graph.add_node(node_id, label=lbl, x=vx, y=vy)
+            self.draw_node(node_id)
+        if label is not None:
+            on_save(label)
+        else:
+            self.node_label_popup("", on_save)
+
     def delete_edges_from_selected(self):
         # Remove all edges connected to selected nodes (in or out)
         to_remove = []
@@ -248,18 +263,6 @@ class WorkflowApp:
             x = self.canvas.canvasx(event.x)
             y = self.canvas.canvasy(event.y)
             self.add_node_at(x, y)
-
-    def add_node_at(self, x, y):
-        # Store node positions as virtual (unscaled) coordinates
-        def on_save(label):
-            if not label.strip():
-                return
-            node_id = f"node{len(self.graph.nodes)}"
-            vx = x / self.scale
-            vy = y / self.scale
-            self.graph.add_node(node_id, label=label, x=vx, y=vy)
-            self.draw_node(node_id)
-        self.node_label_popup("", on_save)
 
     def on_left_press(self, event):
         # Check if clicked on a node

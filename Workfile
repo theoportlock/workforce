@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d8" for="edge" attr.name="status" attr.type="string" />
   <key id="d7" for="edge" attr.name="id" attr.type="string" />
   <key id="d6" for="node" attr.name="status" attr.type="string" />
   <key id="d5" for="node" attr.name="y" attr.type="double" />
@@ -34,6 +35,7 @@
       <data key="d3">echo "start p2"</data>
       <data key="d4">5.691574096073975</data>
       <data key="d5">31.10018829176137</data>
+      <data key="d6">ran</data>
     </node>
     <node id="b64ae446-a898-4205-aaa0-6d3a4a940678">
       <data key="d3">echo "start p3"</data>
@@ -57,8 +59,8 @@
     </node>
     <node id="b8128031-6b2b-404c-996f-039a30a9d35c">
       <data key="d3">echo "start p4"</data>
-      <data key="d4">-217.56087576237888</data>
-      <data key="d5">-39.933112498559964</data>
+      <data key="d4">-165.56087576237883</data>
+      <data key="d5">-14.933112498559964</data>
       <data key="d6">ran</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
@@ -68,8 +70,8 @@ ls
 ls
 ls
 ls</data>
-      <data key="d4">-33.17501772981461</data>
-      <data key="d5">-231.74264993888622</data>
+      <data key="d4">-31.71091772981463</data>
+      <data key="d5">-231.74264993888625</data>
       <data key="d6">ran</data>
     </node>
     <node id="ade6c799-c635-43fe-badb-a1be99bbce16">
@@ -78,6 +80,7 @@ ls; pwd
 echo "This is on a second line"</data>
       <data key="d4">-592.8983557530291</data>
       <data key="d5">340.6305180586643</data>
+      <data key="d6">ran</data>
     </node>
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="fa20471d-c97e-4676-ac11-20064bbee6fc">
       <data key="d7">fe91b12a-7fd5-4577-a25c-1b1767957ad3</data>
@@ -91,7 +94,9 @@ echo "This is on a second line"</data>
     <edge source="648a7ff3-98a0-4f4b-83a8-77b13e895fae" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d7">b20ef1f0-23bf-4659-b0fe-a7b607305847</data>
     </edge>
-    <edge source="8b1b0510-e2d7-4328-bbaa-229a4621754e" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0" />
+    <edge source="8b1b0510-e2d7-4328-bbaa-229a4621754e" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
+      <data key="d8">to_run</data>
+    </edge>
     <edge source="b64ae446-a898-4205-aaa0-6d3a4a940678" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d7">708eb12c-da5e-409c-8a36-ab5cd175135d</data>
     </edge>
