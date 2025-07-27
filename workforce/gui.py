@@ -52,7 +52,10 @@ class WorkflowApp:
         self.canvas.bind("<MouseWheel>", self.on_zoom)
         self.canvas.bind("<Button-4>", self.on_zoom)
         self.canvas.bind("<Button-5>", self.on_zoom)
-        self.canvas.bind("<ButtonPress-3>", self.on_pan_start)
+        self.canvas.bind("<ButtonPress-3>", self.on_right_press)
+        # For edge dragging
+        self._edge_drag_start_node = None
+        self._edge_drag_line = None
         self.canvas.bind("<ButtonPress-1>", self.on_left_press)
         self.canvas.bind("<B1-Motion>", self.on_left_motion)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
@@ -71,6 +74,55 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+
+    def on_right_press(self, event):
+        # Check if right-clicked on a node
+        item = self.canvas.find_withtag(tk.CURRENT)
+        for node_id, (rect, text) in self.node_widgets.items():
+            if item and item[0] in (rect, text):
+                self._edge_drag_start_node = node_id
+                x1, y1, x2, y2 = self.canvas.coords(rect)
+                start_x = (x1 + x2) / 2
+                start_y = (y1 + y2) / 2
+                self._edge_drag_line = self.canvas.create_line(
+                    start_x, start_y, start_x, start_y, fill='gray', dash=(2,2), width=2, tags="edge_drag"
+                )
+                self.canvas.bind("<B3-Motion>", self.on_right_motion)
+                self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
+                return
+        # If not on a node, fallback to pan
+        self.on_pan_start(event)
+
+    def on_right_motion(self, event):
+        if self._edge_drag_start_node and self._edge_drag_line:
+            # Update the dragging line to current mouse position
+            x1, y1, x2, y2 = self.canvas.coords(self.node_widgets[self._edge_drag_start_node][0])
+            start_x = (x1 + x2) / 2
+            start_y = (y1 + y2) / 2
+            end_x = self.canvas.canvasx(event.x)
+            end_y = self.canvas.canvasy(event.y)
+            self.canvas.coords(self._edge_drag_line, start_x, start_y, end_x, end_y)
+
+    def on_right_release(self, event):
+        if self._edge_drag_start_node and self._edge_drag_line:
+            # Use event coordinates to check if released over a node
+            x = self.canvas.canvasx(event.x)
+            y = self.canvas.canvasy(event.y)
+            target_node = None
+            for node_id, (rect, text) in self.node_widgets.items():
+                rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
+                if rx1 <= x <= rx2 and ry1 <= y <= ry2:
+                    target_node = node_id
+                    break
+            if target_node and target_node != self._edge_drag_start_node:
+                self.graph.add_edge(self._edge_drag_start_node, target_node)
+                self.draw_edge(self._edge_drag_start_node, target_node)
+            # Remove the dragging line
+            self.canvas.delete(self._edge_drag_line)
+            self._edge_drag_line = None
+            self._edge_drag_start_node = None
+            self.canvas.unbind("<B3-Motion>")
+            self.canvas.unbind("<ButtonRelease-3>")
     
     def save_and_exit(self):
         self.save_to_current_file()
