@@ -106,7 +106,7 @@ class WorkflowApp:
         self._select_rect_id = self.canvas.create_rectangle(
             self._select_rect_start[0], self._select_rect_start[1],
             self._select_rect_start[0], self._select_rect_start[1],
-            outline="blue", dash=(2,2), width=2, tags="select_rect"
+            outline="gray", dash=(2,2), width=2, tags="select_rect"
         )
 
     def on_shift_left_motion(self, event):
@@ -148,7 +148,11 @@ class WorkflowApp:
         # Node color by status
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
         status = data.get('status', '').lower()
-        fill_color = status_colors.get(status, 'lightgray')
+        base_fill_color = status_colors.get(status, 'lightgray')
+        if node_id in self.selected_nodes:
+            fill_color = "#555555"
+        else:
+            fill_color = base_fill_color
 
         # Use passed font_size, or the instance's current_font_size, or fallback to base
         if font_size is None:
@@ -182,7 +186,6 @@ class WorkflowApp:
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
             self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
-
         self.canvas.tag_lower(rect)  # Ensure rectangle is behind text
 
     def create_toolbar(self):
@@ -373,16 +376,17 @@ class WorkflowApp:
         return "break"
 
     def on_node_click(self, node_id):
-        print(node_id)
-        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
-        status = self.graph.nodes[node_id].get('status', '').lower()
-        fill_color = status_colors.get(status, 'lightgray')
+        print(f"Node clicked: {node_id}")
         if node_id in self.selected_nodes:
             self.selected_nodes.remove(node_id)
-            self.canvas.itemconfig(self.node_widgets[node_id][0], fill=fill_color)
         else:
             self.selected_nodes.append(node_id)
-            self.canvas.itemconfig(self.node_widgets[node_id][0], fill="#555555")
+        # Redraw only the clicked node to update its color
+        if node_id in self.node_widgets:
+            for item in self.node_widgets[node_id]:
+                self.canvas.delete(item)
+            del self.node_widgets[node_id]
+        self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
 
     def remove_node(self):
         for node_id in self.selected_nodes:
@@ -494,12 +498,14 @@ class WorkflowApp:
             self.save_to_current_file() # Now save to the newly chosen file
 
     def clear_selection(self):
-        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
-        for node_id in self.selected_nodes:
-            status = self.graph.nodes[node_id].get('status', '').lower()
-            fill_color = status_colors.get(status, 'lightgray')
-            self.canvas.itemconfig(self.node_widgets[node_id][0], fill=fill_color)
+        nodes_to_redraw = list(self.selected_nodes)
         self.selected_nodes.clear()
+        for node_id in nodes_to_redraw:
+            if node_id in self.node_widgets:
+                for item in self.node_widgets[node_id]:
+                    self.canvas.delete(item)
+                del self.node_widgets[node_id]
+            self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
 
     def clear_all(self):
         # Remove status from all nodes and edges, but do not clear the graph or canvas
