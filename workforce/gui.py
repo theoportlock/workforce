@@ -278,8 +278,19 @@ class WorkflowApp:
         for node_id, (rect, text) in self.node_widgets.items():
             if item and item[0] in (rect, text):
                 node_clicked = True
-                self.on_node_click(node_id)
-                self.on_node_press(event, node_id)
+                # If node is already selected, do not change selection, just start drag
+                if node_id in self.selected_nodes:
+                    self.on_node_press(event, node_id)
+                else:
+                    # Select only this node
+                    self.clear_selection()
+                    self.selected_nodes.append(node_id)
+                    if node_id in self.node_widgets:
+                        for item2 in self.node_widgets[node_id]:
+                            self.canvas.delete(item2)
+                        del self.node_widgets[node_id]
+                    self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
+                    self.on_node_press(event, node_id)
                 break
         if not node_clicked:
             # Clicked empty space, clear selection and prepare to pan
