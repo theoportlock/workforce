@@ -39,5 +39,5 @@ setup(
     name='workforce',
     packages = ["workforce"],
     url='https://github.com/theoportlock/workforce',
-    version='1.0.40',
+    version='1.0.41',
 )

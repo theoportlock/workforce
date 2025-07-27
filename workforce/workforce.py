@@ -86,10 +86,16 @@ def schedule_tasks(filename):
     if not active_nodes:
         return 'complete'
 
+def shell_quote_multiline(script: str) -> str:
+    """Safely quote a multiline shell script for `bash -c '...'`."""
+    return script.replace("'", "'\\''")
+
 def run_node(filename, node, prefix='bash -c', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
-        command = f"{prefix} {shlex.quote(label)} {suffix}".strip()
+        quoted_label = shell_quote_multiline(label)
+        command = f"{prefix} {quoted_label} {suffix}".strip()
+        print(command)
         G.nodes[node]['status'] = 'running'
     try:
         subprocess.run(command, shell=True, check=True)
@@ -100,7 +106,8 @@ def run_node(filename, node, prefix='bash -c', suffix=''):
 def execute_process(data, prefix='bash -c', suffix=''):
     if data:
         for process in data:
-            command = f"{prefix} {shlex.quote(process['label'])} {suffix}".strip()
+            quoted_label = shell_quote_multiline(process['label'])
+            command = f"{prefix} {quoted_label} {suffix}".strip()
             subprocess.call(command, shell=True)
 
 def safe_load(filename, lock_timeout=0.1):
