@@ -28,7 +28,9 @@ classifiers = [
 ]
 
 dependencies = [
-  # These will be populated from requirements.txt
+  "networkx",
+  "pandas",
+  "filelock"
 ]
 
 [project.urls]
