@@ -490,7 +490,7 @@ class WorkflowApp:
         line = self.canvas.create_line(
             x1a, y1a, x2a, y2a,
             arrow=tk.LAST,
-            fill='gray',
+            fill='lightgray',
             tags="edge",
             width=self.base_edge_width * self.scale
         )
@@ -562,9 +562,12 @@ class WorkflowApp:
         self.zoom(factor)
 
     def save_graph(self):
+        # Use 'Workfile' as the default filename for first-time save
+        initialfile = None
+        if not self.filename:
+            initialfile = "Workfile"
         filename = filedialog.asksaveasfilename(
-            defaultextension=".graphml",
-            filetypes=[("GraphML files", "*.graphml"), ("All files", "*.*")]
+            initialfile=initialfile,
         )
         if filename:
             self.filename = filename # Store the chosen filename
