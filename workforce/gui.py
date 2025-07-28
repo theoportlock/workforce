@@ -168,14 +168,22 @@ class WorkflowApp:
         )
 
     def on_shift_left_motion(self, event):
-        if not self._select_rect_active or self._select_rect_id is None:
+        if (
+            not self._select_rect_active or
+            self._select_rect_id is None or
+            self._select_rect_start is None
+        ):
             return
         x0, y0 = self._select_rect_start
         x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         self.canvas.coords(self._select_rect_id, x0, y0, x1, y1)
 
     def on_shift_left_release(self, event):
-        if not self._select_rect_active or self._select_rect_id is None:
+        if (
+            not self._select_rect_active or
+            self._select_rect_id is None or
+            self._select_rect_start is None
+        ):
             return
         x0, y0 = self._select_rect_start
         x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
@@ -255,11 +263,12 @@ class WorkflowApp:
         tk.Button(toolbar, text="Add", command=self.add_node).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Remove", command=self.remove_node).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Connect", command=self.connect_nodes).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Clear Edges", command=self.delete_edges_from_selected).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Update", command=self.update_node).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Prefix/Suffix", command=self.prefix_suffix_popup).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Clear", command=self.clear_all).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Clear Status", command=self.clear_all).pack(side=tk.LEFT)
 
     def prefix_suffix_popup(self):
         editor = tk.Toplevel(self.master)

@@ -30,8 +30,8 @@
     </node>
     <node id="8b1b0510-e2d7-4328-bbaa-229a4621754e">
       <data key="d3">echo "start p2"</data>
-      <data key="d4">666.6063069473138</data>
-      <data key="d5">540.9840138702741</data>
+      <data key="d4">702.9063069473139</data>
+      <data key="d5">538.564013870274</data>
     </node>
     <node id="b64ae446-a898-4205-aaa0-6d3a4a940678">
       <data key="d3">echo "start p3"</data>
@@ -50,8 +50,8 @@
     </node>
     <node id="b8128031-6b2b-404c-996f-039a30a9d35c">
       <data key="d3">echo "start p4"</data>
-      <data key="d4">736.8255992376214</data>
-      <data key="d5">382.6806825014402</data>
+      <data key="d4">773.1255992376215</data>
+      <data key="d5">380.26068250144016</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
       <data key="d3">sleep 1; echo "start p6"; echo "this label is exceptionally long"
@@ -64,8 +64,8 @@ ls
 ls
 ls
 ls</data>
-      <data key="d4">379.9559605759708</data>
-      <data key="d5">104.96794340822134</data>
+      <data key="d4">416.25596057597085</data>
+      <data key="d5">102.54794340822133</data>
     </node>
     <node id="ade6c799-c635-43fe-badb-a1be99bbce16">
       <data key="d3"># Multi line commands are supported
