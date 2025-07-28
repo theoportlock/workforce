@@ -38,3 +38,6 @@ dependencies = [
 
 [project.scripts]
 wf = "workforce.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
