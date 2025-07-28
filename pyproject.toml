@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "workforce"
+version = "1.0.41"
+description = "Run bash commands with python multiprocessing according to a tsv file edgelist. Includes a Tkinter GUI for workflow editing."
+readme = "README.rst"
+license = {text = "MIT"}
+requires-python = ">=3.6"
+authors = [
+  {name = "Theo Portlock", email = "zn.tportlock@gmail.com"}
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+
+dependencies = [
+  # These will be populated from requirements.txt
+]
+
+[project.urls]
+"Homepage" = "https://github.com/theoportlock/workforce"
+
+[project.scripts]
+wf = "workforce.__main__:main"
