@@ -9,14 +9,27 @@ import sys
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
-        # Use grid layout for toolbar on top, canvas below
+        # Use grid layout for toolbar on top, canvas in middle, terminal at bottom
         self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
         self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
+        self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
         self.master.grid_columnconfigure(0, weight=1)
+
+        self.terminal_visible = False
+        self.terminal_height = 180
 
         self.create_toolbar()
         self.canvas = tk.Canvas(master, width=1000, height=600, bg='white')
         self.canvas.grid(row=1, column=0, sticky="nsew")
+
+        # Terminal panel (Text widget, initially hidden)
+        from tkinter.scrolledtext import ScrolledText
+        self.terminal_frame = tk.Frame(master)
+        self.terminal_text = ScrolledText(self.terminal_frame, height=10, font=("TkFixedFont", 10), bg="#181818", fg="#e0e0e0", insertbackground="#e0e0e0")
+        self.terminal_text.pack(fill=tk.BOTH, expand=True)
+        self.terminal_text.config(state=tk.DISABLED)
+        self.terminal_frame.grid(row=2, column=0, sticky="nsew")
+        self.terminal_frame.grid_remove()
 
         self.graph = nx.DiGraph()
         self.node_widgets = {}
@@ -28,13 +41,11 @@ class WorkflowApp:
         self.filename = None
         self.last_mtime = None
         self.reload_interval = 1000  # ms
-        
+
         # Selection rectangle state
         self._select_rect_id = None
         self._select_rect_start = None
         self._select_rect_active = False
-
-        self.create_toolbar()
 
         # Bind keys only when main window is focused
         self.master.bind('<Control-s>', lambda event: self.save_to_current_file())
@@ -47,6 +58,8 @@ class WorkflowApp:
         self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
         self.master.bind('q', lambda event: self.save_and_exit())
+        # <Control-`> is not supported in Tkinter; use <Control-t> instead
+        self.master.bind('<Control-t>', lambda event: self.toggle_terminal())
 
         # Zoom and pan
         self.scale = 1.0
@@ -64,7 +77,7 @@ class WorkflowApp:
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
         self.dragging_node = None
         self.drag_offset = (0, 0)
-        
+
         self.base_font_size = 10
         self.base_edge_width = 2
         self.scale = 1.0
@@ -72,10 +85,29 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
-        
+
         # For edge dragging
         self._edge_drag_start_node = None
         self._edge_drag_line = None
+
+    def toggle_terminal(self):
+        if self.terminal_visible:
+            self.terminal_frame.grid_remove()
+            self.terminal_visible = False
+        else:
+            self.terminal_frame.grid(row=2, column=0, sticky="nsew")
+            self.terminal_visible = True
+
+    def terminal_write(self, text):
+        self.terminal_text.config(state=tk.NORMAL)
+        self.terminal_text.insert(tk.END, text)
+        self.terminal_text.see(tk.END)
+        self.terminal_text.config(state=tk.DISABLED)
+
+    def terminal_clear(self):
+        self.terminal_text.config(state=tk.NORMAL)
+        self.terminal_text.delete(1.0, tk.END)
+        self.terminal_text.config(state=tk.DISABLED)
 
     def on_right_press(self, event):
         # Check if right-clicked on a node
@@ -271,6 +303,7 @@ class WorkflowApp:
         tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Clear Status", command=self.clear_all).pack(side=tk.LEFT)
+        tk.Button(toolbar, text="Show/Hide Terminal", command=self.toggle_terminal).pack(side=tk.LEFT)
 
     def prefix_suffix_popup(self):
         editor = tk.Toplevel(self.master)
@@ -528,20 +561,41 @@ class WorkflowApp:
         if self.filename:
             self.save_to_current_file()
             for node_id in self.selected_nodes:
-                subprocess.Popen([
+                self.run_in_terminal([
                     sys.executable, "-m", "workforce", "run_node", self.filename, node_id,
                     "--prefix", self.prefix, "--suffix", self.suffix
-                ])
+                ], title=f"Run Node: {node_id}")
 
     def run_pipeline(self):
         if not self.filename:
             self.save_graph()
         if self.filename:
             self.save_to_current_file()
-            subprocess.Popen([
+            self.run_in_terminal([
                 sys.executable, "-m", "workforce", "run", self.filename,
                 "--prefix", self.prefix, "--suffix", self.suffix
-            ])
+            ], title="Run Pipeline")
+
+    def run_in_terminal(self, cmd, title=None):
+        import threading
+        import shlex
+        # Show terminal if not visible
+        if not self.terminal_visible:
+            self.toggle_terminal()
+        if title:
+            self.terminal_write(f"\n\n=== {title} ===\n$ {' '.join(shlex.quote(str(x)) for x in cmd)}\n")
+        else:
+            self.terminal_write(f"\n\n$ {' '.join(shlex.quote(str(x)) for x in cmd)}\n")
+        def run():
+            try:
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                for line in proc.stdout:
+                    self.terminal_write(line)
+                proc.wait()
+                self.terminal_write(f"\n[Process exited with code {proc.returncode}]\n")
+            except Exception as e:
+                self.terminal_write(f"\n[Error running command: {e}]\n")
+        threading.Thread(target=run, daemon=True).start()
 
     def load_graph(self):
         filename = filedialog.askopenfilename()
