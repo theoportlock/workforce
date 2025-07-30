@@ -15,12 +15,12 @@ workforce
 .. image:: docs/images/small.png
     :alt: Small pipeline example
     :align: center
-    :width: 500px
+    :width: 800px
 
 .. image:: docs/images/complex.png
     :alt: Complex pipeline editor view
     :align: center
-    :width: 700px
+    :width: 800px
 
 Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
 
