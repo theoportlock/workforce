@@ -58,7 +58,6 @@ class WorkflowApp:
         self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
         self.master.bind('q', lambda event: self.save_and_exit())
-        # <Control-`> is not supported in Tkinter; use <Control-t> instead
         self.master.bind('<Control-t>', lambda event: self.toggle_terminal())
 
         # Zoom and pan
@@ -102,11 +101,6 @@ class WorkflowApp:
         self.terminal_text.config(state=tk.NORMAL)
         self.terminal_text.insert(tk.END, text)
         self.terminal_text.see(tk.END)
-        self.terminal_text.config(state=tk.DISABLED)
-
-    def terminal_clear(self):
-        self.terminal_text.config(state=tk.NORMAL)
-        self.terminal_text.delete(1.0, tk.END)
         self.terminal_text.config(state=tk.DISABLED)
 
     def on_right_press(self, event):
@@ -579,9 +573,7 @@ class WorkflowApp:
     def run_in_terminal(self, cmd, title=None):
         import threading
         import shlex
-        # Show terminal if not visible
-        if not self.terminal_visible:
-            self.toggle_terminal()
+        # Always write to the terminal widget, even if hidden
         if title:
             self.terminal_write(f"\n\n=== {title} ===\n$ {' '.join(shlex.quote(str(x)) for x in cmd)}\n")
         else:

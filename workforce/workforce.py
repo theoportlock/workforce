@@ -95,7 +95,6 @@ def run_node(filename, node, prefix='bash -c', suffix=''):
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)
         command = f"{prefix} {quoted_label} {suffix}".strip()
-        print(command)
         G.nodes[node]['status'] = 'running'
     try:
         subprocess.run(command, shell=True, check=True)

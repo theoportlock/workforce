@@ -3,14 +3,24 @@ workforce
 =========
 
 .. image:: https://img.shields.io/pypi/v/workforce.svg
-        :target: https://pypi.python.org/pypi/workforce
+    :target: https://pypi.python.org/pypi/workforce
 
 .. image:: https://img.shields.io/travis/theoportlock/workforce.svg
-        :target: https://travis-ci.com/theoportlock/workforce
+    :target: https://travis-ci.com/theoportlock/workforce
 
 .. image:: https://readthedocs.org/projects/workforce/badge/?version=latest
-        :target: https://workforce.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+    :target: https://workforce.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: docs/images/small.png
+    :alt: Small pipeline example
+    :align: center
+    :width: 500px
+
+.. image:: docs/images/complex.png
+    :alt: Complex pipeline editor view
+    :align: center
+    :width: 700px
 
 Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
 
