@@ -359,6 +359,12 @@ class WorkflowApp:
                 self.recent_menu.add_command(label=f, command=lambda fn=f: self.open_recent_file(fn))
 
     def open_recent_file(self, filename):
+        # Change working directory to the file's base directory
+        base_dir = os.path.dirname(os.path.abspath(filename))
+        try:
+            os.chdir(base_dir)
+        except Exception as e:
+            print(f"[Warning] Could not change directory to {base_dir}: {e}")
         self.filename = filename
         self.last_mtime = os.path.getmtime(filename)
         self._reload_graph()
