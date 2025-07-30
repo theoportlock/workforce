@@ -46,7 +46,7 @@ class WorkflowApp:
         self.master.bind('e', lambda event: self.connect_nodes())
         self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
-        self.master.bind('<q>', lambda event: self.save_and_exit())
+        self.master.bind('q', lambda event: self.save_and_exit())
 
         # Zoom and pan
         self.scale = 1.0
@@ -127,7 +127,8 @@ class WorkflowApp:
             self.canvas.unbind("<ButtonRelease-3>")
     
     def save_and_exit(self):
-        self.save_to_current_file()
+        if self.filename:
+            self.save_to_current_file()
         self.master.quit()
 
     def add_node_at(self, x, y, label=None):
