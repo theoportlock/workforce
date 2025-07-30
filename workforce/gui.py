@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
+from tkinter.scrolledtext import ScrolledText
 import networkx as nx
 import subprocess
 import os
@@ -9,7 +10,6 @@ import sys
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
-        # Use grid layout for toolbar on top, canvas in middle, terminal at bottom
         self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
         self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
         self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
@@ -22,8 +22,6 @@ class WorkflowApp:
         self.canvas = tk.Canvas(master, width=1000, height=600, bg='white')
         self.canvas.grid(row=1, column=0, sticky="nsew")
 
-        # Terminal panel (Text widget, initially hidden)
-        from tkinter.scrolledtext import ScrolledText
         self.terminal_frame = tk.Frame(master)
         self.terminal_text = ScrolledText(self.terminal_frame, height=10, font=("TkFixedFont", 10), bg="#181818", fg="#e0e0e0", insertbackground="#e0e0e0")
         self.terminal_text.pack(fill=tk.BOTH, expand=True)
@@ -58,6 +56,7 @@ class WorkflowApp:
         self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
         self.master.bind('q', lambda event: self.save_and_exit())
+        self.master.bind('<Control-o>', lambda event: self.load_graph())
         self.master.bind('<Control-t>', lambda event: self.toggle_terminal())
 
         # Zoom and pan
@@ -283,21 +282,101 @@ class WorkflowApp:
         self.canvas.tag_lower(rect)  # Ensure rectangle is behind text
 
     def create_toolbar(self):
-        toolbar = tk.Frame(self.master)
-        toolbar.grid(row=0, column=0, sticky="ew")
+        import os
+        # Replace toolbar with a menubar
+        self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
+        self.recent_files = self.load_recent_files()
+        menubar = tk.Menu(self.master)
 
-        tk.Button(toolbar, text="Load", command=self.load_graph).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Save", command=self.save_graph).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Add", command=self.add_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Remove", command=self.remove_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Connect", command=self.connect_nodes).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Clear Edges", command=self.delete_edges_from_selected).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Update", command=self.update_node).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Prefix/Suffix", command=self.prefix_suffix_popup).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Run Node", command=self.run_selected).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Run Pipeline", command=self.run_pipeline).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Clear Status", command=self.clear_all).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Show/Hide Terminal", command=self.toggle_terminal).pack(side=tk.LEFT)
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Open", command=self.load_graph)
+        file_menu.add_command(label="Save", command=self.save_graph)
+        # Open Recent submenu (always present)
+        self.recent_menu = tk.Menu(file_menu, tearoff=0)
+        file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
+        self.update_recent_menu()
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.save_and_exit)
+        menubar.add_cascade(label="File", menu=file_menu)
+
+        # Edit menu
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu.add_command(label="Add Node", command=self.add_node)
+        edit_menu.add_command(label="Remove Node", command=self.remove_node)
+        edit_menu.add_command(label="Update Node", command=self.update_node)
+        edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes)
+        edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected)
+        edit_menu.add_command(label="Clear Status", command=self.clear_all)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+
+        # Run menu
+        run_menu = tk.Menu(menubar, tearoff=0)
+        run_menu.add_command(label="Run Node", command=self.run_selected)
+        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline)
+        menubar.add_cascade(label="Run", menu=run_menu)
+
+        # Tools menu
+        tools_menu = tk.Menu(menubar, tearoff=0)
+        tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup)
+        tools_menu.add_command(label="Show/Hide Terminal", command=self.toggle_terminal)
+        menubar.add_cascade(label="Tools", menu=tools_menu)
+
+        self.master.config(menu=menubar)
+
+    def load_recent_files(self):
+        try:
+            with open(self.recent_file_path, 'r') as f:
+                files = [line.strip() for line in f if line.strip() and os.path.exists(line.strip())]
+            return files
+        except Exception:
+            return []
+
+    def save_recent_files(self):
+        try:
+            with open(self.recent_file_path, 'w') as f:
+                for file in self.recent_files:
+                    f.write(file + '\n')
+        except Exception:
+            pass
+
+    def add_recent_file(self, filename):
+        if filename:
+            if filename in self.recent_files:
+                self.recent_files.remove(filename)
+            self.recent_files.insert(0, filename)
+            if len(self.recent_files) > 10:
+                self.recent_files = self.recent_files[:10]
+            self.save_recent_files()
+        self.update_recent_menu()
+
+    def update_recent_menu(self):
+        self.recent_menu.delete(0, tk.END)
+        if not self.recent_files:
+            self.recent_menu.add_command(label="(No recent files)", state=tk.DISABLED)
+        else:
+            for f in self.recent_files:
+                self.recent_menu.add_command(label=f, command=lambda fn=f: self.open_recent_file(fn))
+
+    def open_recent_file(self, filename):
+        self.filename = filename
+        self.last_mtime = os.path.getmtime(filename)
+        self._reload_graph()
+        self.master.title(f"Workforce - {os.path.basename(filename)}")
+        self.add_recent_file(filename)
+
+    def save_graph(self):
+        initialfile = None
+        if not self.filename:
+            initialfile = "Workfile"
+        filename = filedialog.asksaveasfilename(
+            initialfile=initialfile,
+        )
+        if filename:
+            self.filename = filename # Store the chosen filename
+            self.master.title(f"Workforce - {os.path.basename(filename)}") # Update window title
+            self.save_to_current_file() # Now save to the newly chosen file
+            self.add_recent_file(filename)
 
     def prefix_suffix_popup(self):
         editor = tk.Toplevel(self.master)
@@ -575,9 +654,9 @@ class WorkflowApp:
         import shlex
         # Always write to the terminal widget, even if hidden
         if title:
-            self.terminal_write(f"\n\n=== {title} ===\n$ {' '.join(shlex.quote(str(x)) for x in cmd)}\n")
+            self.terminal_write(f"\n\n=== {title} ===\n$ {cmd}\n")
         else:
-            self.terminal_write(f"\n\n$ {' '.join(shlex.quote(str(x)) for x in cmd)}\n")
+            self.terminal_write(f"\n\n$ {cmd}\n")
         def run():
             try:
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -595,6 +674,7 @@ class WorkflowApp:
             self.filename = filename
             self.last_mtime = os.path.getmtime(filename)
             self._reload_graph()
+            self.add_recent_file(filename)
 
     def _reload_graph(self):
         # Reload graph
