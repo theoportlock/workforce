@@ -29,7 +29,7 @@
       <data key="d3">notepad.exe</data>
       <data key="d4">250.8408705891561</data>
       <data key="d5">235.82087167485747</data>
-      <data key="d6">running</data>
+      <data key="d6">fail</data>
     </node>
     <node id="8b1b0510-e2d7-4328-bbaa-229a4621754e">
       <data key="d3">echo "start p2"</data>

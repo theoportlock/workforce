@@ -6,7 +6,7 @@ import networkx as nx
 import subprocess
 import os
 import sys
-
+import uuid
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
@@ -157,11 +157,12 @@ class WorkflowApp:
         self.master.quit()
 
     def add_node_at(self, x, y, label=None):
+        import uuid
         # Store node positions as virtual (unscaled) coordinates
         def on_save(lbl):
             if not lbl.strip():
                 return
-            node_id = f"node{len(self.graph.nodes)}"
+            node_id = str(uuid.uuid4())
             vx = x / self.scale
             vy = y / self.scale
             self.graph.add_node(node_id, label=lbl, x=vx, y=vy)
@@ -700,7 +701,7 @@ class WorkflowApp:
         def on_save(label):
             if not label.strip():
                 return
-            node_id = f"node{len(self.graph.nodes)}"
+            node_id = str(uuid.uuid4())
             x = 100 + len(self.graph.nodes) * 50
             y = 100
             self.graph.add_node(node_id, label=label, x=x, y=y)
