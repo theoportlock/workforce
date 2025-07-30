@@ -25,7 +25,7 @@ workforce
 Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
 
 * Free software: MIT license
-* Documentation: https://workforce.readthedocs.io.
+* Documentation: https://workforce-documentation.readthedocs.io.
 
 Installation
 ------------
