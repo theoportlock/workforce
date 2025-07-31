@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d8" for="edge" attr.name="status" attr.type="string" />
   <key id="d7" for="edge" attr.name="id" attr.type="string" />
   <key id="d6" for="node" attr.name="status" attr.type="string" />
   <key id="d5" for="node" attr.name="y" attr.type="double" />
@@ -14,22 +13,19 @@
       <data key="d3">echo one</data>
       <data key="d4">413.66208528086287</data>
       <data key="d5">298.9196231547882</data>
+      <data key="d6">ran</data>
     </node>
     <node id="fa20471d-c97e-4676-ac11-20064bbee6fc">
       <data key="d3">echo two</data>
       <data key="d4">285.3175313992841</data>
       <data key="d5">393.08366616386445</data>
+      <data key="d6">ran</data>
     </node>
     <node id="03349b87-b2c7-440f-9e76-2f2b9e11ec1e">
       <data key="d3">echo three</data>
       <data key="d4">439.31950704864556</data>
       <data key="d5">406.212989722066</data>
-    </node>
-    <node id="648a7ff3-98a0-4f4b-83a8-77b13e895fae">
-      <data key="d3">notepad.exe</data>
-      <data key="d4">250.8408705891561</data>
-      <data key="d5">235.82087167485747</data>
-      <data key="d6">fail</data>
+      <data key="d6">ran</data>
     </node>
     <node id="8b1b0510-e2d7-4328-bbaa-229a4621754e">
       <data key="d3">echo "start p2"</data>
@@ -40,6 +36,7 @@
       <data key="d3">echo "start p3"</data>
       <data key="d4">132.89452303665394</data>
       <data key="d5">302.8608125345602</data>
+      <data key="d6">ran</data>
     </node>
     <node id="4db400a9-6bd0-4539-ac3a-0aa55484b243">
       <data key="d3">echo "three p1"</data>
@@ -50,6 +47,7 @@
       <data key="d3">pwd</data>
       <data key="d4">649.1643992376214</data>
       <data key="d5">268.46702250144017</data>
+      <data key="d6">ran</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
       <data key="d3">sleep 1; echo "start p6"; echo "this label is exceptionally long"
@@ -79,18 +77,14 @@ echo "This is on a second line"</data>
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="8b1b0510-e2d7-4328-bbaa-229a4621754e" />
     <edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="ade6c799-c635-43fe-badb-a1be99bbce16" />
     <edge source="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" target="4db400a9-6bd0-4539-ac3a-0aa55484b243" />
-    <edge source="648a7ff3-98a0-4f4b-83a8-77b13e895fae" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
-      <data key="d7">b20ef1f0-23bf-4659-b0fe-a7b607305847</data>
-      <data key="d8">to_run</data>
-    </edge>
     <edge source="b64ae446-a898-4205-aaa0-6d3a4a940678" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d7">708eb12c-da5e-409c-8a36-ab5cd175135d</data>
     </edge>
     <edge source="b8128031-6b2b-404c-996f-039a30a9d35c" target="8b1b0510-e2d7-4328-bbaa-229a4621754e" />
     <edge source="1ecbcbc6-35db-4ab5-852c-0aff0d79b909" target="b8128031-6b2b-404c-996f-039a30a9d35c" />
     <data key="d0">export test="one"
-bash -c</data>
-    <data key="d1" />
+bash -c '</data>
+    <data key="d1">'</data>
     <data key="d2">0.5644739300537794</data>
   </graph>
 </graphml>

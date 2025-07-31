@@ -5,8 +5,10 @@ from tkinter.scrolledtext import ScrolledText
 import networkx as nx
 import subprocess
 import os
+import threading
 import sys
 import uuid
+
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
@@ -53,11 +55,11 @@ class WorkflowApp:
         self.master.bind('d', lambda event: self.remove_node())
         self.master.bind('c', lambda event: self.clear_selected_status())
         self.master.bind('e', lambda event: self.connect_nodes())
-        self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('E', lambda event: self.delete_edges_from_selected())
+        self.master.bind('p', lambda event: self.prefix_suffix_popup())
         self.master.bind('q', lambda event: self.save_and_exit())
-        self.master.bind('<Control-o>', lambda event: self.load_graph())
-        self.master.bind('<Control-t>', lambda event: self.toggle_terminal())
+        self.master.bind('o', lambda event: self.load_graph())
+        self.master.bind('t', lambda event: self.toggle_terminal())
 
         # Zoom and pan
         self.scale = 1.0
@@ -157,7 +159,6 @@ class WorkflowApp:
         self.master.quit()
 
     def add_node_at(self, x, y, label=None):
-        import uuid
         # Store node positions as virtual (unscaled) coordinates
         def on_save(lbl):
             if not lbl.strip():
@@ -283,8 +284,6 @@ class WorkflowApp:
         self.canvas.tag_lower(rect)  # Ensure rectangle is behind text
 
     def create_toolbar(self):
-        import os
-        # Replace toolbar with a menubar
         self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
         self.recent_files = self.load_recent_files()
         menubar = tk.Menu(self.master)
@@ -293,7 +292,6 @@ class WorkflowApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Open", command=self.load_graph)
         file_menu.add_command(label="Save", command=self.save_graph)
-        # Open Recent submenu (always present)
         self.recent_menu = tk.Menu(file_menu, tearoff=0)
         file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
         self.update_recent_menu()
@@ -657,23 +655,35 @@ class WorkflowApp:
             ], title="Run Pipeline")
 
     def run_in_terminal(self, cmd, title=None):
-        import threading
-        import shlex
-        # Always write to the terminal widget, even if hidden
+        import queue
+        q = queue.Queue()
+        # Write initial command info to terminal (main thread)
         if title:
-            self.terminal_write(f"\n\n=== {title} ===\n$ {cmd}\n")
+            self.terminal_write(f"\n=== {title} ===\n")
         else:
-            self.terminal_write(f"\n\n$ {cmd}\n")
+            self.terminal_write(f"\n$ {cmd}\n")
+
         def run():
             try:
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                 for line in proc.stdout:
-                    self.terminal_write(line)
+                    q.put(line)
                 proc.wait()
-                self.terminal_write(f"\n[Process exited with code {proc.returncode}]\n")
             except Exception as e:
-                self.terminal_write(f"\n[Error running command: {e}]\n")
+                q.put(f"\n[Error running command: {e}]\n")
         threading.Thread(target=run, daemon=True).start()
+
+        def poll_queue():
+            try:
+                while True:
+                    line = q.get_nowait()
+                    self.terminal_write(line)
+            except queue.Empty:
+                pass
+            # If the thread is still alive or queue not empty, keep polling
+            if threading.active_count() > 1 or not q.empty():
+                self.master.after(50, poll_queue)
+        poll_queue()
 
     def load_graph(self):
         filename = filedialog.askopenfilename()
@@ -684,7 +694,6 @@ class WorkflowApp:
             self.add_recent_file(filename)
 
     def _reload_graph(self):
-        # Reload graph
         self.graph = nx.read_graphml(self.filename)
         self.prefix = self.graph.graph.get('prefix', self.prefix)
         self.suffix = self.graph.graph.get('suffix', self.suffix)

@@ -5,7 +5,6 @@ import sys
 import subprocess
 import networkx as nx
 import time
-import shlex
 
 class GraphMLAtomic:
     def __init__(self, filename):
@@ -30,7 +29,7 @@ def edit_status(G, element_type, element_id, value):
         G.edges[element_id]['status'] = value
     return G
 
-def run_tasks(filename, prefix='bash -c', suffix=''):
+def run_tasks(filename, prefix='bash -c ', suffix=''):
     with GraphMLAtomic(filename) as G:
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
@@ -45,7 +44,7 @@ def run_tasks(filename, prefix='bash -c', suffix=''):
             filename, node, "-p", prefix, "-s", suffix
         ])
 
-def worker(filename, prefix='bash -c', suffix='', speed=0.5):
+def worker(filename, prefix='bash -c ', suffix='', speed=0.5):
     initialize_pipeline(filename)
     status = ''
     while status != 'complete':
@@ -90,24 +89,18 @@ def shell_quote_multiline(script: str) -> str:
     """Safely quote a multiline shell script for `bash -c '...'`."""
     return script.replace("'", "'\\''")
 
-def run_node(filename, node, prefix='bash -c', suffix=''):
+def run_node(filename, node, prefix='bash -c ', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)
-        command = f"{prefix} {quoted_label} {suffix}".strip()
+        command = f"{prefix}{quoted_label}{suffix}".strip()
+        print(command)
         G.nodes[node]['status'] = 'running'
     try:
         subprocess.run(command, shell=True, check=True)
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'ran'
     except subprocess.CalledProcessError:
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
-
-def execute_process(data, prefix='bash -c', suffix=''):
-    if data:
-        for process in data:
-            quoted_label = shell_quote_multiline(process['label'])
-            command = f"{prefix} {quoted_label} {suffix}".strip()
-            subprocess.call(command, shell=True)
 
 def safe_load(filename, lock_timeout=0.1):
     lock = FileLock(f"{filename}.lock")
