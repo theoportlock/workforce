@@ -31,7 +31,7 @@ def main():
         description="Manage and run graph-based workflows."
     )
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     # (rest of your code remains the same)
 
