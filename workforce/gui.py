@@ -11,31 +11,39 @@ import uuid
 
 class WorkflowApp:
     def __init__(self, master):
-        self.master = master        
+        self.master = master
 
         # Get the absolute path to the directory where the script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
         # Go up one directory to get to the project root
         root_dir = os.path.abspath(os.path.join(script_dir, '..'))
 
-        # Construct the full path to your icon.ico file
-        # This works best for WSL2 environments
-        icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.ico')
-
-        # Use a conditional check to apply the correct icon method
+        # Determine the platform and load the correct icon file
         if sys.platform.startswith('win'):
-            # Use iconbitmap for Windows and WSL2
+            # Windows and WSL2: Use the multi-size .ico file
+            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.ico')
             if os.path.exists(icon_path):
                 self.master.iconbitmap(icon_path)
+        elif sys.platform.startswith('darwin'):
+            # macOS: Use the .icns file
+            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.icns')
+            if os.path.exists(icon_path):
+                self.master.iconphoto(True, tk.PhotoImage(file=icon_path))
         else:
-            # Use iconphoto for native Linux or other systems
-            png_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon-16.png')
+            # Linux: Use a .png for full color, or fallback to .xbm
+            png_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon-32.png')
+            xbm_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.xbm')
+
             if os.path.exists(png_icon_path):
                 try:
                     icon = tk.PhotoImage(file=png_icon_path)
                     self.master.iconphoto(False, icon)
                 except tk.TclError:
-                    print("Warning: Could not set icon with iconphoto.")
+                    print("Warning: Could not load PNG icon. Falling back to XBM.")
+                    if os.path.exists(xbm_icon_path):
+                        self.master.iconbitmap('@' + xbm_icon_path)
+            elif os.path.exists(xbm_icon_path):
+                self.master.iconbitmap('@' + xbm_icon_path)
 
         self.terminal_visible = False
         self.terminal_height = 180
