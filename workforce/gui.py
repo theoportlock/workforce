@@ -16,6 +16,7 @@ class WorkflowApp:
         self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
         self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
         self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(1, weight=0)
 
         self.terminal_visible = False
         self.terminal_height = 180
@@ -23,6 +24,21 @@ class WorkflowApp:
         self.create_toolbar()
         self.canvas = tk.Canvas(master, width=1000, height=600, bg='white')
         self.canvas.grid(row=1, column=0, sticky="nsew")
+
+        self.zoom_slider = tk.Scale(
+            master,
+            from_=0.1,
+            to=3.0,
+            orient=tk.VERTICAL,
+            resolution=0.1,
+            command=self.on_zoom_scroll,
+            showvalue=False,
+            tickinterval=0,     # no ticks
+            sliderlength=20,    # shorter slider
+            width=10            # thinner bar
+        )
+        self.zoom_slider.set(1.0)
+        self.zoom_slider.grid(row=1, column=1, sticky="ns")
 
         self.terminal_frame = tk.Frame(master)
         self.terminal_text = ScrolledText(self.terminal_frame, height=10, font=("TkFixedFont", 10), bg="#181818", fg="#e0e0e0", insertbackground="#e0e0e0")
@@ -60,6 +76,8 @@ class WorkflowApp:
         self.master.bind('q', lambda event: self.save_and_exit())
         self.master.bind('o', lambda event: self.load_graph())
         self.master.bind('t', lambda event: self.toggle_terminal())
+        self.master.bind('<Control-Up>', lambda event: self.zoom_in())
+        self.master.bind('<Control-Down>', lambda event: self.zoom_out())
 
         # Zoom and pan
         self.scale = 1.0
@@ -721,6 +739,18 @@ class WorkflowApp:
         factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
         self.zoom(factor)
 
+    def on_zoom_scroll(self, value):
+        new_scale = float(value)
+        if abs(new_scale - self.scale) > 1e-9: # Compare floats with a tolerance
+            factor = new_scale / self.scale
+            self.zoom(factor, from_scroll=True)
+
+    def zoom_in(self):
+        self.zoom(1.1)
+
+    def zoom_out(self):
+        self.zoom(1/1.1)
+
     def save_graph(self):
         # Use 'Workfile' as the default filename for first-time save
         initialfile = None
@@ -766,10 +796,22 @@ class WorkflowApp:
         if self.filename:
             self._reload_graph()
 
-    def zoom(self, factor):
+    def zoom(self, factor, from_scroll=False):
         # Keep track of old scale before updating
         old_scale = self.scale
-        self.scale *= factor
+        new_scale = self.scale * factor
+
+        # Clamp the scale to the slider's range
+        new_scale = max(0.1, min(new_scale, 3.0))
+
+        if abs(new_scale - self.scale) < 1e-9:
+            return
+
+        self.scale = new_scale
+
+        # Update slider only if not triggered by it
+        if not from_scroll:
+            self.zoom_slider.set(self.scale)
 
         # Calculate new font size and edge width based on new scale
         new_font = max(1, int(self.base_font_size * self.scale))
