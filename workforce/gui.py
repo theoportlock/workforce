@@ -11,12 +11,31 @@ import uuid
 
 class WorkflowApp:
     def __init__(self, master):
-        self.master = master
-        self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
-        self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
-        self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
-        self.master.grid_columnconfigure(0, weight=1)
-        self.master.grid_columnconfigure(1, weight=0)
+        self.master = master        
+
+        # Get the absolute path to the directory where the script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one directory to get to the project root
+        root_dir = os.path.abspath(os.path.join(script_dir, '..'))
+
+        # Construct the full path to your icon.ico file
+        # This works best for WSL2 environments
+        icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.ico')
+
+        # Use a conditional check to apply the correct icon method
+        if sys.platform.startswith('win'):
+            # Use iconbitmap for Windows and WSL2
+            if os.path.exists(icon_path):
+                self.master.iconbitmap(icon_path)
+        else:
+            # Use iconphoto for native Linux or other systems
+            png_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon-16.png')
+            if os.path.exists(png_icon_path):
+                try:
+                    icon = tk.PhotoImage(file=png_icon_path)
+                    self.master.iconphoto(False, icon)
+                except tk.TclError:
+                    print("Warning: Could not set icon with iconphoto.")
 
         self.terminal_visible = False
         self.terminal_height = 180
