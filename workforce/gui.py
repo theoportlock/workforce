@@ -12,39 +12,11 @@ import uuid
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
-
-        # Get the absolute path to the directory where the script is located
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Go up one directory to get to the project root
-        root_dir = os.path.abspath(os.path.join(script_dir, '..'))
-
-        # Determine the platform and load the correct icon file
-        if sys.platform.startswith('win'):
-            # Windows and WSL2: Use the multi-size .ico file
-            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.ico')
-            if os.path.exists(icon_path):
-                self.master.iconbitmap(icon_path)
-        elif sys.platform.startswith('darwin'):
-            # macOS: Use the .icns file
-            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.icns')
-            if os.path.exists(icon_path):
-                self.master.iconphoto(True, tk.PhotoImage(file=icon_path))
-        else:
-            # Linux: Use a .png for full color, or fallback to .xbm
-            png_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon-32.png')
-            xbm_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.xbm')
-
-            if os.path.exists(png_icon_path):
-                try:
-                    icon = tk.PhotoImage(file=png_icon_path)
-                    self.master.iconphoto(False, icon)
-                except tk.TclError:
-                    print("Warning: Could not load PNG icon. Falling back to XBM.")
-                    if os.path.exists(xbm_icon_path):
-                        self.master.iconbitmap('@' + xbm_icon_path)
-            elif os.path.exists(xbm_icon_path):
-                self.master.iconbitmap('@' + xbm_icon_path)
-
+        self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
+        self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
+        self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_columnconfigure(1, weight=0)
         self.terminal_visible = False
         self.terminal_height = 180
 
@@ -130,6 +102,38 @@ class WorkflowApp:
         # Defer loading 'Workfile' until after window is initialized
         self.master.after_idle(self.try_load_workfile)
         self.master.title("Workforce")
+
+        # Get the absolute path to the directory where the script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one directory to get to the project root
+        root_dir = os.path.abspath(os.path.join(script_dir, '..'))
+
+        # Determine the platform and load the correct icon file
+        if sys.platform.startswith('win'):
+            # Windows and WSL2: Use the multi-size .ico file
+            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.ico')
+            if os.path.exists(icon_path):
+                self.master.iconbitmap(icon_path)
+        elif sys.platform.startswith('darwin'):
+            # macOS: Use the .icns file
+            icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.icns')
+            if os.path.exists(icon_path):
+                self.master.iconphoto(True, tk.PhotoImage(file=icon_path))
+        else:
+            # Linux: Use a .png for full color, or fallback to .xbm
+            png_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon-32.png')
+            xbm_icon_path = os.path.join(root_dir, 'docs', 'images', 'icon.xbm')
+
+            if os.path.exists(png_icon_path):
+                try:
+                    icon = tk.PhotoImage(file=png_icon_path)
+                    self.master.iconphoto(False, icon)
+                except tk.TclError:
+                    print("Warning: Could not load PNG icon. Falling back to XBM.")
+                    if os.path.exists(xbm_icon_path):
+                        self.master.iconbitmap('@' + xbm_icon_path)
+            elif os.path.exists(xbm_icon_path):
+                self.master.iconbitmap('@' + xbm_icon_path)
 
         # For edge dragging
         self._edge_drag_start_node = None
