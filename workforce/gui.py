@@ -9,6 +9,7 @@ import os
 import threading
 import sys
 import uuid
+from .utils import GraphMLAtomic
 
 class WorkflowApp:
     def __init__(self, master):
@@ -557,24 +558,25 @@ class WorkflowApp:
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def save_to_current_file(self):
-        # If a filename is already set, save to it directly
         if self.filename:
-            # Save virtual coordinates
             for node_id in self.graph.nodes():
-                # Ensure 'x' and 'y' are stored as floats
                 vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
                 self.graph.nodes[node_id]['x'] = float(vx)
                 self.graph.nodes[node_id]['y'] = float(vy)
             self.graph.graph['prefix'] = self.prefix
             self.graph.graph['suffix'] = self.suffix
             try:
-                nx.write_graphml(self.graph, self.filename)
+                with GraphMLAtomic(self.filename) as ga:
+                    ga.G.clear()
+                    ga.G.add_nodes_from(self.graph.nodes(data=True))
+                    ga.G.add_edges_from(self.graph.edges(data=True))
+                    ga.G.graph.update(self.graph.graph)
+                    ga.mark_modified()
                 print(f"[Saved] {self.filename}")
-                self.last_mtime = os.path.getmtime(self.filename) # Update mtime after saving
+                self.last_mtime = os.path.getmtime(self.filename)
             except Exception as e:
                 messagebox.showerror("Save Error", f"Failed to save {self.filename}:\n{e}")
         else:
-            # If no filename is set, call save_graph to prompt the user
             self.save_graph()
 
     def try_load_workfile(self):
@@ -758,7 +760,9 @@ class WorkflowApp:
     def _reload_graph(self):
         selected_ids = list(self.selected_nodes)
 
-        self.graph = nx.read_graphml(self.filename)
+        with GraphMLAtomic(self.filename) as ga:
+            self.graph = ga.G.copy()
+
         self.prefix = self.graph.graph.get('prefix', self.prefix)
         self.suffix = self.graph.graph.get('suffix', self.suffix)
 
@@ -791,7 +795,7 @@ class WorkflowApp:
 
     def on_zoom_scroll(self, value):
         new_scale = float(value)
-        if abs(new_scale - self.scale) > 1e-9: # Compare floats with a tolerance
+        if abs(new_scale - self.scale) < 1e-9: # Compare floats with a tolerance
             factor = new_scale / self.scale
             self.zoom(factor, from_scroll=True, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
 

@@ -1,22 +1,10 @@
 #!/usr/bin/env python
 
-from filelock import FileLock, Timeout
 import sys
 import subprocess
 import networkx as nx
 import time
-
-class GraphMLAtomic:
-    def __init__(self, filename):
-        self.filename = filename
-        self.lock = FileLock(f"{filename}.lock")
-    def __enter__(self):
-        self.lock.acquire()
-        self.G = nx.read_graphml(self.filename)
-        return self.G
-    def __exit__(self, exc_type, exc_value, traceback):
-        nx.write_graphml(self.G, self.filename)
-        self.lock.release()
+from .utils import GraphMLAtomic
 
 def edit_status(G, element_type, element_id, value):
     if element_type == 'node':
@@ -30,12 +18,14 @@ def edit_status(G, element_type, element_id, value):
     return G
 
 def run_tasks(filename, prefix='bash -c ', suffix=''):
-    with GraphMLAtomic(filename) as G:
+    with GraphMLAtomic(filename) as ga:
+        G = ga.G
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
         if run_nodes:
             node = run_nodes.pop()
             G.nodes[node]['status'] = 'running'
+            ga.mark_modified()
         else:
             node = None
     if node:
@@ -53,17 +43,21 @@ def worker(filename, prefix='bash -c ', suffix='', speed=0.5):
         run_tasks(filename, prefix, suffix)
 
 def initialize_pipeline(filename):
-    with GraphMLAtomic(filename) as G:
+    with GraphMLAtomic(filename) as ga:
+        G = ga.G
         node_status = nx.get_node_attributes(G, "status")
         failed_nodes = {node for node, status in node_status.items() if status == 'fail'}
         if failed_nodes:
             nx.set_node_attributes(G, {node: 'run' for node in failed_nodes}, 'status')
+            ga.mark_modified()
         if not node_status:
             node_updates = {node: 'run' for node, degree in G.in_degree() if degree == 0}
             nx.set_node_attributes(G, node_updates, 'status')
+            ga.mark_modified()
 
 def schedule_tasks(filename):
-    with GraphMLAtomic(filename) as G:
+    with GraphMLAtomic(filename) as ga:
+        G = ga.G
         node_status = nx.get_node_attributes(G, "status")
         ran_nodes = {node for node, status in node_status.items() if status == 'ran'}
         if ran_nodes:
@@ -80,6 +74,7 @@ def schedule_tasks(filename):
                 nx.set_node_attributes(G, {node: 'run' for node in ready_nodes}, 'status')
                 reverse_edges = [(u, v) for node in ready_nodes for u, v in G.in_edges(node)]
                 [G.edges[edge].pop('status', None) for edge in reverse_edges]
+            ga.mark_modified()
         node_status = nx.get_node_attributes(G, "status")
         active_nodes = {node for node, status in node_status.items() if status in ('run', 'ran', 'running')}
     if not active_nodes:
@@ -90,23 +85,20 @@ def shell_quote_multiline(script: str) -> str:
     return script.replace("'", "'\\''")
 
 def run_node(filename, node, prefix='bash -c ', suffix=''):
-    with GraphMLAtomic(filename) as G:
+    with GraphMLAtomic(filename) as ga:
+        G = ga.G
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)
         command = f"{prefix}{quoted_label}{suffix}".strip()
         print(command)
         G.nodes[node]['status'] = 'running'
+        ga.mark_modified()
     try:
         subprocess.run(command, shell=True, check=True)
-        with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'ran'
+        with GraphMLAtomic(filename) as ga:
+            ga.G.nodes[node]['status'] = 'ran'
+            ga.mark_modified()
     except subprocess.CalledProcessError:
-        with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
-
-def safe_load(filename, lock_timeout=0.1):
-    lock = FileLock(f"{filename}.lock")
-    try:
-        with lock.acquire(timeout=lock_timeout):
-            return nx.read_graphml(filename)
-    except Timeout:
-        # Could not acquire the lock quickly; skip this update
-        return None
+        with GraphMLAtomic(filename) as ga:
+            ga.G.nodes[node]['status'] = 'fail'
+            ga.mark_modified()
