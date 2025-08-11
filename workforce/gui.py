@@ -63,6 +63,11 @@ class WorkflowApp:
         self._select_rect_start = None
         self._select_rect_active = False
 
+        # Click vs Pan state
+        self._potential_deselect = False
+        self._press_x = 0
+        self._press_y = 0
+
         # Bind keys only when main window is focused
         self.master.bind('<Control-s>', lambda event: self.save_to_current_file())
         self.master.bind('r', lambda event: self.run_selected())
@@ -516,6 +521,7 @@ class WorkflowApp:
         for node_id, (rect, text) in self.node_widgets.items():
             if item and item[0] in (rect, text):
                 node_clicked = True
+                self._potential_deselect = False # Clicked on a node, so no deselect
                 # If node is already selected, do not change selection, just start drag
                 if node_id in self.selected_nodes:
                     self.on_node_press(event, node_id)
@@ -531,8 +537,10 @@ class WorkflowApp:
                     self.on_node_press(event, node_id)
                 break
         if not node_clicked:
-            # Clicked empty space, clear selection and prepare to pan
-            self.clear_selection()
+            # Clicked empty space, prepare to pan and potentially deselect
+            self._potential_deselect = True
+            self._press_x = event.x
+            self._press_y = event.y
             self.canvas.scan_mark(event.x, event.y)
             self.dragging_node = None
             self._panning = True
@@ -543,6 +551,9 @@ class WorkflowApp:
         if self.dragging_node:
             self.on_node_drag(event, self.dragging_node)
         elif getattr(self, '_panning', False):
+            # If there is motion, it's a pan, not a deselect click
+            if abs(event.x - self._press_x) > 5 or abs(event.y - self._press_y) > 5:
+                self._potential_deselect = False
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def save_to_current_file(self):
@@ -745,12 +756,18 @@ class WorkflowApp:
             self.add_recent_file(filename)
 
     def _reload_graph(self):
+        selected_ids = list(self.selected_nodes)
+
         self.graph = nx.read_graphml(self.filename)
         self.prefix = self.graph.graph.get('prefix', self.prefix)
         self.suffix = self.graph.graph.get('suffix', self.suffix)
+
+        # Filter selected_ids to only include nodes that still exist
+        self.selected_nodes = [nid for nid in selected_ids if nid in self.graph.nodes]
+
         self.canvas.delete("all")
         self.node_widgets.clear()
-        self.selected_nodes.clear()
+        
         for node_id, data in self.graph.nodes(data=True):
             data['x'], data['y'] = float(data.get('x', 100)), float(data.get('y', 100))
             self.draw_node(node_id)
@@ -986,8 +1003,10 @@ class WorkflowApp:
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def on_canvas_release(self, event):
-        # Nothing special needed here for pan
-        pass
+        if getattr(self, '_potential_deselect', False):
+            self.clear_selection()
+        self._potential_deselect = False
+        self._panning = False
 
 class Gui:
     def __init__(self, filename=None):
