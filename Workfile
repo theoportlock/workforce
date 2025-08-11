@@ -10,6 +10,9 @@
   <graph edgedefault="directed">
     <node id="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
       <data key="d3">echo one</data>
+      <data key="d4">322.2335138522915</data>
+      <data key="d5">236.06248029764538</data>
+      <data key="d6">ran</data>
       <data key="d4">607.2708820901146</data>
       <data key="d5">155.177827122538</data>
     </node>
@@ -20,11 +23,17 @@
     </node>
     <node id="03349b87-b2c7-440f-9e76-2f2b9e11ec1e">
       <data key="d3">echo three</data>
+      <data key="d4">515.0337927629312</data>
+      <data key="d5">276.2129897220661</data>
+      <data key="d6">ran</data>
       <data key="d4">800.0711610007547</data>
       <data key="d5">195.3283365469585</data>
     </node>
     <node id="8b1b0510-e2d7-4328-bbaa-229a4621754e">
       <data key="d3">echo "start p2"</data>
+      <data key="d4">504.0385698044567</data>
+      <data key="d5">191.09791101313112</data>
+      <data key="d6">ran</data>
       <data key="d4">789.0759380422801</data>
       <data key="d5">110.21325783802374</data>
     </node>
