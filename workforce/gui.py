@@ -340,35 +340,35 @@ class WorkflowApp:
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Open", command=self.load_graph)
-        file_menu.add_command(label="Save", command=self.save_graph)
+        file_menu.add_command(label="Open", command=self.load_graph, accelerator="O")
+        file_menu.add_command(label="Save", command=self.save_graph, accelerator="Ctrl+S")
         self.recent_menu = tk.Menu(file_menu, tearoff=0)
         file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
         self.update_recent_menu()
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.save_and_exit)
+        file_menu.add_command(label="Exit", command=self.save_and_exit, accelerator="Q")
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
-        edit_menu.add_command(label="Add Node", command=self.add_node)
-        edit_menu.add_command(label="Remove Node", command=self.remove_node)
-        edit_menu.add_command(label="Update Node", command=self.update_node)
-        edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes)
-        edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected)
-        edit_menu.add_command(label="Clear Status", command=self.clear_all)
+        edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
+        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D")
+        edit_menu.add_command(label="Update Node", command=self.update_node, accelerator="dbl click node")
+        edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
+        edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
+        edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Node", command=self.run_selected)
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline)
+        run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
+        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup)
-        tools_menu.add_command(label="Show/Hide Terminal", command=self.toggle_terminal)
+        tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup, accelerator="P")
+        tools_menu.add_command(label="Show/Hide Terminal", command=self.toggle_terminal, accelerator="T")
         menubar.add_cascade(label="Tools", menu=tools_menu)
 
         self.master.config(menu=menubar)
