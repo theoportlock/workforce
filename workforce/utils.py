@@ -8,11 +8,11 @@ class GraphMLAtomic:
         self._modified = False
 
     def __enter__(self):
-        self.lock.acquire()
-        try:
-            self.G = nx.read_graphml(self.filename)
-        except FileNotFoundError:
-            self.G = nx.DiGraph()
+        with self.lock:
+            try:
+                self.G = nx.read_graphml(self.filename)
+            except FileNotFoundError:
+                self.G = nx.DiGraph()
         return self
 
     def mark_modified(self):
@@ -20,5 +20,5 @@ class GraphMLAtomic:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self._modified:
-            nx.write_graphml(self.G, self.filename)
-        self.lock.release()
+            with self.lock:
+                nx.write_graphml(self.G, self.filename)
