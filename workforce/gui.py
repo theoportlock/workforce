@@ -208,7 +208,7 @@ class WorkflowApp:
             self.canvas.unbind("<B3-Motion>")
             self.canvas.unbind("<ButtonRelease-3>")
     
-    def save_and_exit(self):
+    def save_and_exit(self, event=None):
         if self.filename:
             self.save_to_current_file()
         self.master.quit()
@@ -854,20 +854,6 @@ class WorkflowApp:
         if abs(new_scale - old_scale) < 1e-9:
             return
 
-        actual_factor = new_scale / old_scale
-
-        if mouse_pos:
-            cx = self.canvas.canvasx(mouse_pos[0])
-            cy = self.canvas.canvasy(mouse_pos[1])
-
-            # Translation to add to all virtual coordinates
-            delta_vx = (cx / old_scale) * (1/actual_factor - 1)
-            delta_vy = (cy / old_scale) * (1/actual_factor - 1)
-
-            for node_id in self.graph.nodes():
-                self.graph.nodes[node_id]['x'] += delta_vx
-                self.graph.nodes[node_id]['y'] += delta_vy
-
         self.scale = new_scale
 
         # Update slider only if not triggered by it
@@ -887,7 +873,7 @@ class WorkflowApp:
 
         # Redraw all nodes with the new scale and font size
         for node_id, data in self.graph.nodes(data=True):
-            self.draw_node(node_id, font_size=new_font)
+            self.draw_node(node_id)
 
         # Redraw all edges with the new scale and line width
         for src, tgt in self.graph.edges():
