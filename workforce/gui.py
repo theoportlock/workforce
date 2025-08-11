@@ -769,19 +769,19 @@ class WorkflowApp:
 
     def on_zoom(self, event):
         factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
-        self.zoom(factor)
+        self.zoom(factor, mouse_pos=(event.x, event.y))
 
     def on_zoom_scroll(self, value):
         new_scale = float(value)
         if abs(new_scale - self.scale) > 1e-9: # Compare floats with a tolerance
             factor = new_scale / self.scale
-            self.zoom(factor, from_scroll=True)
+            self.zoom(factor, from_scroll=True, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
 
     def zoom_in(self):
-        self.zoom(1.1)
+        self.zoom(1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
 
     def zoom_out(self):
-        self.zoom(1/1.1)
+        self.zoom(1/1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
 
     def save_graph(self):
         # Use 'Workfile' as the default filename for first-time save
@@ -828,16 +828,27 @@ class WorkflowApp:
         if self.filename:
             self._reload_graph()
 
-    def zoom(self, factor, from_scroll=False):
-        # Keep track of old scale before updating
+    def zoom(self, factor, from_scroll=False, mouse_pos=None):
         old_scale = self.scale
         new_scale = self.scale * factor
-
-        # Clamp the scale to the slider's range
         new_scale = max(0.1, min(new_scale, 3.0))
 
-        if abs(new_scale - self.scale) < 1e-9:
+        if abs(new_scale - old_scale) < 1e-9:
             return
+
+        actual_factor = new_scale / old_scale
+
+        if mouse_pos:
+            cx = self.canvas.canvasx(mouse_pos[0])
+            cy = self.canvas.canvasy(mouse_pos[1])
+
+            # Translation to add to all virtual coordinates
+            delta_vx = (cx / old_scale) * (1/actual_factor - 1)
+            delta_vy = (cy / old_scale) * (1/actual_factor - 1)
+
+            for node_id in self.graph.nodes():
+                self.graph.nodes[node_id]['x'] += delta_vx
+                self.graph.nodes[node_id]['y'] += delta_vy
 
         self.scale = new_scale
 
@@ -863,10 +874,6 @@ class WorkflowApp:
         # Redraw all edges with the new scale and line width
         for src, tgt in self.graph.edges():
             self.draw_edge(src, tgt)
-
-    def on_mousewheel(self, event):
-        factor = 1.1 if getattr(event, 'delta', 0) > 0 or getattr(event, 'num', 0) == 4 else 1 / 1.1
-        self.zoom(factor)
 
     def on_pan_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
