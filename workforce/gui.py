@@ -248,7 +248,7 @@ class WorkflowApp:
         self._select_rect_id = self.canvas.create_rectangle(
             self._select_rect_start[0], self._select_rect_start[1],
             self._select_rect_start[0], self._select_rect_start[1],
-            outline="gray", dash=(2,2), width=2, tags="select_rect"
+            outline="gray", dash=(2,2), width=1, tags="select_rect"
         )
 
     def on_shift_left_motion(self, event):
