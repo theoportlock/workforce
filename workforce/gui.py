@@ -248,7 +248,7 @@ class WorkflowApp:
         self._select_rect_id = self.canvas.create_rectangle(
             self._select_rect_start[0], self._select_rect_start[1],
             self._select_rect_start[0], self._select_rect_start[1],
-            outline="gray", dash=(2,2), width=2, tags="select_rect"
+            outline="gray", dash=(2,2), width=1, tags="select_rect"
         )
 
     def on_shift_left_motion(self, event):
@@ -280,7 +280,7 @@ class WorkflowApp:
             if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
                 if node_id not in self.selected_nodes:
                     self.selected_nodes.append(node_id)
-                    self.canvas.itemconfig(rect, outline="black", width=2)
+                    self.canvas.itemconfig(rect, outline="black", width=1)
         # Remove selection rectangle
         self.canvas.delete(self._select_rect_id)
         self._select_rect_id = None
