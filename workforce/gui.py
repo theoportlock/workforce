@@ -275,7 +275,7 @@ class WorkflowApp:
             if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
                 if node_id not in self.selected_nodes:
                     self.selected_nodes.append(node_id)
-                    self.canvas.itemconfig(rect, fill="#555555")
+                    self.canvas.itemconfig(rect, outline="black", width=2)
         # Remove selection rectangle
         self.canvas.delete(self._select_rect_id)
         self._select_rect_id = None
@@ -293,11 +293,7 @@ class WorkflowApp:
         # Node color by status
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
         status = data.get('status', '').lower()
-        base_fill_color = status_colors.get(status, 'lightgray')
-        if node_id in self.selected_nodes:
-            fill_color = "#555555"
-        else:
-            fill_color = base_fill_color
+        fill_color = status_colors.get(status, 'lightgray')
 
         # Use passed font_size, or the instance's current_font_size, or fallback to base
         if font_size is None:
@@ -317,8 +313,13 @@ class WorkflowApp:
         box_width = text_width + 2 * padding_x
         box_height = text_height + 2 * padding_y
 
+        outline_kwargs = {'outline': ''}
+        if node_id in self.selected_nodes:
+            outline_kwargs['outline'] = "black"
+            outline_kwargs['width'] = 1
+
         # Draw rectangle at scaled virtual coordinates
-        rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, outline="")
+        rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, **outline_kwargs)
 
         # Draw left-aligned text inside the rectangle at scaled virtual coordinates
         text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
