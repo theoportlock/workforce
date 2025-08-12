@@ -43,6 +43,12 @@ To launch the pipeline editor, run:
 
    wf
 
+or:
+
+.. code-block:: bash
+
+   python -m workforce
+
 To open a previously constructed pipeline, run:
 
 .. code-block:: bash
@@ -57,7 +63,7 @@ If a `Workfile` is in the current directory:
 
 Running workforce plan
 ----------------------
-To run a sample plan from workforce github project:
+To run a sample plan from workforce github project from the GUI, click run_all or shift r. Run from cli with:
 
 .. code-block:: bash
 
@@ -65,7 +71,7 @@ To run a sample plan from workforce github project:
 
 Prefix and Suffix
 -----------------
-Adding the following prefix and suffixes to the wf run command will add those prefix and suffixes to each command ran by the pipeline.
+Adding the following prefix and suffixes to the wf run command (or within gui) will add those prefix and suffixes to each command ran by the pipeline.
 
 +-------------------------------+---------------------------------------------------------------------------------+
 | Options                       | Description                                                                     |
@@ -107,6 +113,6 @@ Adding the following prefix and suffixes to the wf run command will add those pr
 | -p "powershell.exe"           | Executes commands in Windows PowerShell.                                        |
 +-------------------------------+---------------------------------------------------------------------------------+
 
-To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button. The command line from where the builder was launched will display the standard output and error for each process.
+To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button (or shortcut with r key). Opening the terminal with shortcut t (or on the toolbar), you can see the output of the commands
 
-This is tested on mac and linux but work requires work for windows integration except for wsl2
+This is tested on mac, linux, and windows powershell and wsl2.

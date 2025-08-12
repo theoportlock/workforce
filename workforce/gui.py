@@ -2,7 +2,6 @@
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
-from tkinterdnd2 import TkinterDnD, DND_TEXT
 import networkx as nx
 import subprocess
 import os

@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d8" for="edge" attr.name="id" attr.type="string" />
-  <key id="d7" for="node" attr.name="status" attr.type="string" />
+  <key id="d7" for="edge" attr.name="id" attr.type="string" />
   <key id="d6" for="node" attr.name="id" attr.type="string" />
   <key id="d5" for="node" attr.name="y" attr.type="double" />
   <key id="d4" for="node" attr.name="x" attr.type="double" />
@@ -15,7 +14,6 @@
       <data key="d4">1105.1536510383385</data>
       <data key="d5">406.28136404016607</data>
       <data key="d6">ran</data>
-      <data key="d7">ran</data>
     </node>
     <node id="fa20471d-c97e-4676-ac11-20064bbee6fc">
       <data key="d3">echo two</data>
@@ -38,7 +36,6 @@
       <data key="d3">echo "start p3"</data>
       <data key="d4">765.8146602227014</data>
       <data key="d5">413.07969627708087</data>
-      <data key="d7">ran</data>
     </node>
     <node id="4db400a9-6bd0-4539-ac3a-0aa55484b243">
       <data key="d3">echo "three p1"</data>
@@ -49,7 +46,6 @@
       <data key="d3">pwd</data>
       <data key="d4">1155.2273935665264</data>
       <data key="d5">259.9716205296751</data>
-      <data key="d7">ran</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
       <data key="d3">sleep 1; echo "start p6"; echo "this label is exceptionally long"
@@ -58,9 +54,8 @@ ls
 ls
 ls
 ls</data>
-      <data key="d4">526.6161091905897</data>
+      <data key="d4">532.6161091905897</data>
       <data key="d5">252.84693429359902</data>
-      <data key="d7">ran</data>
     </node>
     <node id="ade6c799-c635-43fe-badb-a1be99bbce16">
       <data key="d3"># Multi line commands are supported
@@ -72,7 +67,7 @@ echo "This is on a second line"</data>
     <node id="76bb5011-5236-4845-95d0-b1690fd94914">
       <data key="d3">echo test</data>
       <data key="d4">1377.8827689482243</data>
-      <data key="d5">298.10353691762793</data>
+      <data key="d5">299.5321083461994</data>
     </node>
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="fa20471d-c97e-4676-ac11-20064bbee6fc" />
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" />
@@ -80,7 +75,7 @@ echo "This is on a second line"</data>
     <edge source="fa20471d-c97e-4676-ac11-20064bbee6fc" target="ade6c799-c635-43fe-badb-a1be99bbce16" />
     <edge source="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" target="4db400a9-6bd0-4539-ac3a-0aa55484b243" />
     <edge source="b64ae446-a898-4205-aaa0-6d3a4a940678" target="e4cce944-a6a0-488e-8251-fbd35e75d0c0">
-      <data key="d8">708eb12c-da5e-409c-8a36-ab5cd175135d</data>
+      <data key="d7">708eb12c-da5e-409c-8a36-ab5cd175135d</data>
     </edge>
     <edge source="b8128031-6b2b-404c-996f-039a30a9d35c" target="8b1b0510-e2d7-4328-bbaa-229a4621754e" />
     <edge source="b8128031-6b2b-404c-996f-039a30a9d35c" target="76bb5011-5236-4845-95d0-b1690fd94914" />
