@@ -29,7 +29,7 @@ def edit_status(G, element_type, element_id, value):
         G.edges[element_id]['status'] = value
     return G
 
-def run_tasks(filename, prefix='bash -c ', suffix=''):
+def run_tasks(filename, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
@@ -44,7 +44,7 @@ def run_tasks(filename, prefix='bash -c ', suffix=''):
             filename, node, "-p", prefix, "-s", suffix
         ])
 
-def worker(filename, prefix='bash -c ', suffix='', speed=0.5):
+def worker(filename, prefix='', suffix='', speed=0.5):
     initialize_pipeline(filename)
     status = ''
     while status != 'complete':
@@ -86,10 +86,10 @@ def schedule_tasks(filename):
         return 'complete'
 
 def shell_quote_multiline(script: str) -> str:
-    """Safely quote a multiline shell script for `bash -c '...'`."""
+    """Safely quote a multiline shell script '...'`."""
     return script.replace("'", "'\\''")
 
-def run_node(filename, node, prefix='bash -c ', suffix=''):
+def run_node(filename, node, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)

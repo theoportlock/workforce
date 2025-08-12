@@ -51,7 +51,7 @@ class WorkflowApp:
         self.node_widgets = {}
         self.selected_nodes = []
 
-        self.prefix = "bash -c"
+        self.prefix = ""
         self.suffix = ""
 
         self.filename = None
