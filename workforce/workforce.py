@@ -29,7 +29,7 @@ def edit_status(G, element_type, element_id, value):
         G.edges[element_id]['status'] = value
     return G
 
-def run_tasks(filename, prefix='bash -c ', suffix=''):
+def run_tasks(filename, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
@@ -44,7 +44,7 @@ def run_tasks(filename, prefix='bash -c ', suffix=''):
             filename, node, "-p", prefix, "-s", suffix
         ])
 
-def worker(filename, prefix='bash -c ', suffix='', speed=0.5):
+def worker(filename, prefix='', suffix='', speed=0.5):
     initialize_pipeline(filename)
     status = ''
     while status != 'complete':
@@ -89,7 +89,7 @@ def shell_quote_multiline(script: str) -> str:
     """Safely quote a multiline shell script for `bash -c '...'`."""
     return script.replace("'", "'\\''")
 
-def run_node(filename, node, prefix='bash -c ', suffix=''):
+def run_node(filename, node, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)
@@ -102,11 +102,51 @@ def run_node(filename, node, prefix='bash -c ', suffix=''):
     except subprocess.CalledProcessError:
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
 
-def safe_load(filename, lock_timeout=0.1):
-    lock = FileLock(f"{filename}.lock")
-    try:
-        with lock.acquire(timeout=lock_timeout):
-            return nx.read_graphml(filename)
-    except Timeout:
-        # Could not acquire the lock quickly; skip this update
-        return None
+def run_multi_nodes(filename, nodes_to_run, prefix='', suffix=''):
+    """
+    Run a specific list of nodes in dependency order, treating them as a subgraph.
+    Dependencies outside the selection are ignored.
+    """
+    nodes_to_run_set = set(nodes_to_run)
+    completed_nodes = set()
+
+    print(f"Starting execution of specified nodes: {nodes_to_run}")
+
+    # Initialize: set status='run' for subgraph nodes with no incoming edges *within the subgraph*
+    with GraphMLAtomic(filename) as G:
+        subG = G.subgraph(nodes_to_run_set).copy()
+        print(subG)
+        initial_nodes = [n for n, deg in subG.in_degree() if deg == 0]
+        nx.set_node_attributes(G, {n: 'run' for n in initial_nodes}, 'status')
+
+    while completed_nodes != nodes_to_run_set:
+        with GraphMLAtomic(filename) as G:
+            node_status = nx.get_node_attributes(G, "status")
+            runnable_nodes = {n for n in nodes_to_run_set if node_status.get(n) == 'run'}
+
+            if not runnable_nodes:
+                print("No more runnable nodes found in the selection. Exiting.")
+                break
+
+            for node in sorted(runnable_nodes):
+                print(f"\n--- Running node: {node} ---")
+                run_node(filename, node, prefix, suffix)
+
+                # Custom schedule for subgraph
+                for succ in G.successors(node):
+                    if succ in nodes_to_run_set:
+                        preds = list(G.predecessors(succ))
+                        # Check if all preds in subgraph are ran
+                        if all(G.nodes[p].get('status') == 'ran'
+                               for p in preds if p in nodes_to_run_set):
+                            G.nodes[succ]['status'] = 'run'
+
+        with GraphMLAtomic(filename) as G:
+            node_status = nx.get_node_attributes(G, "status")
+            completed_nodes.update(n for n, s in node_status.items()
+                                   if s == 'ran' and n in nodes_to_run_set)
+
+        time.sleep(0.5)
+
+    print("\nAll specified nodes have been processed.")
+

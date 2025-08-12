@@ -700,11 +700,14 @@ class WorkflowApp:
             self.save_graph()
         if self.filename:
             self.save_to_current_file()
-            for node_id in self.selected_nodes:
-                self.run_in_terminal([
-                    sys.executable, "-m", "workforce", "run_node", self.filename, node_id,
-                    "--prefix", self.prefix, "--suffix", self.suffix
-                ], title=f"Run Node: {node_id}")
+            if self.selected_nodes:
+                cmd = [
+                    sys.executable, "-m", "workforce", "run_multi_nodes",
+                    self.filename, *self.selected_nodes,
+                    "--prefix", self.prefix,
+                    "--suffix", self.suffix
+                ]
+                self.run_in_terminal(cmd, title=f"Run Selected Nodes ({len(self.selected_nodes)})")
 
     def run_pipeline(self):
         if not self.filename:

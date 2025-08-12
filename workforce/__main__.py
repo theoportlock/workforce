@@ -9,6 +9,9 @@ import sys
 def run_node_cmd(args):
     workforce.run_node(args.filename, args.node, args.prefix, args.suffix)
 
+def run_multi_nodes_cmd(args):
+    workforce.run_multi_nodes(args.filename, args.nodes, args.prefix, args.suffix)
+
 def run_tasks_cmd(args):
     workforce.worker(args.filename, args.prefix, args.suffix, args.speed)
 
@@ -16,7 +19,7 @@ def gui_cmd(args):
     gui.Gui(args.filename)  # Pass only the filename, not the entire Namespace
 
 def main():
-    valid_commands = {"run", "run_node", "gui", "-h", "--help"}
+    valid_commands = {"run", "run_node", "run_multi_nodes", "gui", "-h", "--help"}
 
     if len(sys.argv) == 1:
         if os.path.exists("Workfile"):
@@ -33,12 +36,10 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # (rest of your code remains the same)
-
     # Run Tasks Command
     run_parser = subparsers.add_parser("run", help="Run all scheduled workflow tasks")
     run_parser.add_argument("filename", help="GraphML file containing tasks")
-    run_parser.add_argument("--prefix", '-p', default='bash -c', type=str, help="Prefix for node execution")
+    run_parser.add_argument("--prefix", '-p', default='', type=str, help="Prefix for node execution")
     run_parser.add_argument("--suffix", '-s', default='', type=str, help="Suffix for node execution")
     run_parser.add_argument("--run_task", action="store_true", help="Run a single task and exit")
     run_parser.add_argument("--speed", type=float, default=1, help="Seconds in between job submission")
@@ -48,9 +49,17 @@ def main():
     run_node_parser = subparsers.add_parser("run_node", help="Run a single node in the workflow")
     run_node_parser.add_argument("filename", type=str, help="Path to the input GraphML file.")
     run_node_parser.add_argument("node", type=str, help="Node to execute.")
-    run_node_parser.add_argument("--prefix", '-p', default='bash -c', required=False, type=str, help="Prefix for command execution.")
+    run_node_parser.add_argument("--prefix", '-p', default='', required=False, type=str, help="Prefix for command execution.")
     run_node_parser.add_argument("--suffix", '-s', default='', required=False, type=str, help="Suffix for command execution.")
     run_node_parser.set_defaults(func=run_node_cmd)
+    
+    # Run Multiple Nodes Command
+    run_multi_parser = subparsers.add_parser("run_multi_nodes", help="Run a specific subset of nodes in dependency order")
+    run_multi_parser.add_argument("filename", type=str, help="Path to the GraphML file.")
+    run_multi_parser.add_argument("nodes", nargs="+", help="List of node IDs to execute.")
+    run_multi_parser.add_argument("--prefix", "-p", default="", type=str, help="Prefix for execution")
+    run_multi_parser.add_argument("--suffix", "-s", default="", type=str, help="Suffix for execution")
+    run_multi_parser.set_defaults(func=run_multi_nodes_cmd)
 
     # GUI Command
     gui_parser = subparsers.add_parser("gui", help="Launch the GUI")
