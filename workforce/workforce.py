@@ -101,12 +101,3 @@ def run_node(filename, node, prefix='bash -c ', suffix=''):
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'ran'
     except subprocess.CalledProcessError:
         with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
-
-def safe_load(filename, lock_timeout=0.1):
-    lock = FileLock(f"{filename}.lock")
-    try:
-        with lock.acquire(timeout=lock_timeout):
-            return nx.read_graphml(filename)
-    except Timeout:
-        # Could not acquire the lock quickly; skip this update
-        return None
