@@ -568,7 +568,7 @@ class WorkflowApp:
             self.graph.graph['suffix'] = self.suffix
             try:
                 nx.write_graphml(self.graph, self.filename)
-                print(f"[Saved] {self.filename}")
+                # print(f"[Saved] {self.filename}")
                 self.last_mtime = os.path.getmtime(self.filename) # Update mtime after saving
             except Exception as e:
                 messagebox.showerror("Save Error", f"Failed to save {self.filename}:\n{e}")
@@ -584,7 +584,7 @@ class WorkflowApp:
             try:
                 self._reload_graph()
                 self.master.title(f"Workforce - {self.filename}")
-                print(f"[Auto-loaded] {self.filename}")
+                # print(f"[Auto-loaded] {self.filename}")
             except Exception as e:
                 messagebox.showerror("Load Error", f"Failed to auto-load {default_file}:\n{e}")
                 self.master.title("Workforce")
@@ -640,7 +640,7 @@ class WorkflowApp:
         return "break"
 
     def on_node_click(self, node_id):
-        print(f"Node clicked: {node_id}")
+        # print(f"Node clicked: {node_id}")
         if node_id in self.selected_nodes:
             self.selected_nodes.remove(node_id)
         else:
@@ -932,7 +932,7 @@ class WorkflowApp:
                 self.last_mtime = mtime
                 try:
                     self._reload_graph()
-                    print(f"[Auto-reloaded] {self.filename}")
+                    # print(f"[Auto-reloaded] {self.filename}")
                 except Exception as e:
                     messagebox.showerror("Reload Error", str(e))
         self.master.after(self.reload_interval, self.check_reload)
