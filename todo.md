@@ -22,3 +22,4 @@ pipeline diffs/shapshots/copy nodes
 Keep nodes that have ran to ran (olin suggestion)
 prefix suffix dropdowns and potential config files for running.
 function builder with copy command to clipboard option?
+Do I use the CLI to save and load nodes (fully operational from cli)

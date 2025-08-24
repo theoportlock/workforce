@@ -1,3 +1,6 @@
 Workforce is an app that creates and runs bash commands in the order of a graph.
 It is like a desktop for terminals.
 Similar to Galaxy workflow, Qiime plugin workflows, AnADMA2, Snakemake, Nextflow, Make
+A Latticework on which to hang your ideas
+Supports multiuser
+
