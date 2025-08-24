@@ -1,3 +1,4 @@
+Workforce within workforce (edit a wf run command in a workforce window)
 run nodeS function to just run a portion of the network that is selected
 RUNNODES.py script for inspiration from gemini
 don't change focus back to canvas on reload - messes up
