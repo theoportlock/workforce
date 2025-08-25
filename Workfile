@@ -33,6 +33,7 @@
       <data key="d4">1286.9587069905047</data>
       <data key="d5">361.3167947556517</data>
       <data key="d6">ran</data>
+      <data key="d7">ran</data>
     </node>
     <node id="b64ae446-a898-4205-aaa0-6d3a4a940678">
       <data key="d3">echo "start p3"</data>
@@ -49,6 +50,7 @@
       <data key="d3">pwd</data>
       <data key="d4">1155.2273935665264</data>
       <data key="d5">259.9716205296751</data>
+      <data key="d7">ran</data>
     </node>
     <node id="1ecbcbc6-35db-4ab5-852c-0aff0d79b909">
       <data key="d3">sleep 1; echo "start p6"; echo "this label is exceptionally long"
@@ -72,6 +74,7 @@ echo "This is on a second line"</data>
       <data key="d3">echo test</data>
       <data key="d4">1377.8827689482243</data>
       <data key="d5">299.5321083461994</data>
+      <data key="d7">ran</data>
     </node>
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="fa20471d-c97e-4676-ac11-20064bbee6fc" />
     <edge source="e4cce944-a6a0-488e-8251-fbd35e75d0c0" target="03349b87-b2c7-440f-9e76-2f2b9e11ec1e" />
