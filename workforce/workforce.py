@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from filelock import FileLock, Timeout
+from filelock import FileLock
 import sys
 import subprocess
 import networkx as nx
@@ -31,6 +31,11 @@ def edit_status(G, element_type, element_id, value):
 
 def run_tasks(filename, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
+        # Use graph attribute if prefix/suffix not provided
+        graph_prefix = G.graph.get('prefix', '')
+        graph_suffix = G.graph.get('suffix', '')
+        use_prefix = prefix if prefix else graph_prefix
+        use_suffix = suffix if suffix else graph_suffix
         node_status = nx.get_node_attributes(G, "status")
         run_nodes = {node for node, status in node_status.items() if status == 'run'}
         if run_nodes:
@@ -41,16 +46,22 @@ def run_tasks(filename, prefix='', suffix=''):
     if node:
         subprocess.Popen([
             sys.executable, "-m", "workforce", "run_node",
-            filename, node, "-p", prefix, "-s", suffix
+            filename, node, "-p", use_prefix, "-s", use_suffix
         ])
 
 def worker(filename, prefix='', suffix='', speed=0.5):
+    # Get graph prefix/suffix if not provided
+    with GraphMLAtomic(filename) as G:
+        graph_prefix = G.graph.get('prefix', '')
+        graph_suffix = G.graph.get('suffix', '')
+    use_prefix = prefix if prefix else graph_prefix
+    use_suffix = suffix if suffix else graph_suffix
     initialize_pipeline(filename)
     status = ''
     while status != 'complete':
         time.sleep(speed)
         status = schedule_tasks(filename)
-        run_tasks(filename, prefix, suffix)
+        run_tasks(filename, use_prefix, use_suffix)
 
 def initialize_pipeline(filename):
     with GraphMLAtomic(filename) as G:
@@ -91,9 +102,13 @@ def shell_quote_multiline(script: str) -> str:
 
 def run_node(filename, node, prefix='', suffix=''):
     with GraphMLAtomic(filename) as G:
+        graph_prefix = G.graph.get('prefix', '')
+        graph_suffix = G.graph.get('suffix', '')
+        use_prefix = prefix if prefix else graph_prefix
+        use_suffix = suffix if suffix else graph_suffix
         label = G.nodes[node].get('label', '')
         quoted_label = shell_quote_multiline(label)
-        command = f"{prefix}{quoted_label}{suffix}".strip()
+        command = f"{use_prefix}{quoted_label}{use_suffix}".strip()
         print(command)
         G.nodes[node]['status'] = 'running'
     try:
