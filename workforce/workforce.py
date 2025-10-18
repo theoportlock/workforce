@@ -1,22 +1,9 @@
 #!/usr/bin/env python
-
-from filelock import FileLock
+import socketio
 import sys
 import subprocess
-import networkx as nx
 import time
-
-class GraphMLAtomic:
-    def __init__(self, filename):
-        self.filename = filename
-        self.lock = FileLock(f"{filename}.lock")
-    def __enter__(self):
-        self.lock.acquire()
-        self.G = nx.read_graphml(self.filename)
-        return self.G
-    def __exit__(self, exc_type, exc_value, traceback):
-        nx.write_graphml(self.G, self.filename)
-        self.lock.release()
+import requests
 
 def edit_status(G, element_type, element_id, value):
     if element_type == 'node':
@@ -29,31 +16,37 @@ def edit_status(G, element_type, element_id, value):
         G.edges[element_id]['status'] = value
     return G
 
+def save_graph(filename, graph):
+    sio = socketio.Client()
+    sio.connect('http://localhost:5000')
+    sio.emit('graph_update', {"graph": graph, "filename": filename})
+    sio.disconnect()
+    resp = requests.post("http://localhost:5000/save-graph", json={"filename": filename, "graph": graph})
+    if resp.status_code != 200:
+        raise RuntimeError(f"Failed to save graph: {resp.text}")
+    return resp.json()
+
 def run_tasks(filename, prefix='', suffix=''):
-    with GraphMLAtomic(filename) as G:
-        # Use graph attribute if prefix/suffix not provided
-        graph_prefix = G.graph.get('prefix', '')
-        graph_suffix = G.graph.get('suffix', '')
-        use_prefix = prefix if prefix else graph_prefix
-        use_suffix = suffix if suffix else graph_suffix
-        node_status = nx.get_node_attributes(G, "status")
-        run_nodes = {node for node, status in node_status.items() if status == 'run'}
-        if run_nodes:
-            node = run_nodes.pop()
-            G.nodes[node]['status'] = 'running'
-        else:
-            node = None
+    graph = requests.get("http://localhost:5000/graph").json()
+    graph_prefix = graph.get('graph', {}).get('prefix', '')
+    graph_suffix = graph.get('graph', {}).get('suffix', '')
+    use_prefix = prefix if prefix else graph_prefix
+    use_suffix = suffix if suffix else graph_suffix
+    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
+    run_nodes = [node for node, status in node_status.items() if status == 'run']
+    node = run_nodes[0] if run_nodes else None
     if node:
+        edit_status(graph['graph'], 'node', node, 'running')
+        save_graph(filename, graph['graph'])
         subprocess.Popen([
             sys.executable, "-m", "workforce", "run_node",
             filename, node, "-p", use_prefix, "-s", use_suffix
         ])
 
 def worker(filename, prefix='', suffix='', speed=0.5):
-    # Get graph prefix/suffix if not provided
-    with GraphMLAtomic(filename) as G:
-        graph_prefix = G.graph.get('prefix', '')
-        graph_suffix = G.graph.get('suffix', '')
+    graph = requests.get("http://localhost:5000/graph").json()
+    graph_prefix = graph.get('graph', {}).get('prefix', '')
+    graph_suffix = graph.get('graph', {}).get('suffix', '')
     use_prefix = prefix if prefix else graph_prefix
     use_suffix = suffix if suffix else graph_suffix
     initialize_pipeline(filename)
@@ -64,35 +57,48 @@ def worker(filename, prefix='', suffix='', speed=0.5):
         run_tasks(filename, use_prefix, use_suffix)
 
 def initialize_pipeline(filename):
-    with GraphMLAtomic(filename) as G:
-        node_status = nx.get_node_attributes(G, "status")
-        failed_nodes = {node for node, status in node_status.items() if status == 'fail'}
-        if failed_nodes:
-            nx.set_node_attributes(G, {node: 'run' for node in failed_nodes}, 'status')
-        if not node_status:
-            node_updates = {node: 'run' for node, degree in G.in_degree() if degree == 0}
-            nx.set_node_attributes(G, node_updates, 'status')
+    graph = requests.get("http://localhost:5000/graph").json()
+    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
+    failed_nodes = [node for node, status in node_status.items() if status == 'fail']
+    for node in failed_nodes:
+        edit_status(graph['graph'], 'node', node, 'run')
+    if not node_status:
+        # Find nodes with in-degree 0
+        for node in graph['nodes']:
+            node_id = node['id']
+            indegree = sum(1 for e in graph['links'] if e['target'] == node_id)
+            if indegree == 0:
+                edit_status(graph['graph'], 'node', node_id, 'run')
+    save_graph(filename, graph['graph'])
 
 def schedule_tasks(filename):
-    with GraphMLAtomic(filename) as G:
-        node_status = nx.get_node_attributes(G, "status")
-        ran_nodes = {node for node, status in node_status.items() if status == 'ran'}
-        if ran_nodes:
-            forward_edges = [(u, v) for node in ran_nodes for u, v in G.out_edges(node)]
-            nx.set_edge_attributes(G, {edge: 'to_run' for edge in forward_edges}, 'status')
-            [G.nodes[node].pop('status', None) for node in ran_nodes]
-            edge_status = nx.get_edge_attributes(G, "status")
-            ready_nodes = {
-                node for node in G.nodes
-                if G.in_degree(node) > 0 and
-                all(edge_status.get((u, node)) == 'to_run' for u, _ in G.in_edges(node))
-            }
-            if ready_nodes:
-                nx.set_node_attributes(G, {node: 'run' for node in ready_nodes}, 'status')
-                reverse_edges = [(u, v) for node in ready_nodes for u, v in G.in_edges(node)]
-                [G.edges[edge].pop('status', None) for edge in reverse_edges]
-        node_status = nx.get_node_attributes(G, "status")
-        active_nodes = {node for node, status in node_status.items() if status in ('run', 'ran', 'running')}
+    graph = requests.get("http://localhost:5000/graph").json()
+    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
+    ran_nodes = [node for node, status in node_status.items() if status == 'ran']
+    # Set edge status for outgoing edges of ran nodes
+    for node in ran_nodes:
+        for link in graph['links']:
+            if link['source'] == node:
+                edit_status(graph['graph'], 'edge', (link['source'], link['target']), 'to_run')
+        edit_status(graph['graph'], 'node', node, None)  # Remove status
+    # Find ready nodes
+    edge_status = {(l['source'], l['target']): l.get('status', '') for l in graph['links']}
+    ready_nodes = []
+    for node in graph['nodes']:
+        node_id = node['id']
+        indegree = sum(1 for l in graph['links'] if l['target'] == node_id)
+        if indegree > 0:
+            incoming = [l for l in graph['links'] if l['target'] == node_id]
+            if all(edge_status.get((l['source'], l['target'])) == 'to_run' for l in incoming):
+                ready_nodes.append(node_id)
+    for node in ready_nodes:
+        edit_status(graph['graph'], 'node', node, 'run')
+        for l in graph['links']:
+            if l['target'] == node:
+                edit_status(graph['graph'], 'edge', (l['source'], l['target']), None)
+    save_graph(filename, graph['graph'])
+    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
+    active_nodes = [node for node, status in node_status.items() if status in ('run', 'ran', 'running')]
     if not active_nodes:
         return 'complete'
 
@@ -101,18 +107,24 @@ def shell_quote_multiline(script: str) -> str:
     return script.replace("'", "'\\''")
 
 def run_node(filename, node, prefix='', suffix=''):
-    with GraphMLAtomic(filename) as G:
-        graph_prefix = G.graph.get('prefix', '')
-        graph_suffix = G.graph.get('suffix', '')
-        use_prefix = prefix if prefix else graph_prefix
-        use_suffix = suffix if suffix else graph_suffix
-        label = G.nodes[node].get('label', '')
-        quoted_label = shell_quote_multiline(label)
-        command = f"{use_prefix}{quoted_label}{use_suffix}".strip()
-        print(command)
-        G.nodes[node]['status'] = 'running'
+    graph = requests.get("http://localhost:5000/graph").json()
+    graph_prefix = graph.get('graph', {}).get('prefix', '')
+    graph_suffix = graph.get('graph', {}).get('suffix', '')
+    use_prefix = prefix if prefix else graph_prefix
+    use_suffix = suffix if suffix else graph_suffix
+    label = None
+    for n in graph['nodes']:
+        if n['id'] == node:
+            label = n.get('label', '')
+            break
+    quoted_label = shell_quote_multiline(label)
+    command = f"{use_prefix}{quoted_label}{use_suffix}".strip()
+    print(command)
+    edit_status(graph['graph'], 'node', node, 'running')
+    save_graph(filename, graph['graph'])
     try:
         subprocess.run(command, shell=True, check=True)
-        with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'ran'
+        edit_status(graph['graph'], 'node', node, 'ran')
     except subprocess.CalledProcessError:
-        with GraphMLAtomic(filename) as G: G.nodes[node]['status'] = 'fail'
+        edit_status(graph['graph'], 'node', node, 'fail')
+    save_graph(filename, graph['graph'])

@@ -1,3 +1,6 @@
 networkx
 pandas
 filelock
+flask
+flask-socketio
+requests

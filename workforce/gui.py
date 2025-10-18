@@ -2,12 +2,13 @@
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
-import networkx as nx
+import requests
 import subprocess
 import os
 import threading
 import sys
 import uuid
+import socketio
 
 class WorkflowApp:
     def __init__(self, master):
@@ -46,7 +47,7 @@ class WorkflowApp:
         self.terminal_frame.grid(row=2, column=0, sticky="nsew")
         self.terminal_frame.grid_remove()
 
-        self.graph = nx.DiGraph()
+        self.graph = None  # Will be loaded from server
         self.node_widgets = {}
         self.selected_nodes = []
 
@@ -55,7 +56,7 @@ class WorkflowApp:
 
         self.filename = None
         self.last_mtime = None
-        self.reload_interval = 1000  # ms
+        # self.reload_interval = 1000  # ms (no longer needed)
 
         # Selection rectangle state
         self._select_rect_id = None
@@ -104,8 +105,9 @@ class WorkflowApp:
         self.base_edge_width = 2
         self.scale = 1.0
 
-        # Defer loading 'Workfile' until after window is initialized
-        self.master.after_idle(self.try_load_workfile)
+        # Connect to Flask server via SocketIO after window is initialized
+        self.master.after_idle(self.connect_socketio)
+        self._reload_graph()
         self.master.title("Workforce")
 
         # Get the absolute path to the directory where the script is located
@@ -143,6 +145,16 @@ class WorkflowApp:
         # For edge dragging
         self._edge_drag_start_node = None
         self._edge_drag_line = None
+
+        self.sio = socketio.Client()
+        self.sio.on('graph_update', self.on_graph_update)
+        self.sio.connect('http://localhost:5000')
+
+    def connect_socketio(self):
+        import socketio
+        self.sio = socketio.Client()
+        self.sio.on('graph_update', self.on_graph_update)
+        self.sio.connect('http://localhost:5000')
 
     def toggle_terminal(self):
         if self.terminal_visible:
@@ -213,15 +225,20 @@ class WorkflowApp:
         self.master.quit()
 
     def add_node_at(self, x, y, label=None):
-        # Store node positions as virtual (unscaled) coordinates
         def on_save(lbl):
             if not lbl.strip():
                 return
             node_id = str(uuid.uuid4())
             vx = x / self.scale
             vy = y / self.scale
-            self.graph.add_node(node_id, label=lbl, x=vx, y=vy)
-            self.draw_node(node_id)
+            # Send to Flask server (implement /add-node endpoint in flask_server.py)
+            requests.post("http://localhost:5000/add-node", json={
+                "id": node_id,
+                "label": lbl,
+                "x": vx,
+                "y": vy
+            })
+            self._reload_graph()
         if label is not None:
             on_save(label)
         else:
@@ -286,57 +303,41 @@ class WorkflowApp:
         self._select_rect_start = None
         self._select_rect_active = False
 
-    def draw_node(self, node_id, font_size=None):
-        data = self.graph.nodes[node_id]
-        # Use virtual coordinates, apply scale for display
+    def draw_node(self, node_id, node_data=None, font_size=None):
+        # Get node data from graph response
+        data = node_data if node_data else next((n for n in self.graph['nodes'] if n['id'] == node_id), {})
         vx, vy = data.get('x', 100), data.get('y', 100)
         x = vx * self.scale
         y = vy * self.scale
         label = data.get('label', node_id)
-
-        # Node color by status
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
         status = data.get('status', '').lower()
         fill_color = status_colors.get(status, 'lightgray')
-
-        # Use passed font_size, or the instance's current_font_size, or fallback to base
         if font_size is None:
             font_size = getattr(self, 'current_font_size', self.base_font_size)
         font_tuple = ("TkDefaultFont", font_size)
-
-        # Temporary text to measure size
         temp_text = self.canvas.create_text(0, 0, text=label, anchor='nw', font=font_tuple)
         bbox = self.canvas.bbox(temp_text)
         self.canvas.delete(temp_text)
-
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-
-        # Padding should also scale with zoom for consistent appearance
         padding_x, padding_y = 10 * self.scale, 6 * self.scale
         box_width = text_width + 2 * padding_x
         box_height = text_height + 2 * padding_y
-
         outline_kwargs = {'outline': ''}
         if node_id in self.selected_nodes:
             outline_kwargs['outline'] = "black"
             outline_kwargs['width'] = 1
-
-        # Draw rectangle at scaled virtual coordinates
         rect = self.canvas.create_rectangle(x, y, x + box_width, y + box_height, fill=fill_color, **outline_kwargs)
-
-        # Draw left-aligned text inside the rectangle at scaled virtual coordinates
         text = self.canvas.create_text(x + padding_x, y + padding_y, text=label, anchor='nw', justify='left', font=font_tuple)
-
         self.node_widgets[node_id] = (rect, text)
         for item in (rect, text):
-            # Rebind events as new items are created
             self.canvas.tag_bind(item, "<Button-1>", lambda e, nid=node_id: self.handle_node_click(e, nid))
             self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
             self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
-        self.canvas.tag_lower(rect)  # Ensure rectangle is behind text
+        self.canvas.tag_lower(rect)
 
     def create_toolbar(self):
         self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
@@ -491,14 +492,9 @@ class WorkflowApp:
         prefix_text.focus_set()
 
     def clear_selected_status(self):
-        # Remove status from selected nodes only
-        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
         for node_id in self.selected_nodes:
-            if 'status' in self.graph.nodes[node_id]:
-                del self.graph.nodes[node_id]['status']
-            status = self.graph.nodes[node_id].get('status', '').lower()
-            fill_color = status_colors.get(status, 'lightgray')
-            self.canvas.itemconfig(self.node_widgets[node_id][0], fill=fill_color)
+            requests.post("http://localhost:5000/update-status", json={"type": "node", "id": node_id, "status": ""})
+        self._reload_graph()
 
     def on_canvas_double_click(self, event):
         # Only add node if double-clicked on empty space (not on a node)
@@ -556,25 +552,8 @@ class WorkflowApp:
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def save_to_current_file(self):
-        # If a filename is already set, save to it directly
-        if self.filename:
-            # Save virtual coordinates
-            for node_id in self.graph.nodes():
-                # Ensure 'x' and 'y' are stored as floats
-                vx, vy = self.graph.nodes[node_id].get('x', 100), self.graph.nodes[node_id].get('y', 100)
-                self.graph.nodes[node_id]['x'] = float(vx)
-                self.graph.nodes[node_id]['y'] = float(vy)
-            self.graph.graph['prefix'] = self.prefix
-            self.graph.graph['suffix'] = self.suffix
-            try:
-                nx.write_graphml(self.graph, self.filename)
-                # print(f"[Saved] {self.filename}")
-                self.last_mtime = os.path.getmtime(self.filename) # Update mtime after saving
-            except Exception as e:
-                messagebox.showerror("Save Error", f"Failed to save {self.filename}:\n{e}")
-        else:
-            # If no filename is set, call save_graph to prompt the user
-            self.save_graph()
+        # All changes are now handled via Flask server endpoints
+        pass
 
     def try_load_workfile(self):
         default_file = "Workfile"
@@ -588,9 +567,6 @@ class WorkflowApp:
             except Exception as e:
                 messagebox.showerror("Load Error", f"Failed to auto-load {default_file}:\n{e}")
                 self.master.title("Workforce")
-
-        # Start periodic file check
-        self.master.after(self.reload_interval, self.check_reload)
 
     def edit_node_label(self, node_id):
         current_label = self.graph.nodes[node_id].get('label', '')
@@ -654,14 +630,9 @@ class WorkflowApp:
 
     def remove_node(self):
         for node_id in self.selected_nodes:
-            self.graph.remove_node(node_id)
-            for item in self.node_widgets[node_id]:
-                self.canvas.delete(item)
-            del self.node_widgets[node_id]
+            requests.post("http://localhost:5000/remove-node", json={"id": node_id})
         self.selected_nodes.clear()
-        self.save_to_current_file()
-        if self.filename:
-            self._reload_graph()
+        self._reload_graph()
 
     def connect_nodes(self):
         if len(self.selected_nodes) >= 2:
@@ -691,8 +662,8 @@ class WorkflowApp:
             new_cmd = simpledialog.askstring("Update Node", "Enter new bash command:")
             if new_cmd:
                 node_id = self.selected_nodes[0]
-                self.graph.nodes[node_id]['label'] = new_cmd
-                self.canvas.itemconfig(self.node_widgets[node_id][1], text=new_cmd)
+                requests.post("http://localhost:5000/update-node", json={"id": node_id, "label": new_cmd})
+                self._reload_graph()
 
     def run_selected(self):
         if not self.filename:
@@ -756,22 +727,20 @@ class WorkflowApp:
 
     def _reload_graph(self):
         selected_ids = list(self.selected_nodes)
-
-        self.graph = nx.read_graphml(self.filename)
-        self.prefix = self.graph.graph.get('prefix', self.prefix)
-        self.suffix = self.graph.graph.get('suffix', self.suffix)
-
-        # Filter selected_ids to only include nodes that still exist
-        self.selected_nodes = [nid for nid in selected_ids if nid in self.graph.nodes]
-
+        graph_data = self.graph or {}
+        self.prefix = graph_data.get('prefix', self.prefix)
+        self.suffix = graph_data.get('suffix', self.suffix)
+        node_ids = [n['id'] for n in graph_data.get('nodes', [])]
+        self.selected_nodes = [nid for nid in selected_ids if nid in node_ids]
         self.canvas.delete("all")
         self.node_widgets.clear()
-        
-        for node_id, data in self.graph.nodes(data=True):
-            data['x'], data['y'] = float(data.get('x', 100)), float(data.get('y', 100))
+        for node in graph_data.get('nodes', []):
+            node_id = node['id']
+            node['x'] = float(node.get('x', 100))
+            node['y'] = float(node.get('y', 100))
             self.draw_node(node_id)
-        for src, tgt in self.graph.edges():
-            self.draw_edge(src, tgt)
+        for edge in graph_data.get('links', []):
+            self.draw_edge(edge['source'], edge['target'])
 
     def add_node(self):
         def on_save(label):
@@ -825,21 +794,26 @@ class WorkflowApp:
 
     def clear_all(self):
         # Remove status from all nodes and edges, but do not clear the graph or canvas
-        for node_id in list(self.graph.nodes):
-            if 'status' in self.graph.nodes[node_id]:
-                del self.graph.nodes[node_id]['status']
-        for u, v in list(self.graph.edges):
-            if 'status' in self.graph.edges[u, v]:
-                del self.graph.edges[u, v]['status']
+        # Remove status from all nodes
+        for node in self.graph.get('nodes', []):
+            if 'status' in node:
+                del node['status']
+        # Remove status from all edges
+        for edge in self.graph.get('links', []):
+            if 'status' in edge:
+                del edge['status']
         # Redraw all nodes to update their color
-        for node_id in self.graph.nodes:
-            rect, text = self.node_widgets[node_id]
-            label = self.graph.nodes[node_id].get('label', node_id)
-            status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
-            status = self.graph.nodes[node_id].get('status', '').lower()
+        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
+        for node in self.graph.get('nodes', []):
+            node_id = node.get('id')
+            rect, text = self.node_widgets.get(node_id, (None, None))
+            label = node.get('label', node_id)
+            status = node.get('status', '').lower()
             fill_color = status_colors.get(status, 'lightgray')
-            self.canvas.itemconfig(rect, fill=fill_color)
-            self.canvas.itemconfig(text, text=label)
+            if rect:
+                self.canvas.itemconfig(rect, fill=fill_color)
+            if text:
+                self.canvas.itemconfig(text, text=label)
         # Save and reload
         self.save_to_current_file()
         if self.filename:
@@ -925,18 +899,6 @@ class WorkflowApp:
         x_edge = x0 + (y_edge - y0) / slope
         return x_edge, y_edge
 
-    def check_reload(self):
-        if self.filename and os.path.exists(self.filename):
-            mtime = os.path.getmtime(self.filename)
-            if self.last_mtime and mtime > self.last_mtime:
-                self.last_mtime = mtime
-                try:
-                    self._reload_graph()
-                    # print(f"[Auto-reloaded] {self.filename}")
-                except Exception as e:
-                    messagebox.showerror("Reload Error", str(e))
-        self.master.after(self.reload_interval, self.check_reload)
-
     def on_node_press(self, event, node_id):
         self.dragging_node = node_id
         x1, y1, x2, y2 = self._get_node_bounds(node_id)
@@ -944,8 +906,10 @@ class WorkflowApp:
         # Store initial positions for all selected nodes (virtual coordinates)
         self._multi_drag_initial = {}
         for nid in self.selected_nodes:
-            vx = self.graph.nodes[nid].get('x', 100)
-            vy = self.graph.nodes[nid].get('y', 100)
+            # Flask server returns node-link dict, so use self.graph['nodes']
+            node_data = next((n for n in self.graph.get('nodes', []) if n.get('id') == nid), {})
+            vx = node_data.get('x', 100)
+            vy = node_data.get('y', 100)
             self._multi_drag_initial[nid] = (vx, vy)
 
     def on_node_drag(self, event, node_id):
@@ -992,6 +956,13 @@ class WorkflowApp:
             self.clear_selection()
         self._potential_deselect = False
         self._panning = False
+
+    def on_graph_update(self, data):
+        self.graph = data.get('graph', {})
+        self.filename = data.get('filename', None)
+        self.version = data.get('version', None)
+        self.master.title(f"Workforce - {self.filename} (v{self.version})")
+        self._reload_graph()
 
 class Gui:
     def __init__(self, filename=None):
