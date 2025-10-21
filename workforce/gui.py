@@ -10,6 +10,25 @@ import sys
 import uuid
 import socketio
 
+'''
+need to refactor to do this:
+import requests
+from workforce.server import load_registry
+
+def connect_to_server(self, filename):
+    registry = load_registry()
+    if filename not in registry:
+        raise RuntimeError(f"No server found for {filename}")
+    port = registry[filename]
+    self.base_url = f"http://127.0.0.1:{port}"
+
+
+def add_arguments(subparser: argparse.ArgumentParser):
+    subparser.add_argument("filename", help="Path to the workflow .graphml file")
+    subparser.add_argument("--port", type=int, help="Port to connect to (optional)")
+    subparser.set_defaults(func=main)
+'''
+
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
