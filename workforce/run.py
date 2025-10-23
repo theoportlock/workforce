@@ -128,3 +128,18 @@ def run_node(filename, node, prefix='', suffix=''):
     except subprocess.CalledProcessError:
         edit_status(graph['graph'], 'node', node, 'fail')
     save_graph(filename, graph['graph'])
+
+def add_arguments(subparser):
+    subparser.add_argument("filename", help="Workflow file")
+    subparser.add_argument("--prefix", default="", help="Command prefix")
+    subparser.add_argument("--suffix", default="", help="Command suffix")
+    subparser.add_argument("--speed", type=float, default=1.0, help="Run speed multiplier")
+    subparser.set_defaults(func=main)
+
+def main(args=None):
+    if not isinstance(args, argparse.Namespace):
+        from argparse import Namespace
+        filename = sys.argv[1] if len(sys.argv) > 1 else "Workfile.graphml"
+        args = Namespace(filename=filename, prefix="", suffix="", speed=1.0)
+    print(f"[Runner] Running {args.filename} with prefix={args.prefix}, suffix={args.suffix}")
+    runner.worker(args.filename, args.prefix, args.suffix, args.speed)

@@ -6,6 +6,8 @@ server.py — Start, list, or stop Workforce servers associated with GraphML fil
 Each file can have at most one active server, tracked by a JSON registry.
 """
 
+from workforce import edit
+
 from contextlib import closing
 from flask import Flask
 from flask_socketio import SocketIO
@@ -19,12 +21,8 @@ import socket
 import sys
 import tempfile
 
-# ---------------------------------------------------------------------
-# Registry management
-# ---------------------------------------------------------------------
 
 REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
-
 
 def load_registry():
     """Load the JSON registry of active servers."""
@@ -60,10 +58,6 @@ def clean_registry():
     return updated
 
 
-# ---------------------------------------------------------------------
-# GraphML utilities
-# ---------------------------------------------------------------------
-
 class GraphMLAtomic:
     """Atomic read/write context manager for GraphML files."""
 
@@ -85,10 +79,6 @@ class GraphMLAtomic:
         self.modified = True
 
 
-# ---------------------------------------------------------------------
-# Port management
-# ---------------------------------------------------------------------
-
 def find_free_port(default_port=5000, max_port=6000):
     """Find the first available TCP port starting from default_port."""
     for port in range(default_port, max_port):
@@ -97,21 +87,14 @@ def find_free_port(default_port=5000, max_port=6000):
     raise RuntimeError("No free port found in range.")
 
 
-# ---------------------------------------------------------------------
-# Server operations
-# ---------------------------------------------------------------------
-
-# server.py (add entrypoint)
 def start_server(filename, port=None):
-    from flask import Flask
-    from flask_socketio import SocketIO
 
     app = Flask(__name__)
     socketio = SocketIO(app, cors_allowed_origins="*")
     port = port or find_free_port()
 
     registry = load_registry()
-    registry[filename] = port
+    registry[os.path.abspath(filename)] = port
     save_registry(registry)
 
     @app.route("/graph")
@@ -121,12 +104,17 @@ def start_server(filename, port=None):
 
     @app.route("/save-graph", methods=["POST"])
     def save_graph():
-        # receive updates from GUI/runner
         data = request.json
         with GraphMLAtomic(filename) as g:
             g.G = nx.node_link_graph(data["graph"])
             g.mark_modified()
         return jsonify({"status": "ok"})
+
+    @app.route("/add-node", methods=["POST"])
+    def add_node_route():
+        data = request.json
+        node_id = edit.add_node(WORKFILE, data["label"], data.get("x", 0), data.get("y", 0))
+        return jsonify({"node_id": node_id})
 
     print(f"Serving {filename} on port {port}")
     socketio.run(app, port=port)
@@ -161,39 +149,31 @@ def stop_server(filename: str):
     print("Registry entry removed. You may need to terminate the process manually if still running.")
 
 
-# ---------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Manage Workforce servers for GraphML files.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+def add_arguments(subparser):
+    """Register server CLI commands."""
+    subparsers = subparser.add_subparsers(dest="command", required=True)
 
     start_p = subparsers.add_parser("start", help="Start or connect to a server for a GraphML file.")
     start_p.add_argument("filename", help="Path to the GraphML file.")
+    start_p.set_defaults(func=lambda args: start_server(args.filename))
 
     stop_p = subparsers.add_parser("stop", help="Stop the server for a GraphML file.")
     stop_p.add_argument("filename", help="Path to the GraphML file.")
+    stop_p.set_defaults(func=lambda args: stop_server(args.filename))
 
-    subparsers.add_parser("list", help="List all active servers.")
-    subparser.set_defaults(func=main)
-    return parser.parse_args()
-
-
-def main():
-    args = parse_args()
-
-    if args.command == "start":
-        start_server(args.filename)
-    elif args.command == "stop":
-        stop_server(args.filename)
-    elif args.command == "list":
-        list_servers()
-    else:
-        print("Invalid command. Use --help for usage.")
+    list_p = subparsers.add_parser("list", help="List all active servers.")
+    list_p.set_defaults(func=lambda args: list_servers())
 
 
 if __name__ == "__main__":
-    filename = sys.argv[1] if len(sys.argv) > 1 else "Workfile.graphml"
-    start_server(filename)
+    parser = argparse.ArgumentParser(description="Workforce server CLI")
+    add_arguments(parser)
+    args = parser.parse_args()
+
+    # If called with just a filename (no subcommand), default to "start"
+    if args.command is None and len(sys.argv) > 1:
+        args.filename = sys.argv[1]
+        start_server(args.filename)
+    else:
+        args.func(args)
 

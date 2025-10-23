@@ -1,3 +1,31 @@
+wf run = if Workfile: if Workfile is a graphml: wf server Workfile; wf run Workfile; wf server stop Workfile
+wf run Workfile = if Workfile is a graphml: wf run Workfile
+wf run --bg Workfile = if Workfile is a graphml: wf run Workfile in background # do i want to specify the port anywhere?
+wf run node Workfile --id 1124  = uses wf edit to edit file
+wf run nodes Workfile --ids 1124,3423,235235  = run according to the order of the pipeline
+
+wf edit = ERROR
+wf edit node status 'ran' = uses wf server
+wf edit edge 
+wf edit merge?
+
+wf server = if Workfile: wf server start Workfile else wf server start temp
+wf server start = if Workfile: wf server start Workfile else wf server start temp
+wf server stop = if Workfile: wf server stop Workfile else wf server stop temp
+wf server list = list active servers
+wf server list --watch = list active servers with watch
+
+wf = if Workfile: if Workfile is a graphml: wf server Workfile; wf gui Workfile; wf server stop Workfile # Should there be an option to keep running and exit? maybe --bg?
+wf gui = same as above
+wf gui Workfile : same as above
+
+wf pull/push?
+wf clone?
+wf status?
+wf --version -v?
+wf browser?
+
+
 Minimap for the bottom left
 Edges need to change color based on to_run
 Save PDF of layout button
@@ -28,6 +56,4 @@ function builder with copy command to clipboard option?
 Do I use the CLI to save and load nodes (fully operational from cli)
 Update the prefix suffix suggestions
     Prefix bash -c 'tmux send-keys " Suffix " C-m'
-
 FLASK socketIO SERVER - need to make an enter and exit function that is called by the gui and the run commands
-

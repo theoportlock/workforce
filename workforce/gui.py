@@ -1,40 +1,27 @@
 #!/usr/bin/env python
-import tkinter as tk
+
+from datetime import datetime
 from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
-import requests
-import subprocess
-import os
-import threading
-import sys
-import uuid
-import socketio
-
-'''
-need to refactor to do this:
-import requests
 from workforce.server import load_registry
-
-def connect_to_server(self, filename):
-    registry = load_registry()
-    if filename not in registry:
-        raise RuntimeError(f"No server found for {filename}")
-    port = registry[filename]
-    self.base_url = f"http://127.0.0.1:{port}"
-
-
-def add_arguments(subparser: argparse.ArgumentParser):
-    subparser.add_argument("filename", help="Path to the workflow .graphml file")
-    subparser.add_argument("--port", type=int, help="Port to connect to (optional)")
-    subparser.set_defaults(func=main)
-'''
+import argparse
+import networkx as nx
+import os
+import requests
+import socketio
+import subprocess
+import sys
+import tempfile
+import threading
+import tkinter as tk
+import uuid
 
 class WorkflowApp:
     def __init__(self, master):
         self.master = master
-        self.master.grid_rowconfigure(0, weight=0)  # Toolbar row (fixed)
-        self.master.grid_rowconfigure(1, weight=1)  # Canvas row (expands)
-        self.master.grid_rowconfigure(2, weight=0)  # Terminal row (hidden or fixed)
+        self.master.grid_rowconfigure(0, weight=0)
+        self.master.grid_rowconfigure(1, weight=1)
+        self.master.grid_rowconfigure(2, weight=0)
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=0)
         self.terminal_visible = False
@@ -52,9 +39,9 @@ class WorkflowApp:
             resolution=0.1,
             command=self.on_zoom_scroll,
             showvalue=False,
-            tickinterval=0,     # no ticks
-            sliderlength=20,    # shorter slider
-            width=10            # thinner bar
+            tickinterval=0,
+            sliderlength=20,
+            width=10
         )
         self.zoom_slider.set(1.0)
         self.zoom_slider.grid(row=1, column=1, sticky="ns")
@@ -66,7 +53,7 @@ class WorkflowApp:
         self.terminal_frame.grid(row=2, column=0, sticky="nsew")
         self.terminal_frame.grid_remove()
 
-        self.graph = None  # Will be loaded from server
+        self.graph = None
         self.node_widgets = {}
         self.selected_nodes = []
 
@@ -75,7 +62,6 @@ class WorkflowApp:
 
         self.filename = None
         self.last_mtime = None
-        # self.reload_interval = 1000  # ms (no longer needed)
 
         # Selection rectangle state
         self._select_rect_id = None
@@ -169,8 +155,19 @@ class WorkflowApp:
         self.sio.on('graph_update', self.on_graph_update)
         self.sio.connect('http://localhost:5000')
 
+    def connect_to_server(self, filename):
+        """
+        Connect to a running Workforce server for the given filename.
+        If no server exists, raise an error.
+        """
+        registry = load_registry()
+        if filename not in registry:
+            raise RuntimeError(f"No server found for {filename}")
+        port = registry[filename]
+        self.base_url = f"http://127.0.0.1:{port}"
+        print(f"[Workforce] Connected to server for {filename} at port {port}")
+
     def connect_socketio(self):
-        import socketio
         self.sio = socketio.Client()
         self.sio.on('graph_update', self.on_graph_update)
         self.sio.connect('http://localhost:5000')
@@ -996,7 +993,37 @@ class Gui:
                 messagebox.showerror("Load Error", f"Failed to load {filename}:\n{e}")
         self.root.mainloop()
 
-if __name__ == "__main__":
+
+def get_default_workfile():
+    """
+    Return a suitable GraphML file path for the GUI to open.
+    - If 'Workfile.graphml' exists in the current directory, use that.
+    - Otherwise, create a unique temporary file in the system temp dir.
+    """
+    cwd_workfile = os.path.join(os.getcwd(), "Workfile")
+
+    if os.path.exists(cwd_workfile):
+        return cwd_workfile
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    tmpdir = tempfile.gettempdir()
+    tmpfile = os.path.join(tmpdir, f"workforce_{timestamp}.graphml")
+
+    # create an empty placeholder graph
+    nx.write_graphml(nx.DiGraph(), tmpfile)
+
+    print(f"[Workforce] Created temporary workfile: {tmpfile}")
+    return tmpfile
+
+def add_arguments(subparser: argparse.ArgumentParser):
+    subparser.add_argument("filename", help="Path to the workflow graphml file")
+    subparser.add_argument("--port", type=int, help="Port to connect to (optional)")
+    subparser.set_defaults(func=main)
+
+def main():
     root = tk.Tk()
     app = WorkflowApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
