@@ -241,6 +241,7 @@ class WorkflowApp:
         self.master.quit()
 
     def add_node_at(self, x, y, label=None):
+        # THIS SHOULD BE IN EDIT
         def on_save(lbl):
             if not lbl.strip():
                 return
@@ -261,6 +262,7 @@ class WorkflowApp:
             self.node_label_popup("", on_save)
 
     def delete_edges_from_selected(self):
+        # THIS SHOULD BE IN EDIT
         # Remove all edges connected to selected nodes (in or out)
         to_remove = []
         for u, v in list(self.graph.edges()):
@@ -356,6 +358,7 @@ class WorkflowApp:
         self.canvas.tag_lower(rect)
 
     def create_toolbar(self):
+        # NEED TO ADD SAVE AS and others
         self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
         self.recent_files = self.load_recent_files()
         menubar = tk.Menu(self.master)
@@ -443,6 +446,7 @@ class WorkflowApp:
         self.add_recent_file(filename)
 
     def save_graph(self):
+        # THIS SHOULD BE IN EDIT
         initialfile = None
         if not self.filename:
             initialfile = "Workfile"
@@ -508,6 +512,7 @@ class WorkflowApp:
         prefix_text.focus_set()
 
     def clear_selected_status(self):
+        #THIS SHOULD BE IN EDIT
         for node_id in self.selected_nodes:
             requests.post("http://localhost:5000/update-status", json={"type": "node", "id": node_id, "status": ""})
         self._reload_graph()
@@ -568,10 +573,11 @@ class WorkflowApp:
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def save_to_current_file(self):
-        # All changes are now handled via Flask server endpoints
+        #THIS SHOULD BE IN EDIT/SERVER
         pass
 
     def try_load_workfile(self):
+        #THIS SHOULD BE IN UTILS
         default_file = "Workfile"
         if os.path.exists(default_file):
             self.filename = os.path.abspath(default_file)
@@ -585,6 +591,7 @@ class WorkflowApp:
                 self.master.title("Workforce")
 
     def edit_node_label(self, node_id):
+        #THIS SHOULD BE IN EDIT/SERVER
         current_label = self.graph.nodes[node_id].get('label', '')
         def on_save(new_label):
             self.graph.nodes[node_id]['label'] = new_label
@@ -603,6 +610,7 @@ class WorkflowApp:
         text_widget.insert("1.0", initial_value)
 
         def save_and_close(event=None):
+        #THIS SHOULD BE IN EDIT/SERVER
             new_label = text_widget.get("1.0", "end-1c")
             on_save(new_label)
             editor.destroy()
@@ -645,12 +653,14 @@ class WorkflowApp:
         self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
 
     def remove_node(self):
+        #THIS SHOULD BE IN EDIT/SERVER
         for node_id in self.selected_nodes:
             requests.post("http://localhost:5000/remove-node", json={"id": node_id})
         self.selected_nodes.clear()
         self._reload_graph()
 
     def connect_nodes(self):
+        #THIS SHOULD BE IN EDIT/SERVER
         if len(self.selected_nodes) >= 2:
             for i in range(len(self.selected_nodes) - 1):
                 self.graph.add_edge(self.selected_nodes[i], self.selected_nodes[i+1])
@@ -658,6 +668,7 @@ class WorkflowApp:
             self.clear_selection()
 
     def draw_edge(self, src, tgt):
+        #THIS SHOULD BE IN EDIT/SERVER
         x1, y1 = self._get_node_center(src)
         x2, y2 = self._get_node_center(tgt)
         src_box = self._get_node_bounds(src)
@@ -674,6 +685,7 @@ class WorkflowApp:
         self.canvas.tag_lower(line)
 
     def update_node(self):
+        #THIS SHOULD BE IN EDIT/SERVER
         if len(self.selected_nodes) == 1:
             new_cmd = simpledialog.askstring("Update Node", "Enter new bash command:")
             if new_cmd:
@@ -734,6 +746,7 @@ class WorkflowApp:
         poll_queue()
 
     def load_graph(self):
+        # SHOULD BE IN SERVER
         filename = filedialog.askopenfilename()
         if filename:
             self.filename = filename
@@ -759,6 +772,7 @@ class WorkflowApp:
             self.draw_edge(edge['source'], edge['target'])
 
     def add_node(self):
+        # THIS SHOULD NOW BE IN EDIT
         def on_save(label):
             if not label.strip():
                 return
@@ -786,6 +800,7 @@ class WorkflowApp:
         self.zoom(1/1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
 
     def save_graph(self):
+        # THIS SHOULD NOW BE IN EDIT
         # Use 'Workfile' as the default filename for first-time save
         initialfile = None
         if not self.filename:
@@ -799,6 +814,7 @@ class WorkflowApp:
             self.save_to_current_file() # Now save to the newly chosen file
 
     def clear_selection(self):
+        # THIS SHOULD NOW BE IN EDIT
         nodes_to_redraw = list(self.selected_nodes)
         self.selected_nodes.clear()
         for node_id in nodes_to_redraw:
@@ -809,6 +825,7 @@ class WorkflowApp:
             self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
 
     def clear_all(self):
+        # THIS SHOULD NOW BE IN EDIT
         # Remove status from all nodes and edges, but do not clear the graph or canvas
         # Remove status from all nodes
         for node in self.graph.get('nodes', []):
@@ -995,6 +1012,7 @@ class Gui:
 
 
 def get_default_workfile():
+    # THIS SHOULD NOW BE IN UTILS
     """
     Return a suitable GraphML file path for the GUI to open.
     - If 'Workfile.graphml' exists in the current directory, use that.
@@ -1017,7 +1035,6 @@ def get_default_workfile():
 
 def add_arguments(subparser: argparse.ArgumentParser):
     subparser.add_argument("filename", help="Path to the workflow graphml file")
-    subparser.add_argument("--port", type=int, help="Port to connect to (optional)")
     subparser.set_defaults(func=main)
 
 def main():

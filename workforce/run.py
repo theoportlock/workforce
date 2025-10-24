@@ -137,6 +137,7 @@ def add_arguments(subparser):
     subparser.set_defaults(func=main)
 
 def main(args=None):
+    # SHOULD BE RUN NODE not RUN_NODE
     if not isinstance(args, argparse.Namespace):
         from argparse import Namespace
         filename = sys.argv[1] if len(sys.argv) > 1 else "Workfile.graphml"

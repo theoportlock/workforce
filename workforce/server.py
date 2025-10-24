@@ -25,10 +25,6 @@ import tempfile
 REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
 
 
-# ---------------------------------------------------------------------------
-# Registry helpers
-# ---------------------------------------------------------------------------
-
 def load_registry():
     if os.path.exists(REGISTRY_PATH):
         try:
@@ -69,10 +65,6 @@ def default_workfile():
     default = os.path.join(os.getcwd(), "Workfile")
     return default if os.path.exists(default) else None
 
-
-# ---------------------------------------------------------------------------
-# Core server management
-# ---------------------------------------------------------------------------
 
 def find_free_port(default_port=5000, max_port=6000):
     for port in range(default_port, max_port):

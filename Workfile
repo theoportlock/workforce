@@ -42,6 +42,12 @@ rm file.txt</data>
   <data key="d4">188.88888888888889</data>
   <data key="d5">ran</data>
 </node>
+<node id="aedbcec7-4be4-44bd-82ee-bfe852897327">
+  <data key="d2">pwd</data>
+  <data key="d3">0.0</data>
+  <data key="d4">0.0</data>
+  <data key="d5"></data>
+</node>
 <edge source="34766383-3b75-4ada-a42c-f91cb2b5b9c4" target="b05017c3-9e95-417b-94f0-ceb50b027883"/>
 <edge source="005912c2-fcdf-48e9-a28c-1dc3f117e640" target="b05017c3-9e95-417b-94f0-ceb50b027883"/>
 <edge source="6fe366b0-8990-4107-b588-ca95851c5ea9" target="34766383-3b75-4ada-a42c-f91cb2b5b9c4"/>
