@@ -34,7 +34,7 @@ def add_node(filename, label, x=0.0, y=0.0, status=""):
     node_id = str(uuid.uuid4())
     G.add_node(node_id, label=label, x=x, y=y, status=status)
     save_graph(G, filename)
-    print(f"✅ Added node {node_id} ({label}) to {filename}")
+    print(f"🟢 Added node {node_id} ({label}) to {filename}")
     return node_id
 
 
@@ -88,17 +88,18 @@ def edit_status(filename, element_type, element_id, value):
             return
 
     save_graph(G, filename)
-    print(f"✏️ Set {element_type} {element_id} status = {value}")
+    print(f"🟡 Set {element_type} {element_id} status = {value}")
 
 
 # === CLI Argument Definitions ===
 
-def add_arguments(parser):
-    """Attach edit commands directly to the parser (flattened CLI)."""
-    subparsers = parser.add_subparsers(dest="action", required=True)
+def add_arguments(subparsers):
+    """Attach edit commands to the main CLI."""
+    parser = subparsers.add_parser("edit", help="Modify Workfile nodes or edges")
+    edit_sub = parser.add_subparsers(dest="action", required=True)
 
     # Add node
-    p_add = subparsers.add_parser("add-node", help="Add a new node")
+    p_add = edit_sub.add_parser("add-node", help="Add a new node")
     p_add.add_argument("filename")
     p_add.add_argument("--label", required=True)
     p_add.add_argument("--x", type=float, default=0.0)
@@ -107,27 +108,27 @@ def add_arguments(parser):
     p_add.set_defaults(func=lambda args: add_node(args.filename, args.label, args.x, args.y, args.status))
 
     # Remove node
-    p_rm = subparsers.add_parser("remove-node", help="Remove a node")
+    p_rm = edit_sub.add_parser("remove-node", help="Remove a node")
     p_rm.add_argument("filename")
     p_rm.add_argument("node_id")
     p_rm.set_defaults(func=lambda args: remove_node(args.filename, args.node_id))
 
     # Add edge
-    p_edge = subparsers.add_parser("add-edge", help="Add edge between two nodes")
+    p_edge = edit_sub.add_parser("add-edge", help="Add edge between two nodes")
     p_edge.add_argument("filename")
     p_edge.add_argument("source")
     p_edge.add_argument("target")
     p_edge.set_defaults(func=lambda args: add_edge(args.filename, args.source, args.target))
 
     # Remove edge
-    p_redge = subparsers.add_parser("remove-edge", help="Remove edge")
+    p_redge = edit_sub.add_parser("remove-edge", help="Remove edge")
     p_redge.add_argument("filename")
     p_redge.add_argument("source")
     p_redge.add_argument("target")
     p_redge.set_defaults(func=lambda args: remove_edge(args.filename, args.source, args.target))
 
     # Edit status
-    p_status = subparsers.add_parser("edit-status", help="Edit node or edge status")
+    p_status = edit_sub.add_parser("edit-status", help="Edit node or edge status")
     p_status.add_argument("filename")
     p_status.add_argument("element_type", choices=["node", "edge"])
     p_status.add_argument("element_id")
@@ -135,10 +136,13 @@ def add_arguments(parser):
     p_status.set_defaults(func=lambda args: edit_status(args.filename, args.element_type, args.element_id, args.value))
 
 
-def main(args=None):
+def main():
+    # Ensure server is running and run if not for workfile
+    # Call server
     parser = argparse.ArgumentParser(description="Workforce GraphML Editor CLI")
-    add_arguments(parser)
-    args = parser.parse_args(args)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    add_arguments(subparsers)
+    args = parser.parse_args()
     args.func(args)
 
 
