@@ -1,147 +1,97 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 """
-edit.py — GraphML editing CLI for Workforce.
-Directly reads and writes GraphML files (atomic control now handled by server).
+edit.py — Command-line client for Workforce server API.
+Performs remote edits via HTTP endpoints exposed by server.py.
 """
 
-import os
-import uuid
 import argparse
-import networkx as nx
+import json
+import os
+import sys
+import tempfile
+import requests
+
+from workforce.utils import load_registry, REGISTRY_PATH, resolve_port, send_request
+
+def cmd_add_node(args):
+    _, port = resolve_port(args.file)
+    payload = {
+        "label": args.label,
+        "x": args.x,
+        "y": args.y,
+        "status": args.status,
+    }
+    send_request(port, "add-node", payload)
 
 
-# === IO Functions ===
-
-def load_graph(filename):
-    """Load a GraphML file, creating an empty one if it doesn't exist."""
-    if not os.path.exists(filename):
-        G = nx.DiGraph()
-        nx.write_graphml(G, filename)
-    return nx.read_graphml(filename)
+def cmd_remove_node(args):
+    _, port = resolve_port(args.file)
+    send_request(port, "remove-node", {"node_id": args.node_id})
 
 
-def save_graph(G, filename):
-    """Save the GraphML file."""
-    nx.write_graphml(G, filename)
+def cmd_add_edge(args):
+    _, port = resolve_port(args.file)
+    send_request(port, "add-edge", {"source": args.source, "target": args.target})
 
 
-# === Graph Editing Functions ===
-
-def add_node(filename, label, x=0.0, y=0.0, status=""):
-    G = load_graph(filename)
-    node_id = str(uuid.uuid4())
-    G.add_node(node_id, label=label, x=x, y=y, status=status)
-    save_graph(G, filename)
-    print(f"🟢 Added node {node_id} ({label}) to {filename}")
-    return node_id
+def cmd_remove_edge(args):
+    _, port = resolve_port(args.file)
+    send_request(port, "remove-edge", {"source": args.source, "target": args.target})
 
 
-def remove_node(filename, node_id):
-    G = load_graph(filename)
-    if node_id not in G:
-        print(f"⚠️ Node {node_id} not found in {filename}")
-        return
-    G.remove_node(node_id)
-    save_graph(G, filename)
-    print(f"🗑️ Removed node {node_id} from {filename}")
+def cmd_edit_status(args):
+    _, port = resolve_port(args.file)
+    send_request(port, "edit-status", {
+        "element_type": args.element_type,
+        "element_id": args.element_id,
+        "value": args.value,
+    })
 
 
-def add_edge(filename, source, target):
-    G = load_graph(filename)
-    if source not in G or target not in G:
-        print("⚠️ Both source and target nodes must exist.")
-        return
-    G.add_edge(source, target)
-    save_graph(G, filename)
-    print(f"🔗 Added edge {source} → {target} in {filename}")
-
-
-def remove_edge(filename, source, target):
-    G = load_graph(filename)
-    if G.has_edge(source, target):
-        G.remove_edge(source, target)
-        save_graph(G, filename)
-        print(f"❌ Removed edge {source} → {target} from {filename}")
-    else:
-        print(f"⚠️ Edge {source} → {target} not found in {filename}")
-
-
-def edit_status(filename, element_type, element_id, value):
-    G = load_graph(filename)
-
-    if element_type == "node":
-        if element_id not in G:
-            print(f"⚠️ Node {element_id} not found in {filename}")
-            return
-        G.nodes[element_id]["status"] = value
-    elif element_type == "edge":
-        found = False
-        for u, v, data in G.edges(data=True):
-            if data.get("id") == element_id:
-                data["status"] = value
-                found = True
-                break
-        if not found:
-            print(f"⚠️ Edge with id={element_id} not found in {filename}")
-            return
-
-    save_graph(G, filename)
-    print(f"🟡 Set {element_type} {element_id} status = {value}")
-
-
-# === CLI Argument Definitions ===
-
-def add_arguments(subparsers):
-    """Attach edit commands to the main CLI."""
-    parser = subparsers.add_parser("edit", help="Modify Workfile nodes or edges")
-    edit_sub = parser.add_subparsers(dest="action", required=True)
-
-    # Add node
-    p_add = edit_sub.add_parser("add-node", help="Add a new node")
-    p_add.add_argument("filename")
-    p_add.add_argument("--label", required=True)
-    p_add.add_argument("--x", type=float, default=0.0)
-    p_add.add_argument("--y", type=float, default=0.0)
-    p_add.add_argument("--status", default="")
-    p_add.set_defaults(func=lambda args: add_node(args.filename, args.label, args.x, args.y, args.status))
-
-    # Remove node
-    p_rm = edit_sub.add_parser("remove-node", help="Remove a node")
-    p_rm.add_argument("filename")
-    p_rm.add_argument("node_id")
-    p_rm.set_defaults(func=lambda args: remove_node(args.filename, args.node_id))
-
-    # Add edge
-    p_edge = edit_sub.add_parser("add-edge", help="Add edge between two nodes")
-    p_edge.add_argument("filename")
-    p_edge.add_argument("source")
-    p_edge.add_argument("target")
-    p_edge.set_defaults(func=lambda args: add_edge(args.filename, args.source, args.target))
-
-    # Remove edge
-    p_redge = edit_sub.add_parser("remove-edge", help="Remove edge")
-    p_redge.add_argument("filename")
-    p_redge.add_argument("source")
-    p_redge.add_argument("target")
-    p_redge.set_defaults(func=lambda args: remove_edge(args.filename, args.source, args.target))
-
-    # Edit status
-    p_status = edit_sub.add_parser("edit-status", help="Edit node or edge status")
-    p_status.add_argument("filename")
-    p_status.add_argument("element_type", choices=["node", "edge"])
-    p_status.add_argument("element_id")
-    p_status.add_argument("value")
-    p_status.set_defaults(func=lambda args: edit_status(args.filename, args.element_type, args.element_id, args.value))
-
+# === CLI Parser ===
 
 def main():
-    # Ensure server is running and run if not for workfile
-    # Call server
-    parser = argparse.ArgumentParser(description="Workforce GraphML Editor CLI")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    add_arguments(subparsers)
+    parser = argparse.ArgumentParser(description="Workforce Graph Editor CLI (client for server.py)")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    # add-node
+    p_add = sub.add_parser("add-node", help="Add a new node to the graph")
+    p_add.add_argument("label", help="Node label")
+    p_add.add_argument("--x", type=float, default=0)
+    p_add.add_argument("--y", type=float, default=0)
+    p_add.add_argument("--status", default="")
+    p_add.add_argument("--file", help="GraphML file (to find correct server)")
+    p_add.set_defaults(func=cmd_add_node)
+
+    # remove-node
+    p_rmnode = sub.add_parser("remove-node", help="Remove a node")
+    p_rmnode.add_argument("node_id", help="Node ID")
+    p_rmnode.add_argument("--file", help="GraphML file")
+    p_rmnode.set_defaults(func=cmd_remove_node)
+
+    # add-edge
+    p_addedge = sub.add_parser("add-edge", help="Add edge between nodes")
+    p_addedge.add_argument("source", help="Source node ID")
+    p_addedge.add_argument("target", help="Target node ID")
+    p_addedge.add_argument("--file", help="GraphML file")
+    p_addedge.set_defaults(func=cmd_add_edge)
+
+    # remove-edge
+    p_rmedge = sub.add_parser("remove-edge", help="Remove edge between nodes")
+    p_rmedge.add_argument("source", help="Source node ID")
+    p_rmedge.add_argument("target", help="Target node ID")
+    p_rmedge.add_argument("--file", help="GraphML file")
+    p_rmedge.set_defaults(func=cmd_remove_edge)
+
+    # edit-status
+    p_status = sub.add_parser("edit-status", help="Edit status of node or edge")
+    p_status.add_argument("element_type", choices=["node", "edge"])
+    p_status.add_argument("element_id")
+    p_status.add_argument("value", help="New status value")
+    p_status.add_argument("--file", help="GraphML file")
+    p_status.set_defaults(func=cmd_edit_status)
+
     args = parser.parse_args()
     args.func(args)
 

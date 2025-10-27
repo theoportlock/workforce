@@ -1,3 +1,6 @@
+edit has functions that accept graph
+graph, filename, port
+
 wf run = if Workfile: if Workfile is a graphml: wf server Workfile; wf run Workfile; wf server stop Workfile
 wf run Workfile = if Workfile is a graphml: wf run Workfile
 wf run --bg Workfile = if Workfile is a graphml: wf run Workfile in background # do i want to specify the port anywhere?
