@@ -66,6 +66,9 @@ class WorkflowApp:
         self.terminal_frame = tk.Frame(master)
         self.terminal_text = ScrolledText(self.terminal_frame, height=8, bg="#181818", fg="#e0e0e0")
         self.terminal_text.pack(fill=tk.BOTH, expand=True)
+        self.terminal_text.config(state=tk.DISABLED)
+        self.terminal_frame.grid(row=2, column=0, sticky="nsew")
+        self.terminal_frame.grid_remove()
 
         # Terminal & prefix/suffix state
         self.prefix = ""
@@ -536,8 +539,12 @@ class WorkflowApp:
     # ----------------------
     # Drawing and UI helpers
     # ----------------------
-    def draw_node(self, node_id, node_data=None, font_size=None):
+    def draw_node(self, node_id, node_data=None, font_size=None, selected=None):
         data = node_data if node_data is not None else next((n for n in self.graph.get("nodes", []) if n.get("id") == node_id), {})
+        # Determine selection: explicit param takes precedence, otherwise consult model
+        if selected is None:
+            selected = node_id in self.selected_nodes
+
         vx = float(data.get("x", 100))
         vy = float(data.get("y", 100))
         x = vx * self.scale
@@ -556,7 +563,8 @@ class WorkflowApp:
         pad_x, pad_y = 10 * self.scale, 6 * self.scale
         w = text_w + 2 * pad_x
         h = text_h + 2 * pad_y
-        rect = self.canvas.create_rectangle(x, y, x + w, y + h, fill=fill, outline="")
+        outline_color = "black" if selected else ""
+        rect = self.canvas.create_rectangle(x, y, x + w, y + h, fill=fill, outline=outline_color, width=1 if selected else 0)
         txt = self.canvas.create_text(x + pad_x, y + pad_y, text=label, anchor="nw", font=("TkDefaultFont", font_size))
         self.node_widgets[node_id] = (rect, txt)
         for item in (rect, txt):
@@ -568,11 +576,19 @@ class WorkflowApp:
         self.canvas.tag_lower(rect)
 
     def draw_edge(self, src, tgt):
-        if src not in self.node_widgets or tgt not in self.node_widgets:
-            return
         x1, y1 = self._get_node_center(src)
         x2, y2 = self._get_node_center(tgt)
-        line = self.canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST, fill="lightgray", width=self.base_edge_width * self.scale, tags="edge")
+        src_box = self._get_node_bounds(src)
+        tgt_box = self._get_node_bounds(tgt)
+        x1a, y1a = self._clip_line_to_box(x1, y1, x2, y2, src_box)
+        x2a, y2a = self._clip_line_to_box(x2, y2, x1, y1, tgt_box)
+        line = self.canvas.create_line(
+            x1a, y1a, x2a, y2a,
+            arrow=tk.LAST,
+            fill='lightgray',
+            tags="edge",
+            width=self.base_edge_width * self.scale
+        )
         self.canvas.tag_lower(line)
 
     def _get_node_bounds(self, node_id):
@@ -583,26 +599,74 @@ class WorkflowApp:
         x1, y1, x2, y2 = self._get_node_bounds(node_id)
         return (x1 + x2) / 2, (y1 + y2) / 2
 
+    def _clip_line_to_box(self, x0, y0, x1, y1, box):
+        # Compute intersection of line (x0,y0)->(x1,y1) with rectangle box
+        x_min, y_min, x_max, y_max = box
+        dx = x1 - x0
+        dy = y1 - y0
+
+        if dx == 0:  # vertical line
+            return x0, y_min if y1 < y0 else y_max
+
+        if dy == 0:  # horizontal line
+            return x_min if x1 < x0 else x_max, y0
+
+        # Calculate intersection with all four box sides
+        slope = dy / dx
+
+        # Try left and right edges
+        if x1 > x0:
+            x_edge = x_max
+        else:
+            x_edge = x_min
+        y_edge = y0 + slope * (x_edge - x0)
+        if y_min <= y_edge <= y_max:
+            return x_edge, y_edge
+
+        # Try top and bottom edges
+        if y1 > y0:
+            y_edge = y_max
+        else:
+            y_edge = y_min
+        x_edge = x0 + (y_edge - y0) / slope
+        return x_edge, y_edge
+    
     # ----------------------
     # Mouse/interaction handlers
     # ----------------------
     def node_label_popup(self, initial_value, on_save):
         editor = tk.Toplevel(self.master)
         editor.title("Node Label")
-        text = tk.Text(editor, height=6)
-        text.pack(fill=tk.BOTH, expand=True)
-        text.insert("1.0", initial_value)
+        editor.geometry("600x300")
+        editor.minsize(600, 300)
+        text_widget = tk.Text(editor, wrap='word', font=("TkDefaultFont", 10), height=6)
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10,0))
+        text_widget.insert("1.0", initial_value)
 
         def save_and_close(event=None):
-            val = text.get("1.0", "end-1c")
-            on_save(val)
+            new_label = text_widget.get("1.0", "end-1c")
+            on_save(new_label)
             editor.destroy()
 
-        btn = tk.Button(editor, text="Save", command=save_and_close)
-        btn.pack(side=tk.LEFT)
+        def cancel_and_close(event=None):
+            editor.destroy()
+
+        btn_frame = tk.Frame(editor)
+        btn_frame.pack(fill=tk.X, padx=10, pady=(5,10))
+        save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+
+        # Keyboard shortcuts
+        editor.bind('<Escape>', cancel_and_close)
+        text_widget.bind('<Control-Return>', save_and_close)
+        text_widget.bind('<Control-KP_Enter>', save_and_close)
+
         editor.transient(self.master)
+        editor.wait_visibility()  # Ensure window is visible before grab_set
         editor.grab_set()
-        text.focus_set()
+        text_widget.focus_set()
 
     def on_canvas_double_click(self, event):
         x = self.canvas.canvasx(event.x)
@@ -610,20 +674,51 @@ class WorkflowApp:
         self.add_node_at(x, y)
 
     def on_left_press(self, event):
+        # Check if clicked on a node
         item = self.canvas.find_withtag(tk.CURRENT)
-        # if clicked on node, selection handled in tag callbacks
-        self._press_x = event.x
-        self._press_y = event.y
-        self._panning = True
-        self.canvas.scan_mark(event.x, event.y)
+        node_clicked = False
+        for node_id, (rect, text) in self.node_widgets.items():
+            if item and item[0] in (rect, text):
+                node_clicked = True
+                self._potential_deselect = False # Clicked on a node, so no deselect
+                # If node is already selected, do not change selection, just start drag
+                if node_id in self.selected_nodes:
+                    self.on_node_press(event, node_id)
+                else:
+                    # Select only this node
+                    self.clear_selection()
+                    self.selected_nodes.append(node_id)
+                    if node_id in self.node_widgets:
+                        for item2 in self.node_widgets[node_id]:
+                            self.canvas.delete(item2)
+                        del self.node_widgets[node_id]
+                    self.draw_node(node_id, font_size=getattr(self, 'current_font_size', self.base_font_size))
+                    self.on_node_press(event, node_id)
+                break
+        if not node_clicked:
+            # Clicked empty space, prepare to pan and potentially deselect
+            self._potential_deselect = True
+            self._press_x = event.x
+            self._press_y = event.y
+            self.canvas.scan_mark(event.x, event.y)
+            self.dragging_node = None
+            self._panning = True
+        else:
+            self._panning = False
 
     def on_left_motion(self, event):
-        if getattr(self, "_panning", False):
-            # simple pan
+        if self.dragging_node:
+            self.on_node_drag(event, self.dragging_node)
+        elif getattr(self, '_panning', False):
+            # If there is motion, it's a pan, not a deselect click
+            if abs(event.x - self._press_x) > 5 or abs(event.y - self._press_y) > 5:
+                self._potential_deselect = False
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def on_canvas_release(self, event):
-        # used for deselect/panning end
+        if getattr(self, '_potential_deselect', False):
+            self.clear_selection()
+        self._potential_deselect = False
         self._panning = False
 
     def handle_node_click(self, event, node_id):
@@ -631,12 +726,12 @@ class WorkflowApp:
             self.selected_nodes.remove(node_id)
         else:
             self.selected_nodes.append(node_id)
-        # redraw single node to update outline
+        # Redraw the node to update its outline based on selection state
         if node_id in self.node_widgets:
             for item in self.node_widgets[node_id]:
                 self.canvas.delete(item)
             del self.node_widgets[node_id]
-        self.draw_node(node_id)
+        self.draw_node(node_id, selected=(node_id in self.selected_nodes))
 
     # right-click drag to create edge
     def on_right_press(self, event):
@@ -683,9 +778,10 @@ class WorkflowApp:
         self.dragging_node = node_id
         x1, y1, x2, y2 = self._get_node_bounds(node_id)
         self.drag_offset = (event.x - x1, event.y - y1)
-        # store initial positions
+        # Store initial positions for all selected nodes (virtual coordinates)
         self._multi_drag_initial = {}
         for n in self.selected_nodes:
+            # find node dict from node-link graph
             nd = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
             if nd:
                 try:
@@ -1099,6 +1195,19 @@ class WorkflowApp:
 def add_arguments(subparser: argparse.ArgumentParser):
     subparser.add_argument("filename", nargs="?", help="Path to GraphML file (Workfile if omitted)")
     subparser.set_defaults(func=main)
+
+class Gui:
+    def __init__(self, filename=None):
+        self.root = tk.Tk()
+        self.app = WorkflowApp(self.root)
+        if filename:
+            self.app.filename = filename
+            try:
+                self.app._reload_graph()
+                self.app.master.title(f"Workforce - {filename}")
+            except Exception as e:
+                messagebox.showerror("Load Error", f"Failed to load {filename}:\n{e}")
+        self.root.mainloop()
 
 
 def main(args=None):

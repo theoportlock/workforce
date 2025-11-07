@@ -24,9 +24,9 @@ def find_workfile():
 
 def launch_gui():
     """Launch GUI with Workfile if present, else the default workfile."""
-    from workforce.gui import Gui, get_default_workfile
+    from workforce.gui import Gui
 
-    workfile = find_workfile() or get_default_workfile()
+    workfile = find_workfile()
     Gui(workfile)
 
 
