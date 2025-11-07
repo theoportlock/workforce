@@ -1,4 +1,4 @@
-edit has functions that accept graph
+edit has functions that accepts graph?
 graph, filename, port
 
 wf run = if Workfile: if Workfile is a graphml: wf server Workfile; wf run Workfile; wf server stop Workfile
@@ -29,11 +29,15 @@ wf --version -v?
 wf browser?
 
 
+Fix the focus bug
+wf runner stop - figure out
+wf log need to write as gui can produce
+Some way to save and load configs (prefix suffix)
 Minimap for the bottom left
 Edges need to change color based on to_run
 Save PDF of layout button
 Workforce within workforce (edit a wf run command in a workforce window)
-run nodeS function to just run a portion of the network that is selected
+runner run_nodes function to just run a portion of the network that is selected
 RUNNODES.py script for inspiration from gemini
 don't change focus back to canvas on reload - messes up
 scale the box with the font size not the zoom factor

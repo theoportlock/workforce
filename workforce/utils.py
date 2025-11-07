@@ -15,7 +15,6 @@ from contextlib import closing
 
 REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
 
-
 def load_registry() -> dict:
     if os.path.exists(REGISTRY_PATH):
         try:

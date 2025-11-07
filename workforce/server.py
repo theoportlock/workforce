@@ -354,6 +354,51 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             print("SERVER ERROR in edit-status:", repr(e))
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/update-node", methods=["POST"])
+    def update_node():
+        try:
+            data = request.get_json(force=True)
+            node_id = data.get("id")
+            if not node_id:
+                return jsonify({"error": "id required"}), 400
+            label = data.get("label")
+            x = data.get("x")
+            y = data.get("y")
+            status = data.get("status", None)
+
+            G = load_graph(abs_path)
+            if node_id not in G:
+                return jsonify({"error": "node not found"}), 404
+
+            if label is not None:
+                G.nodes[node_id]["label"] = label
+            if x is not None:
+                G.nodes[node_id]["x"] = str(x)
+            if y is not None:
+                G.nodes[node_id]["y"] = str(y)
+            if status is not None:
+                G.nodes[node_id]["status"] = status
+
+            save_graph(G, abs_path)
+            return jsonify({"status": "updated"}), 200
+        except Exception as e:
+            print("SERVER ERROR in update-node:", repr(e))
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/save-graph", methods=["POST"])
+    def save_graph_endpoint():
+        try:
+            # re-read and write to ensure file is persisted (safe no-op if file already up-to-date)
+            if not os.path.exists(abs_path):
+                G = nx.DiGraph()
+                nx.write_graphml(G, abs_path)
+            G = nx.read_graphml(abs_path)
+            nx.write_graphml(G, abs_path)
+            return jsonify({"status": "saved"}), 200
+        except Exception as e:
+            print("SERVER ERROR in save-graph:", repr(e))
+            return jsonify({"error": str(e)}), 500
+
     print(f"\nServing '{abs_path}' on port {port}")
     print(f"  http://127.0.0.1:{port}\n")
 
