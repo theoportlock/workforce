@@ -21,6 +21,13 @@ import atexit
 from datetime import datetime
 from workforce.utils import load_registry, default_workfile, resolve_port
 from workforce.server import start_server
+from workforce.edit import (
+    cmd_add_node,
+    cmd_remove_node,
+    cmd_add_edge,
+    cmd_remove_edge,
+    cmd_edit_status
+)
 
 
 class WorkflowApp:
@@ -1189,13 +1196,6 @@ class WorkflowApp:
                 pass
         self.master.after(self.reload_interval, self.check_reload)
 
-    # ----------------------
-    # CLI integration for workforce.__main__
-    # ----------------------
-def add_arguments(subparser: argparse.ArgumentParser):
-    subparser.add_argument("filename", nargs="?", help="Path to GraphML file (Workfile if omitted)")
-    subparser.set_defaults(func=main)
-
 class Gui:
     def __init__(self, filename=None):
         self.root = tk.Tk()
@@ -1210,14 +1210,3 @@ class Gui:
         self.root.mainloop()
 
 
-def main(args=None):
-    filename = None
-    if args is not None:
-        filename = getattr(args, "filename", None)
-    root = tk.Tk()
-    app = WorkflowApp(root, filename=filename)
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    main()

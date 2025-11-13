@@ -29,6 +29,7 @@ wf --version -v?
 wf browser?
 
 
+Add delete key or backspace for delete node(s)
 Fix the focus bug
 wf runner stop - figure out
 wf log need to write as gui can produce
