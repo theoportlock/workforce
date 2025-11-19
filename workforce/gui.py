@@ -21,14 +21,6 @@ import atexit
 from datetime import datetime
 from workforce.utils import load_registry, default_workfile, resolve_port
 from workforce.server import start_server
-from workforce.edit import (
-    cmd_add_node,
-    cmd_remove_node,
-    cmd_add_edge,
-    cmd_remove_edge,
-    cmd_edit_status
-)
-
 
 class WorkflowApp:
     def __init__(self, master, filename: str | None = None):
@@ -186,9 +178,7 @@ class WorkflowApp:
         atexit.register(self._atexit_disconnect)
         self.master.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    # ----------------------
-    # Server / networking
-    # ----------------------
+
     def _ensure_server_for_file(self, filename: str, timeout: float = 6.0):
         abs_path = os.path.abspath(filename)
         reg = load_registry()
@@ -1209,4 +1199,6 @@ class Gui:
                 messagebox.showerror("Load Error", f"Failed to load {filename}:\n{e}")
         self.root.mainloop()
 
+def main(args):
+    Gui(args.filename)
 

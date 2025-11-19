@@ -14,20 +14,17 @@ from importlib import import_module
 
 DEFAULT_WORKFILE = "Workfile"
 
-
 def find_workfile():
     path = os.path.join(os.getcwd(), DEFAULT_WORKFILE)
     return path if os.path.exists(path) else None
 
-
 def launch_gui():
-    from workforce.gui import Gui
-    workfile = find_workfile()
-    Gui(workfile)
-
+    from workforce.gui import main as gui_main
+    class Args: filename = find_workfile()
+    gui_main(Args)
 
 def main():
-    # Case 1: no arguments → launch GUI
+    # Case 1: no arguments -> launch GUI
     if len(sys.argv) == 1:
         launch_gui()
         return
@@ -38,21 +35,35 @@ def main():
 
     # ---------------- GUI ----------------
     gui_parser = subparsers.add_parser("gui", help="Launch graphical interface")
-    gui_parser.add_argument("filename", help="GraphML file (defaults to Workfile)")
+    gui_parser.add_argument("filename", nargs="?", default=find_workfile(), help="GraphML file")
     gui_parser.set_defaults(func=lambda args: import_module("workforce.gui").main(args))
 
     # ---------------- RUN ----------------
     run_parser = subparsers.add_parser("run", help="Execute workflow nodes")
-    run_parser.add_argument("filename", help="Workflow file (GraphML)")
+    run_parser.add_argument("filename", help="Workflow file (GraphML) or Server URL")
     run_parser.add_argument("--prefix", default="", help="Command prefix")
     run_parser.add_argument("--suffix", default="", help="Command suffix")
     run_parser.set_defaults(func=lambda args: import_module("workforce.run").main(args))
 
     # ---------------- SERVER ----------------
-    server_parser = subparsers.add_parser("server", help="Start workforce server")
-    server_parser.add_argument("filename", help="Workflow file (GraphML)")
-    server_parser.add_argument("--port", type=int, default=8000)
-    server_parser.set_defaults(func=lambda args: import_module("workforce.server").main(args))
+    server_parser = subparsers.add_parser("server", help="Manage workforce servers")
+    server_subs = server_parser.add_subparsers(dest="server_command", required=True)
+
+    # Start
+    start_p = server_subs.add_parser("start", help="Start a server")
+    start_p.add_argument("filename", nargs="?", help="Workflow file (GraphML)")
+    start_p.add_argument("--foreground", "-f", action="store_true")
+    start_p.add_argument("--port", type=int)
+    start_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_start(args))
+
+    # Stop
+    stop_p = server_subs.add_parser("stop", help="Stop a server")
+    stop_p.add_argument("filename", nargs="?", help="Workflow file (GraphML)")
+    stop_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_stop(args))
+
+    # List
+    list_p = server_subs.add_parser("ls", help="List active servers")
+    list_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_list(args))
 
     # ---------------- EDIT ----------------
     edit_parser = subparsers.add_parser("edit", help="Edit running workflow via API")
@@ -97,9 +108,10 @@ def main():
 
     # ---------------- PARSE & DISPATCH ----------------
     args = parser.parse_args()
-    args.func(args)
-
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
-

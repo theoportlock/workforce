@@ -1,29 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-server.py — Workforce graph server with safe serialized graph modification.
-
-✅ All GraphML writes are routed through a dedicated queue worker
-   → Prevents race conditions / corruption
-✅ FIFO ordering ensures endpoint execution is deterministic
-✅ Non-blocking HTTP responses (202 Accepted on queued tasks)
-
-"""
-
 import argparse
-import json
 import os
 import platform
 import signal
-import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
-import uuid
 import queue
-from contextlib import closing
 
 import networkx as nx
 from flask import Flask, request, jsonify
@@ -31,39 +16,19 @@ from flask_socketio import SocketIO
 
 from workforce.utils import (
     load_registry, save_registry, clean_registry,
-    is_port_in_use, find_free_port, default_workfile, REGISTRY_PATH
+    find_free_port, default_workfile
 )
 
-from workforce.runner import main as run_full_pipeline
-from workforce.runner import run_node as run_single_node
+from workforce.run import main as run_full_pipeline
 from workforce.edit import (
-        load_graph,
-        save_graph,
-        add_node_to_graph,
-        remove_node_from_graph,
-        add_edge_to_graph,
-        remove_edge_from_graph,
-        edit_status_in_graph)
-
-# ============================================================
-# Graph Helper Functions
-# ============================================================
+    load_graph, add_node_to_graph, remove_node_from_graph,
+    add_edge_to_graph, remove_edge_from_graph,
+    edit_status_in_graph
+)
 
 # ============================================================
 # Server Lifecycle
 # ============================================================
-
-def list_servers():
-    registry = clean_registry()
-    if not registry:
-        print("No active Workforce servers.")
-        return
-
-    print("Active Workforce servers:")
-    for path, info in registry.items():
-        print(f"  • {path}")
-        print(f"    → http://127.0.0.1:{info['port']} (PID {info['pid']}) clients={info.get('clients', 0)}")
-
 
 def stop_server(filename: str | None):
     if not filename:
@@ -94,12 +59,23 @@ def stop_server(filename: str | None):
     print(f"Stopped server for '{filename}' (PID {pid}) port {port}")
 
 
+def list_servers():
+    registry = clean_registry()
+    if not registry:
+        print("No active Workforce servers.")
+        return
+
+    print("Active Workforce servers:")
+    for path, info in registry.items():
+        print(f"  • {path}")
+        print(f"    → http://127.0.0.1:{info['port']} (PID {info['pid']}) clients={info.get('clients', 0)}")
+
+
 def start_server(filename: str, port: int | None = None, background: bool = True):
     if not filename:
         sys.exit("No file specified")
 
     abs_path = os.path.abspath(filename)
-
     registry = clean_registry()
 
     if abs_path in registry:
@@ -109,57 +85,48 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     if port is None:
         port = find_free_port()
 
-    # Run new detached process
     if background:
-        cmd = [sys.executable, os.path.abspath(__file__), "start", abs_path, "--foreground", "--port", str(port)]
-        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # FIXED: Use -m workforce.server to ensure imports work correctly in the child process
+        cmd = [sys.executable, "-m", "workforce.server", "start", abs_path, "--foreground", "--port", str(port)]
+
+        # Popen inherits env by default, which is what we want
+        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=os.getcwd())
+
         registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0}
         save_registry(registry)
         print(f"Server started for '{abs_path}' on port {port}")
         return
 
     # ============================================================
-    # Foreground server + Queue Worker
+    # Foreground Server
     # ============================================================
 
     app = Flask(__name__)
+    # Allow all origins for local dev, or restrict if needed
     socketio = SocketIO(app, cors_allowed_origins="*")
-
     MODIFICATION_QUEUE = queue.Queue()
 
     def graph_worker():
         print("✓ Graph worker thread started.")
         last_graph = None
-
         while True:
             func, args, kwargs = MODIFICATION_QUEUE.get()
             try:
-                # Execute the modification
                 result = func(*args, **kwargs)
-
-                # Emit the full graph update (for UI etc)
                 socketio.emit("graph_updated", result, room=abs_path)
 
-                # --- NEW: Detect status changes for the Runner ---
                 if last_graph and 'nodes' in result:
                     old_status = {n['id']: n.get('status') for n in last_graph['nodes']}
-
                     for node in result['nodes']:
                         nid = node['id']
                         new_stat = node.get('status')
                         old_stat = old_status.get(nid)
 
-                        # If status changed TO 'run', the runner should execute it
                         if new_stat == 'run' and old_stat != 'run':
                             socketio.emit("node_ready", {"node_id": nid}, room=abs_path)
-
-                        # If status changed TO 'ran', the runner should schedule next items
                         elif new_stat == 'ran' and old_stat != 'ran':
                             socketio.emit("node_done", {"node_id": nid}, room=abs_path)
-
                 last_graph = result
-                # -------------------------------------------------
-
             except Exception as e:
                 print(f"[ERROR] Graph worker: {e}")
             finally:
@@ -167,22 +134,20 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
     threading.Thread(target=graph_worker, daemon=True).start()
 
+    # Update registry with actual PID (os.getpid) since this is the running process
     registry[abs_path] = {"port": port, "pid": os.getpid(), "clients": 0}
     save_registry(registry)
 
-    print(f"\n📡 Serving '{abs_path}' on port {port}")
-    print(f"➡️  http://127.0.0.1:{port}\n")
+    print(f"\n≡ƒôí Serving '{abs_path}' on port {port}")
+    print(f"Γ₧í∩╕Å  http://127.0.0.1:{port}\n")
 
     client_count = {"count": 0}
 
-    # ------------------------------------------------------------
-    # Client connect/disconnect
-    # ------------------------------------------------------------
-
     def update_registry_clients():
         reg = load_registry()
-        reg[abs_path]["clients"] = client_count["count"]
-        save_registry(reg)
+        if abs_path in reg:
+            reg[abs_path]["clients"] = client_count["count"]
+            save_registry(reg)
 
     @app.route("/client-connect", methods=["POST"])
     def client_connect():
@@ -194,21 +159,12 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     def client_disconnect():
         client_count["count"] = max(0, client_count["count"] - 1)
         update_registry_clients()
-        if client_count["count"] == 0:
-            threading.Thread(target=lambda: (time.sleep(5), os.kill(os.getpid(), signal.SIGINT)), daemon=True).start()
         return jsonify({"clients": client_count["count"]})
 
-
-    # ------------------------------------------------------------
-    # Graph operations (all queued)
-    # ------------------------------------------------------------
-
     def enqueue(func, *args, **kwargs):
-        """Helper to put tasks into queue."""
         MODIFICATION_QUEUE.put((func, args, kwargs))
         return jsonify({"status": "queued"}), 202
 
-    # Get graph
     @app.route("/get-graph", methods=["GET"])
     def get_graph():
         return jsonify(nx.node_link_data(load_graph(abs_path)))
@@ -243,47 +199,13 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         data = request.get_json(force=True)
         return enqueue(update_node_to_graph, abs_path, data)
 
-    # ------------------------------------------------------------
-    # Pipeline execution endpoints
-    # ------------------------------------------------------------
-
     @app.route("/run", methods=["POST"])
     def run_pipeline():
         data = request.get_json(force=True) if request.data else {}
         prefix = data.get("prefix", "")
         suffix = data.get("suffix", "")
-
-        def background():
-            try:
-                run_full_pipeline(f"http://127.0.0.1:{port}/get-graph", prefix, suffix)
-            except Exception as e:
-                print("[ERROR] run_pipeline:", e)
-
-        threading.Thread(target=background, daemon=True).start()
+        threading.Thread(target=lambda: run_full_pipeline(f"http://127.0.0.1:{port}/get-graph", prefix, suffix), daemon=True).start()
         return jsonify({"status": "started"}), 202
-
-
-    @app.route("/run-node", methods=["POST"])
-    def run_node_endpoint():
-        data = request.get_json(force=True)
-        node = data["node"]
-        prefix = data.get("prefix", "")
-        suffix = data.get("suffix", "")
-
-        def background():
-            try:
-                run_single_node(f"http://127.0.0.1:{port}/get-graph",
-                                 node, prefix, suffix)
-            except Exception as e:
-                print("[ERROR] run_node:", e)
-
-        threading.Thread(target=background, daemon=True).start()
-        return jsonify({"status": "started"}), 202
-
-
-    # ------------------------------------------------------------
-    # Start server
-    # ------------------------------------------------------------
 
     try:
         socketio.run(app, port=port)
@@ -291,40 +213,42 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         reg = load_registry()
         reg.pop(abs_path, None)
         save_registry(reg)
-        print("🔌 Clean shutdown; registry updated")
+        print("≡ƒöî Clean shutdown; registry updated")
 
 
 # ============================================================
-# CLI
+# CLI Bridge Functions
 # ============================================================
 
-def add_arguments(parser):
-    sub = parser.add_subparsers(dest="command", required=False)
+def cmd_start(args):
+    start_server(args.filename or default_workfile(), port=args.port, background=not args.foreground)
+
+def cmd_stop(args):
+    stop_server(args.filename or default_workfile())
+
+def cmd_list(args):
+    list_servers()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
 
     start_p = sub.add_parser("start")
     start_p.add_argument("filename", nargs="?")
     start_p.add_argument("--foreground", "-f", action="store_true")
     start_p.add_argument("--port", type=int)
-    start_p.set_defaults(func=lambda args: start_server(
-        args.filename or default_workfile(),
-        port=args.port,
-        background=not args.foreground
-    ))
+    start_p.set_defaults(func=cmd_start)
 
     stop_p = sub.add_parser("stop")
     stop_p.add_argument("filename", nargs="?")
-    stop_p.set_defaults(func=lambda args: stop_server(args.filename or default_workfile()))
+    stop_p.set_defaults(func=cmd_stop)
 
     list_p = sub.add_parser("list")
-    list_p.set_defaults(func=lambda args: list_servers())
+    list_p.set_defaults(func=cmd_list)
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Workforce server management CLI")
-    add_arguments(parser)
     args = parser.parse_args()
-
     if hasattr(args, "func"):
         args.func(args)
     else:
-        start_server(default_workfile())
+        cmd_start(type("Args", (), {"filename": default_workfile(), "foreground": False, "port": None})())
