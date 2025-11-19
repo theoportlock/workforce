@@ -128,12 +128,38 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     MODIFICATION_QUEUE = queue.Queue()
 
     def graph_worker():
-        print("✅ Graph worker thread started.")
+        print("✓ Graph worker thread started.")
+        last_graph = None
+
         while True:
             func, args, kwargs = MODIFICATION_QUEUE.get()
             try:
+                # Execute the modification
                 result = func(*args, **kwargs)
+
+                # Emit the full graph update (for UI etc)
                 socketio.emit("graph_updated", result, room=abs_path)
+
+                # --- NEW: Detect status changes for the Runner ---
+                if last_graph and 'nodes' in result:
+                    old_status = {n['id']: n.get('status') for n in last_graph['nodes']}
+
+                    for node in result['nodes']:
+                        nid = node['id']
+                        new_stat = node.get('status')
+                        old_stat = old_status.get(nid)
+
+                        # If status changed TO 'run', the runner should execute it
+                        if new_stat == 'run' and old_stat != 'run':
+                            socketio.emit("node_ready", {"node_id": nid}, room=abs_path)
+
+                        # If status changed TO 'ran', the runner should schedule next items
+                        elif new_stat == 'ran' and old_stat != 'ran':
+                            socketio.emit("node_done", {"node_id": nid}, room=abs_path)
+
+                last_graph = result
+                # -------------------------------------------------
+
             except Exception as e:
                 print(f"[ERROR] Graph worker: {e}")
             finally:
