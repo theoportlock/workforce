@@ -556,7 +556,6 @@ class WorkflowApp:
             self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
-        self.canvas.tag_lower(rect)
 
     def draw_edge(self, src, tgt):
         x1, y1 = self._get_node_center(src)
@@ -698,16 +697,15 @@ class WorkflowApp:
                 self._potential_deselect = False
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
-    def on_node_release(self, event):
-        if not getattr(self, "dragging_node", None):
-            return
-        self.dragging_node = None
-        for n in list(self.selected_nodes):
-            node = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
-            if node:
-                self.update_node_position(n, node.get("x"), node.get("y"))
-
     def on_canvas_release(self, event):
+        # If a drag was in progress, finalize it and send updates.
+        if getattr(self, "dragging_node", None):
+            self.dragging_node = None
+            for n in list(self.selected_nodes):
+                node = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
+                if node:
+                    self.update_node_position(n, node.get("x"), node.get("y"))
+        # If a click on empty space occurred, deselect nodes.
         if getattr(self, '_potential_deselect', False):
             self.clear_selection()
         self._potential_deselect = False
@@ -808,6 +806,24 @@ class WorkflowApp:
             self.draw_node(node.get("id"), node_data=node)
         for link in self.graph.get("links", []):
             self.draw_edge(link.get("source"), link.get("target"))
+
+    # node dragging (move positions locally, then send /update-node on release)
+    def on_node_press(self, event, node_id):
+        self.dragging_node = node_id
+        x1, y1, x2, y2 = self._get_node_bounds(node_id)
+        self.drag_offset = (event.x - x1, event.y - y1)
+        # Store initial positions for all selected nodes (virtual coordinates)
+        self._multi_drag_initial = {}
+        for n in self.selected_nodes:
+            # find node dict from node-link graph
+            nd = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
+            if nd:
+                try:
+                    self._multi_drag_initial[n] = (float(nd.get("x", 100)), float(nd.get("y", 100)))
+                except Exception:
+                    self._multi_drag_initial[n] = (100.0, 100.0)
+            else:
+                self._multi_drag_initial[n] = (100.0, 100.0)
 
     # ----------------------
     # SocketIO handler

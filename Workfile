@@ -8,78 +8,54 @@
   <graph edgedefault="directed">
     <node id="0c2476bd-650f-457f-92db-137aa20ac023">
       <data key="d0">pwd</data>
-      <data key="d1">554.0</data>
-      <data key="d2">231.0</data>
+      <data key="d1">429.0</data>
+      <data key="d2">254.0</data>
       <data key="d3" />
     </node>
     <node id="c7677a4a-05a5-44bf-9db6-233be4e41d03">
       <data key="d0">ls</data>
-      <data key="d1">314.0</data>
-      <data key="d2">276.0</data>
+      <data key="d1">345.0</data>
+      <data key="d2">144.0</data>
       <data key="d3" />
     </node>
     <node id="9df184ac-a649-4c7e-a00a-b39b116ec061">
       <data key="d0">pwd</data>
-      <data key="d1">439.0</data>
-      <data key="d2">359.0</data>
+      <data key="d1">564.0</data>
+      <data key="d2">393.0</data>
       <data key="d3" />
     </node>
     <node id="4a5a69d2-8864-469e-a68b-2b07106b5683">
       <data key="d0">ls</data>
-      <data key="d1">452.0</data>
-      <data key="d2">126.0</data>
+      <data key="d1">653.0</data>
+      <data key="d2">121.0</data>
       <data key="d3" />
     </node>
-    <node id="0b7c9c79-fc61-429e-84f2-26e2e4354712">
+    <node id="c4bcbb86-21fb-4e37-a550-8fec997b4043">
       <data key="d0">ls</data>
-      <data key="d1">713.0</data>
-      <data key="d2">105.0</data>
+      <data key="d1">719.0</data>
+      <data key="d2">293.0</data>
       <data key="d3" />
     </node>
-    <node id="f1dd7194-c4eb-4170-943b-f028770b6b99">
+    <node id="acebcc3a-35cd-4bcb-8f33-1df125019f7f">
       <data key="d0">ls</data>
-      <data key="d1">601.0</data>
-      <data key="d2">165.0</data>
+      <data key="d1">702.0</data>
+      <data key="d2">257.0</data>
       <data key="d3" />
     </node>
-    <node id="b58f2dfc-77ff-4e31-a35a-919da4095e29">
-      <data key="d0">pwd</data>
-      <data key="d1">639.0</data>
-      <data key="d2">96.0</data>
-      <data key="d3" />
-    </node>
-    <node id="5009f6f4-dc8c-4d9e-94a9-29073bb0ae32">
+    <node id="1ecc659b-2e50-4e09-a675-dfe3a80e2507">
       <data key="d0">ls</data>
-      <data key="d1">756.0</data>
-      <data key="d2">140.0</data>
-      <data key="d3" />
-    </node>
-    <node id="31676e45-2cab-4c19-bb53-9c373b01eb12">
-      <data key="d0">ls</data>
-      <data key="d1">630.0</data>
-      <data key="d2">445.0</data>
+      <data key="d1">757.0</data>
+      <data key="d2">199.0</data>
       <data key="d3" />
     </node>
     <edge source="0c2476bd-650f-457f-92db-137aa20ac023" target="c7677a4a-05a5-44bf-9db6-233be4e41d03">
       <data key="d4">dd683d6a-e98f-45ac-8d65-77c3284b3697</data>
-    </edge>
-    <edge source="0c2476bd-650f-457f-92db-137aa20ac023" target="b58f2dfc-77ff-4e31-a35a-919da4095e29">
-      <data key="d4">50168de4-743d-4b83-bc97-fd6bc9ec8b5a</data>
     </edge>
     <edge source="9df184ac-a649-4c7e-a00a-b39b116ec061" target="0c2476bd-650f-457f-92db-137aa20ac023">
       <data key="d4">ae10966c-8f78-4b5f-acba-ba1cff562ed4</data>
     </edge>
     <edge source="4a5a69d2-8864-469e-a68b-2b07106b5683" target="0c2476bd-650f-457f-92db-137aa20ac023">
       <data key="d4">373ac2ae-51ae-4c1c-a41e-4e9ad3c1c52e</data>
-    </edge>
-    <edge source="0b7c9c79-fc61-429e-84f2-26e2e4354712" target="0c2476bd-650f-457f-92db-137aa20ac023">
-      <data key="d4">2df276a8-5cbb-4875-a936-2c92cebb5bb3</data>
-    </edge>
-    <edge source="0b7c9c79-fc61-429e-84f2-26e2e4354712" target="5009f6f4-dc8c-4d9e-94a9-29073bb0ae32">
-      <data key="d4">33a0defe-5a98-485d-993b-00bf319aba42</data>
-    </edge>
-    <edge source="f1dd7194-c4eb-4170-943b-f028770b6b99" target="0c2476bd-650f-457f-92db-137aa20ac023">
-      <data key="d4">ddab866f-1977-434e-8656-b02498297502</data>
     </edge>
   </graph>
 </graphml>
