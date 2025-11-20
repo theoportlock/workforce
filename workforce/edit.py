@@ -58,7 +58,7 @@ def add_edge_to_graph(path: str, source: str, target: str) -> dict:
     G.add_edge(source, target, id=edge_id)
     save_graph(G, path)
     print(f"[GRAPH] Add edge {edge_id}")
-    return {"edge_id": edge_id}
+    return nx.node_link_data(G)
 
 
 def remove_edge_from_graph(path: str, source: str, target: str) -> dict:
@@ -109,4 +109,3 @@ def edit_node_position_in_graph(path: str, node_id: str, x: float, y: float) -> 
     print(f"[GRAPH] Node {node_id} position=({x}, {y})")
 
     return {"status": "updated"}
-

@@ -6,56 +6,83 @@
   <key id="d1" for="node" attr.name="x" attr.type="string" />
   <key id="d0" for="node" attr.name="label" attr.type="string" />
   <graph edgedefault="directed">
-    <node id="0c2476bd-650f-457f-92db-137aa20ac023">
-      <data key="d0">pwd</data>
-      <data key="d1">429.0</data>
-      <data key="d2">254.0</data>
+    <node id="4a5a69d2-8864-469e-a68b-2b07106b5683">
+      <data key="d0">ls</data>
+      <data key="d1">169.0</data>
+      <data key="d2">376.0</data>
       <data key="d3" />
     </node>
-    <node id="c7677a4a-05a5-44bf-9db6-233be4e41d03">
+    <node id="c496bb14-ce05-47f2-b742-4e475b25ae06">
       <data key="d0">ls</data>
-      <data key="d1">345.0</data>
+      <data key="d1">868.0</data>
+      <data key="d2">130.0</data>
+      <data key="d3" />
+    </node>
+    <node id="864cd165-6568-421b-a805-7db8fe430a2c">
+      <data key="d0">echo test</data>
+      <data key="d1">595.0</data>
+      <data key="d2">97.0</data>
+      <data key="d3" />
+    </node>
+    <node id="82c44891-3d64-43b8-b2f9-30610fd9496c">
+      <data key="d0">pwd</data>
+      <data key="d1">816.0</data>
+      <data key="d2">326.0</data>
+      <data key="d3" />
+    </node>
+    <node id="627bb835-ba2c-4f6a-91ab-6b930126590b">
+      <data key="d0">pwd</data>
+      <data key="d1">699.0</data>
+      <data key="d2">421.0</data>
+      <data key="d3" />
+    </node>
+    <node id="1f22d838-49d9-4826-8cad-b34d429a4af0">
+      <data key="d0">pwd</data>
+      <data key="d1">901.0</data>
+      <data key="d2">277.0</data>
+      <data key="d3" />
+    </node>
+    <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
+      <data key="d0">ls</data>
+      <data key="d1">382.0</data>
+      <data key="d2">370.0</data>
+      <data key="d3" />
+    </node>
+    <node id="4c696880-2e79-491b-a21e-8712586ddbd4">
+      <data key="d0">ls</data>
+      <data key="d1">368.0</data>
       <data key="d2">144.0</data>
       <data key="d3" />
     </node>
-    <node id="9df184ac-a649-4c7e-a00a-b39b116ec061">
-      <data key="d0">pwd</data>
-      <data key="d1">564.0</data>
-      <data key="d2">393.0</data>
-      <data key="d3" />
-    </node>
-    <node id="4a5a69d2-8864-469e-a68b-2b07106b5683">
+    <node id="597f024c-0bc2-40f3-88cd-8343796820a8">
       <data key="d0">ls</data>
-      <data key="d1">653.0</data>
-      <data key="d2">121.0</data>
+      <data key="d1">360.0</data>
+      <data key="d2">461.0</data>
       <data key="d3" />
     </node>
-    <node id="c4bcbb86-21fb-4e37-a550-8fec997b4043">
-      <data key="d0">ls</data>
-      <data key="d1">719.0</data>
-      <data key="d2">293.0</data>
+    <node id="2a8c3c4d-bdde-4878-9259-f0c31f29e2a5">
+      <data key="d0">sf</data>
+      <data key="d1">515.0</data>
+      <data key="d2">296.0</data>
       <data key="d3" />
     </node>
-    <node id="acebcc3a-35cd-4bcb-8f33-1df125019f7f">
-      <data key="d0">ls</data>
-      <data key="d1">702.0</data>
-      <data key="d2">257.0</data>
-      <data key="d3" />
-    </node>
-    <node id="1ecc659b-2e50-4e09-a675-dfe3a80e2507">
-      <data key="d0">ls</data>
-      <data key="d1">757.0</data>
-      <data key="d2">199.0</data>
-      <data key="d3" />
-    </node>
-    <edge source="0c2476bd-650f-457f-92db-137aa20ac023" target="c7677a4a-05a5-44bf-9db6-233be4e41d03">
-      <data key="d4">dd683d6a-e98f-45ac-8d65-77c3284b3697</data>
+    <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="c496bb14-ce05-47f2-b742-4e475b25ae06">
+      <data key="d4">88e833cb-863e-4080-8f00-2df7759f9a18</data>
     </edge>
-    <edge source="9df184ac-a649-4c7e-a00a-b39b116ec061" target="0c2476bd-650f-457f-92db-137aa20ac023">
-      <data key="d4">ae10966c-8f78-4b5f-acba-ba1cff562ed4</data>
+    <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="627bb835-ba2c-4f6a-91ab-6b930126590b">
+      <data key="d4">0b37ae85-70d5-453a-af88-ededeb4a140c</data>
     </edge>
-    <edge source="4a5a69d2-8864-469e-a68b-2b07106b5683" target="0c2476bd-650f-457f-92db-137aa20ac023">
-      <data key="d4">373ac2ae-51ae-4c1c-a41e-4e9ad3c1c52e</data>
+    <edge source="82c44891-3d64-43b8-b2f9-30610fd9496c" target="c496bb14-ce05-47f2-b742-4e475b25ae06">
+      <data key="d4">d4d0cc75-8943-4c8c-84b6-882fb746ae53</data>
+    </edge>
+    <edge source="627bb835-ba2c-4f6a-91ab-6b930126590b" target="82c44891-3d64-43b8-b2f9-30610fd9496c">
+      <data key="d4">b695e2a6-be82-4bc7-b999-f3b7f7a0631f</data>
+    </edge>
+    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="864cd165-6568-421b-a805-7db8fe430a2c">
+      <data key="d4">096c5ccf-f859-4734-9418-ef39756348c8</data>
+    </edge>
+    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="4a5a69d2-8864-469e-a68b-2b07106b5683">
+      <data key="d4">501407ba-dcce-44cf-abe3-b6b03de49cd4</data>
     </edge>
   </graph>
 </graphml>

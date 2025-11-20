@@ -283,8 +283,8 @@ class WorkflowApp:
             except Exception:
                 self.graph = {"nodes": [], "links": []}
 
-        # redraw via centralized helper
-        self._redraw_graph()
+        # redrawing must be done on the Tk main thread
+        self.master.after(0, self._redraw_graph)
 
     # New helper: centralized, thread-safe redraw of the current self.graph
     def _redraw_graph(self):
@@ -324,7 +324,7 @@ class WorkflowApp:
             payload = {"label": lbl, "x": x / self.scale, "y": y / self.scale}
             try:
                 requests.post(self._url("/add-node"), json=payload, timeout=2.0).raise_for_status()
-                self._reload_graph()
+                # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Add node failed", str(e))
         if label:
@@ -352,7 +352,7 @@ class WorkflowApp:
             y = 100
             try:
                 requests.post(self._url("/add-node"), json={"label": label, "x": x, "y": y}, timeout=2.0).raise_for_status()
-                self._reload_graph()
+                # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Add node error", str(e))
         self.node_label_popup("", on_save)
@@ -364,7 +364,7 @@ class WorkflowApp:
             except Exception as e:
                 print(f"remove_node error: {e}")
         self.selected_nodes.clear()
-        self._reload_graph()
+        # self._reload_graph() # Wait for graph_update event
 
     def connect_nodes(self):
         if len(self.selected_nodes) < 2:
@@ -376,7 +376,7 @@ class WorkflowApp:
                 requests.post(self._url("/add-edge"), json={"source": src, "target": tgt}, timeout=2.0)
             except Exception as e:
                 print(f"add-edge error: {e}")
-        self._reload_graph()
+        # self._reload_graph() # Wait for graph_update event
 
     def delete_edges_from_selected(self):
         links = list(self.graph.get("links", []))
@@ -386,7 +386,7 @@ class WorkflowApp:
                     requests.post(self._url("/remove-edge"), json={"source": l.get("source"), "target": l.get("target")}, timeout=2.0)
                 except Exception as e:
                     print(f"remove-edge error: {e}")
-        self._reload_graph()
+        # self._reload_graph() # Wait for graph_update event
 
     def edit_node_label(self, node_id):
         current = ""
@@ -398,7 +398,7 @@ class WorkflowApp:
         def on_save(new_label):
             try:
                 requests.post(self._url("/update-node"), json={"id": node_id, "label": new_label}, timeout=2.0)
-                self._reload_graph()
+                # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Update error", str(e))
 
@@ -412,7 +412,7 @@ class WorkflowApp:
         if new_label:
             try:
                 requests.post(self._url("/update-node"), json={"id": node_id, "label": new_label}, timeout=2.0)
-                self._reload_graph()
+                # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Update error", str(e))
     
@@ -437,7 +437,7 @@ class WorkflowApp:
                 requests.post(self._url("/edit-status"), json={"element_type": "node", "element_id": nid, "value": ""}, timeout=2.0)
             except Exception:
                 pass
-        self._reload_graph()
+        # self._reload_graph() # Wait for graph_update event
 
     def clear_all(self):
         for n in self.graph.get("nodes", []):
@@ -452,7 +452,7 @@ class WorkflowApp:
                     requests.post(self._url("/edit-status"), json={"element_type": "edge", "element_id": eid, "value": ""}, timeout=2.0)
                 except Exception:
                     pass
-        self._reload_graph()
+        # self._reload_graph() # Wait for graph_update event
     
     def toggle_terminal(self):
         if self.terminal_visible:
@@ -761,7 +761,6 @@ class WorkflowApp:
                 requests.post(self._url("/add-edge"), json={"source": self._edge_start, "target": target}, timeout=2.0)
             except Exception as e:
                 print(f"add-edge error: {e}")
-            self._reload_graph()
 
     # node dragging (move positions locally, then send /update-node on release)
     def on_node_press(self, event, node_id):
@@ -830,13 +829,15 @@ class WorkflowApp:
     # ----------------------
     def on_graph_update(self, data=None):
         """
-        Called when a graph_update event is received from the server.
-        Redraws the graph using the data from the event payload.
+        Called from background SocketIO thread — must not touch Tkinter directly.
+        Receives graph data from the server and schedules a redraw on the main UI thread.
         """
         print("[SocketIO] Graph update event received.")
         if data:
+            # Replace local graph object
             self.graph = data
-            self.master.after_idle(self._redraw_graph)
+            # Schedule UI update on Tkinter's main thread
+            self.master.after(0, self._redraw_graph)
 
     # ----------------------
     # Toolbar / menus / small helpers

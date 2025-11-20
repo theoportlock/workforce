@@ -1,34 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
 import os
 import platform
 import signal
 import subprocess
 import sys
 import threading
-import time
 import queue
 
 import networkx as nx
-from flask import Flask, request, current_app, jsonify
+from flask import Flask, request, current_app
 from flask_socketio import SocketIO
 
 from workforce import utils
 from workforce import run
 from workforce import edit
-
-#from workforce.utils import (
-    #load_registry, save_registry, clean_registry,
-    #find_free_port, default_workfile
-#)
-
-#from workforce.run import main as run_full_pipeline
-#from workforce.edit import (
-    #load_graph, add_node_to_graph, remove_node_from_graph,
-    #add_edge_to_graph, remove_edge_from_graph,
-    #edit_status_in_graph
-#)
 
 # ============================================================
 # Server Lifecycle
@@ -263,7 +249,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         prefix = data.get("prefix", "")
         suffix = data.get("suffix", "")
         threading.Thread(
-            target=lambda: run_full_pipeline(f"http://127.0.0.1:{port}/get-graph", prefix, suffix),
+            target=lambda: run.run_full_pipeline(f"http://127.0.0.1:{port}/get-graph", prefix, suffix),
             daemon=True
         ).start()
         return current_app.json.response({"status": "started"}), 202
