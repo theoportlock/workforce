@@ -1,12 +1,6 @@
 edit has functions that accepts graph?
 graph, filename, port
 
-wf run = if Workfile: if Workfile is a graphml: wf server Workfile; wf run Workfile; wf server stop Workfile
-wf run Workfile = if Workfile is a graphml: wf run Workfile
-wf run --bg Workfile = if Workfile is a graphml: wf run Workfile in background # do i want to specify the port anywhere?
-wf run node Workfile --id 1124  = uses wf edit to edit file
-wf run nodes Workfile --ids 1124,3423,235235  = run according to the order of the pipeline
-
 wf edit = ERROR
 wf edit node status 'ran' = uses wf server
 wf edit edge 
@@ -21,6 +15,12 @@ wf server list --watch = list active servers with watch
 wf = if Workfile: if Workfile is a graphml: wf server Workfile; wf gui Workfile; wf server stop Workfile # Should there be an option to keep running and exit? maybe --bg?
 wf gui = same as above
 wf gui Workfile : same as above
+
+wf run = if Workfile: if Workfile is a graphml: wf server Workfile; wf run Workfile; wf server stop Workfile
+wf run Workfile = if Workfile is a graphml: wf run Workfile
+wf run --bg Workfile = if Workfile is a graphml: wf run Workfile in background # do i want to specify the port anywhere?
+wf run node Workfile --id 1124  = uses wf edit to edit file
+wf run nodes Workfile --ids 1124,3423,235235  = run according to the order of the pipeline
 
 wf pull/push?
 wf clone?

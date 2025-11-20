@@ -5,10 +5,11 @@ edit.py — Command-line client for Workforce server API.
 Performs remote edits via HTTP endpoints exposed by server.py.
 """
 
-import pandas as pd
 import networkx as nx
-
-from workforce.utils import load_registry, REGISTRY_PATH, resolve_port, send_request
+import os
+import pandas as pd
+import tempfile
+import uuid
 
 def load_graph(path: str) -> nx.DiGraph:
     """Load or create GraphML file."""
@@ -23,7 +24,11 @@ def load_graph(path: str) -> nx.DiGraph:
 
 
 def save_graph(G: nx.DiGraph, path: str):
-    nx.write_graphml(G, path)
+    dirpath = os.path.dirname(path)
+    with tempfile.NamedTemporaryFile(dir=dirpath, delete=False) as tmp:
+        tmppath = tmp.name
+    nx.write_graphml(G, tmppath)
+    os.replace(tmppath, path)
 
 
 def add_node_to_graph(path: str, label: str, x: float = 0.0, y: float = 0.0, status: str = "") -> dict:
@@ -87,4 +92,21 @@ def edit_status_in_graph(path: str, element_type: str, element_id: str, value: s
         return {"error": "Edge not found"}
 
     return {"error": "element_type must be node or edge"}
+
+
+def edit_node_position_in_graph(path: str, node_id: str, x: float, y: float) -> dict:
+    """Edit the (x, y) position of a node in the GraphML graph."""
+    G = load_graph(path)
+
+    if node_id not in G:
+        return {"error": "Node not found"}
+
+    # GraphML stores attributes as strings, so convert
+    G.nodes[node_id]["x"] = str(x)
+    G.nodes[node_id]["y"] = str(y)
+
+    save_graph(G, path)
+    print(f"[GRAPH] Node {node_id} position=({x}, {y})")
+
+    return {"status": "updated"}
 

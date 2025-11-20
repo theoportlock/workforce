@@ -4,21 +4,17 @@
 #   /update-node, /edit-status, /save-graph, /client-connect, /client-disconnect
 # - Starts a background server for the Workfile if none is registered.
 
-import argparse
 import os
 import sys
 import time
 import threading
-import tempfile
 import tkinter as tk
 from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
 import socketio
-import uuid
 import atexit
 
-from datetime import datetime
 from workforce.utils import load_registry, default_workfile, resolve_port
 from workforce.server import start_server
 
@@ -26,7 +22,7 @@ class WorkflowApp:
     def __init__(self, master, filename: str | None = None):
         self.master = master
         self.filename = filename or default_workfile()
-        self.base_url = "http://127.0.0.1:5000"
+        self.base_url = ""
         self.graph = {"nodes": [], "links": []}
         self.node_widgets = {}
         self.selected_nodes = []
@@ -116,10 +112,6 @@ class WorkflowApp:
         self.sio = None
         self.client_connected = False
 
-        # File / reload state for Workfile auto-reload
-        self.last_mtime = None
-        self.reload_interval = 1000  # ms
-
         # Recent files
         self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
         self.recent_files = self.load_recent_files()
@@ -171,7 +163,6 @@ class WorkflowApp:
         self._client_connect()
         self._reload_graph()
 
-        # try auto-load Workfile if present (deferred)
         self.master.after_idle(self.try_load_workfile)
 
         # cleanup on exit
@@ -250,10 +241,6 @@ class WorkflowApp:
             pass
 
     def _on_close(self):
-        try:
-            self.save_to_current_file()
-        except Exception:
-            pass
         try:
             self._client_disconnect()
         except Exception:
@@ -345,10 +332,16 @@ class WorkflowApp:
         else:
             self.node_label_popup("", on_save)
 
-    def save_and_exit(self, event=None):
-        if self.filename:
-            self.save_to_current_file()
-        self.master.quit()
+    def update_node_position(self, node_id: str, x: float, y: float):
+        url = self._url("/edit-node-position")
+        try:
+            requests.post(url, json={
+                "node_id": node_id,
+                "x": x,
+                "y": y
+            }, timeout=2.0)
+        except Exception as e:
+            print(f"Failed to update node position for {node_id}: {e}")
 
     def add_node(self):
         def on_save(label):
@@ -424,10 +417,7 @@ class WorkflowApp:
                 messagebox.showerror("Update error", str(e))
     
     def run_selected(self):
-        if not self.filename:
-            self.save_graph()
         if self.filename:
-            self.save_to_current_file()
             for node_id in self.selected_nodes:
                 self.run_in_terminal([
                     sys.executable, "-m", "workforce", "run", "node", self.filename, node_id,
@@ -435,10 +425,7 @@ class WorkflowApp:
                 ], title=f"Run Node: {node_id}")
     
     def run_pipeline(self):
-        if not self.filename:
-            self.save_graph()
         if self.filename:
-            self.save_to_current_file()
             self.run_in_terminal([
                 sys.executable, "-m", "workforce", "run", self.filename,
                 "--prefix", self.prefix, "--suffix", self.suffix
@@ -569,7 +556,6 @@ class WorkflowApp:
             self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
-            self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.edit_node_label(nid))
         self.canvas.tag_lower(rect)
 
     def draw_edge(self, src, tgt):
@@ -712,6 +698,15 @@ class WorkflowApp:
                 self._potential_deselect = False
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
+    def on_node_release(self, event):
+        if not getattr(self, "dragging_node", None):
+            return
+        self.dragging_node = None
+        for n in list(self.selected_nodes):
+            node = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
+            if node:
+                self.update_node_position(n, node.get("x"), node.get("y"))
+
     def on_canvas_release(self, event):
         if getattr(self, '_potential_deselect', False):
             self.clear_selection()
@@ -814,37 +809,18 @@ class WorkflowApp:
         for link in self.graph.get("links", []):
             self.draw_edge(link.get("source"), link.get("target"))
 
-    def on_node_release(self, event):
-        if not getattr(self, "dragging_node", None):
-            return
-        self.dragging_node = None
-        # persist moved nodes to server
-        for n in list(self.selected_nodes):
-            node = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
-            if node:
-                try:
-                    requests.post(self._url("/update-node"), json={"id": n, "x": node.get("x"), "y": node.get("y")}, timeout=2.0)
-                except Exception:
-                    pass
-        self._reload_graph()
-
     # ----------------------
     # SocketIO handler
     # ----------------------
-    def on_graph_update(self, data):
-        # Accept either {'graph': <node-link>, ...} or the node-link dict directly
-        if isinstance(data, dict):
-            g = data.get("graph", data)
-        else:
-            g = None
-        if g:
-            # update model and schedule redraw on the UI thread
-            self.graph = g
-            try:
-                self.master.after(0, self._redraw_graph)
-            except Exception:
-                # fallback to direct redraw if scheduling fails
-                self._redraw_graph()
+    def on_graph_update(self, data=None):
+        """
+        Called when a graph_update event is received from the server.
+        Redraws the graph using the data from the event payload.
+        """
+        print("[SocketIO] Graph update event received.")
+        if data:
+            self.graph = data
+            self.master.after_idle(self._redraw_graph)
 
     # ----------------------
     # Toolbar / menus / small helpers
@@ -955,11 +931,6 @@ class WorkflowApp:
                 self._ensure_server_for_file(self.filename)
             except Exception:
                 pass
-            # update mtime for file-watch
-            try:
-                self.last_mtime = os.path.getmtime(self.filename)
-            except Exception:
-                self.last_mtime = None
             self.add_recent_file(fn)
             self._reload_graph()
 
@@ -972,10 +943,6 @@ class WorkflowApp:
                 self._ensure_server_for_file(self.filename)
             except Exception:
                 pass
-            try:
-                self.last_mtime = os.path.getmtime(self.filename)
-            except Exception:
-                self.last_mtime = None
             self.add_recent_file(fn)
             self._reload_graph()
 
@@ -1009,18 +976,9 @@ class WorkflowApp:
         if filename:
             self.filename = filename
             self.master.title(f"Workforce - {os.path.basename(filename)}")
-            # let server persist via /save-graph if possible
-            self.save_to_current_file()
             self.add_recent_file(filename)
-            # update mtime if file exists locally
-            try:
-                self.last_mtime = os.path.getmtime(self.filename)
-            except Exception:
-                self.last_mtime = None
     
     def save_and_exit(self, event=None):
-        if self.filename:
-            self.save_to_current_file()
         self.master.quit()
                 
     def on_shift_left_release(self, event):
@@ -1150,41 +1108,17 @@ class WorkflowApp:
             if nd:
                 self.draw_node(nid, node_data=nd)
 
-    # Workfile auto-load + file-watcher
+    # Workfile auto-load
     def try_load_workfile(self):
         default_file = default_workfile()
         if os.path.exists(default_file) and not self.filename:
             self.filename = os.path.abspath(default_file)
             try:
-                # ensure server and load via server if possible
-                try:
-                    self._ensure_server_for_file(self.filename)
-                except Exception:
-                    pass
+                self._ensure_server_for_file(self.filename)
                 self._reload_graph()
                 self.master.title(f"Workforce - {self.filename}")
             except Exception:
                 pass
-            try:
-                self.last_mtime = os.path.getmtime(default_file)
-            except Exception:
-                self.last_mtime = None
-        # start periodic check
-        self.master.after(self.reload_interval, self.check_reload)
-
-    def check_reload(self):
-        if self.filename and os.path.exists(self.filename):
-            try:
-                mtime = os.path.getmtime(self.filename)
-                if self.last_mtime and mtime > self.last_mtime:
-                    self.last_mtime = mtime
-                    try:
-                        self._reload_graph()
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-        self.master.after(self.reload_interval, self.check_reload)
 
 class Gui:
     def __init__(self, filename=None):
@@ -1201,4 +1135,3 @@ class Gui:
 
 def main(args):
     Gui(args.filename)
-

@@ -1,50 +1,85 @@
 <?xml version='1.0' encoding='utf-8'?>
-<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d5" for="node" attr.name="status" attr.type="string"/>
-<key id="d4" for="node" attr.name="y" attr.type="double"/>
-<key id="d3" for="node" attr.name="x" attr.type="double"/>
-<key id="d2" for="node" attr.name="label" attr.type="string"/>
-<key id="d1" for="graph" attr.name="suffix" attr.type="string"/>
-<key id="d0" for="graph" attr.name="prefix" attr.type="string"/>
-<graph edgedefault="directed"><data key="d0">bash -c ' pwd;
-</data>
-<data key="d1">'</data>
-<node id="34766383-3b75-4ada-a42c-f91cb2b5b9c4">
-  <data key="d2">echo 'format string into file' \
-  &gt;&gt; file.txt</data>
-  <data key="d3">293.0</data>
-  <data key="d4">152.0</data>
-  <data key="d5"></data>
-</node>
-<node id="005912c2-fcdf-48e9-a28c-1dc3f117e640">
-  <data key="d2">echo 'Run formatting in parallel' &gt;&gt; file.txt</data>
-  <data key="d3">257.0</data>
-  <data key="d4">254.0</data>
-  <data key="d5"></data>
-</node>
-<node id="6fe366b0-8990-4107-b588-ca95851c5ea9">
-  <data key="d2"># Can include comments in pipeline
-rm -rf file.txt</data>
-  <data key="d3">-145.0</data>
-  <data key="d4">219.0</data>
-  <data key="d5"></data>
-</node>
-<node id="b05017c3-9e95-417b-94f0-ceb50b027883">
-  <data key="d2">wget https://www.google.com/</data>
-  <data key="d3">637.0</data>
-  <data key="d4">207.0</data>
-  <data key="d5"></data>
-</node>
-<node id="d5b8306c-1727-4232-85e7-81be95019161">
-  <data key="d2">cat index.html
-rm index.html
-rm file.txt</data>
-  <data key="d3">912.2222222222222</data>
-  <data key="d4">188.88888888888889</data>
-  <data key="d5"></data>
-</node>
-<edge source="34766383-3b75-4ada-a42c-f91cb2b5b9c4" target="b05017c3-9e95-417b-94f0-ceb50b027883"/>
-<edge source="005912c2-fcdf-48e9-a28c-1dc3f117e640" target="b05017c3-9e95-417b-94f0-ceb50b027883"/>
-<edge source="6fe366b0-8990-4107-b588-ca95851c5ea9" target="34766383-3b75-4ada-a42c-f91cb2b5b9c4"/>
-<edge source="6fe366b0-8990-4107-b588-ca95851c5ea9" target="005912c2-fcdf-48e9-a28c-1dc3f117e640"/>
-<edge source="b05017c3-9e95-417b-94f0-ceb50b027883" target="d5b8306c-1727-4232-85e7-81be95019161"/>
-</graph></graphml>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d4" for="edge" attr.name="id" attr.type="string" />
+  <key id="d3" for="node" attr.name="status" attr.type="string" />
+  <key id="d2" for="node" attr.name="y" attr.type="string" />
+  <key id="d1" for="node" attr.name="x" attr.type="string" />
+  <key id="d0" for="node" attr.name="label" attr.type="string" />
+  <graph edgedefault="directed">
+    <node id="0c2476bd-650f-457f-92db-137aa20ac023">
+      <data key="d0">pwd</data>
+      <data key="d1">554.0</data>
+      <data key="d2">231.0</data>
+      <data key="d3" />
+    </node>
+    <node id="c7677a4a-05a5-44bf-9db6-233be4e41d03">
+      <data key="d0">ls</data>
+      <data key="d1">314.0</data>
+      <data key="d2">276.0</data>
+      <data key="d3" />
+    </node>
+    <node id="9df184ac-a649-4c7e-a00a-b39b116ec061">
+      <data key="d0">pwd</data>
+      <data key="d1">439.0</data>
+      <data key="d2">359.0</data>
+      <data key="d3" />
+    </node>
+    <node id="4a5a69d2-8864-469e-a68b-2b07106b5683">
+      <data key="d0">ls</data>
+      <data key="d1">452.0</data>
+      <data key="d2">126.0</data>
+      <data key="d3" />
+    </node>
+    <node id="0b7c9c79-fc61-429e-84f2-26e2e4354712">
+      <data key="d0">ls</data>
+      <data key="d1">713.0</data>
+      <data key="d2">105.0</data>
+      <data key="d3" />
+    </node>
+    <node id="f1dd7194-c4eb-4170-943b-f028770b6b99">
+      <data key="d0">ls</data>
+      <data key="d1">601.0</data>
+      <data key="d2">165.0</data>
+      <data key="d3" />
+    </node>
+    <node id="b58f2dfc-77ff-4e31-a35a-919da4095e29">
+      <data key="d0">pwd</data>
+      <data key="d1">639.0</data>
+      <data key="d2">96.0</data>
+      <data key="d3" />
+    </node>
+    <node id="5009f6f4-dc8c-4d9e-94a9-29073bb0ae32">
+      <data key="d0">ls</data>
+      <data key="d1">756.0</data>
+      <data key="d2">140.0</data>
+      <data key="d3" />
+    </node>
+    <node id="31676e45-2cab-4c19-bb53-9c373b01eb12">
+      <data key="d0">ls</data>
+      <data key="d1">630.0</data>
+      <data key="d2">445.0</data>
+      <data key="d3" />
+    </node>
+    <edge source="0c2476bd-650f-457f-92db-137aa20ac023" target="c7677a4a-05a5-44bf-9db6-233be4e41d03">
+      <data key="d4">dd683d6a-e98f-45ac-8d65-77c3284b3697</data>
+    </edge>
+    <edge source="0c2476bd-650f-457f-92db-137aa20ac023" target="b58f2dfc-77ff-4e31-a35a-919da4095e29">
+      <data key="d4">50168de4-743d-4b83-bc97-fd6bc9ec8b5a</data>
+    </edge>
+    <edge source="9df184ac-a649-4c7e-a00a-b39b116ec061" target="0c2476bd-650f-457f-92db-137aa20ac023">
+      <data key="d4">ae10966c-8f78-4b5f-acba-ba1cff562ed4</data>
+    </edge>
+    <edge source="4a5a69d2-8864-469e-a68b-2b07106b5683" target="0c2476bd-650f-457f-92db-137aa20ac023">
+      <data key="d4">373ac2ae-51ae-4c1c-a41e-4e9ad3c1c52e</data>
+    </edge>
+    <edge source="0b7c9c79-fc61-429e-84f2-26e2e4354712" target="0c2476bd-650f-457f-92db-137aa20ac023">
+      <data key="d4">2df276a8-5cbb-4875-a936-2c92cebb5bb3</data>
+    </edge>
+    <edge source="0b7c9c79-fc61-429e-84f2-26e2e4354712" target="5009f6f4-dc8c-4d9e-94a9-29073bb0ae32">
+      <data key="d4">33a0defe-5a98-485d-993b-00bf319aba42</data>
+    </edge>
+    <edge source="f1dd7194-c4eb-4170-943b-f028770b6b99" target="0c2476bd-650f-457f-92db-137aa20ac023">
+      <data key="d4">ddab866f-1977-434e-8656-b02498297502</data>
+    </edge>
+  </graph>
+</graphml>

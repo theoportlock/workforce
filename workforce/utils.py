@@ -84,14 +84,3 @@ def resolve_port(filename: str | None = None) -> tuple[str, int]:
     print("Multiple servers active. Specify file path explicitly.", file=sys.stderr)
     sys.exit(1)
 
-
-def send_request(port, endpoint, payload):
-    url = f"http://127.0.0.1:{port}/{endpoint}"
-    try:
-        r = requests.post(url, json=payload)
-        r.raise_for_status()
-        print(json.dumps(r.json(), indent=2))
-    except requests.exceptions.RequestException as e:
-        print(f"Error contacting server: {e}", file=sys.stderr)
-        sys.exit(1)
-
