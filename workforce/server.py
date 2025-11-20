@@ -96,6 +96,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     socketio = SocketIO(
         app,
         cors_allowed_origins="*",
+        async_mode='threading',  # <--- ADD THIS LINE
         ping_interval=30,  # Send a ping every 30 seconds
         ping_timeout=90    # Wait 90 seconds for a pong response before disconnecting
     )
@@ -109,7 +110,9 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             try:
                 result = func(*args, **kwargs)
                 # Broadcast an updated graph to connected clients in the room named by abs_path
-                socketio.emit("graph_update", result, room=abs_path)
+                # FIX 1: Explicit namespace ensures it reaches the connected client
+                print(f"[DEBUG] Emitting graph_update for {abs_path}") # Add debug print
+                socketio.emit("graph_update", result, namespace='/')
 
                 # If we have a previous graph, check for status transitions to emit node lifecycle events
                 if last_graph and isinstance(result, dict) and 'nodes' in result:
@@ -120,16 +123,18 @@ def start_server(filename: str, port: int | None = None, background: bool = True
                         old_stat = old_status.get(nid)
 
                         if new_stat == 'run' and old_stat != 'run':
-                            socketio.emit("node_ready", {"node_id": nid}, room=abs_path)
+                            socketio.emit("node_ready", {"node_id": nid}, namespace='/')
                         elif new_stat == 'ran' and old_stat != 'ran':
-                            socketio.emit("node_done", {"node_id": nid}, room=abs_path)
+                            socketio.emit("node_done", {"node_id": nid}, namespace='/')
                 last_graph = result
             except Exception as e:
                 print(f"[ERROR] Graph worker: {e}")
             finally:
                 MODIFICATION_QUEUE.task_done()
 
-    threading.Thread(target=graph_worker, daemon=True).start()
+    # FIX 2: Use SocketIO's background task spawner instead of standard threading
+    # This ensures the thread can talk to the WebSocket loop.
+    socketio.start_background_task(target=graph_worker)
 
     # Update registry with actual PID (os.getpid) since this is the running process
     registry[abs_path] = {"port": port, "pid": os.getpid(), "clients": 0}
@@ -157,18 +162,12 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
     @socketio.on('connect')
     def on_connect():
-        # The client will send its workfile path (or file ID) on connection,
-        # but for simplicity here, we'll just join the room named after the
-        # server's currently served file.
-        from flask_socketio import join_room
-        join_room(abs_path)
-        print(f"[SocketIO] Client connected and joined room: {abs_path}")
+        # This handler is for logging. Room logic is removed for simplicity.
+        print(f"[SocketIO] Client connected.")
 
     @socketio.on('disconnect')
     def on_disconnect():
-        from flask_socketio import leave_room
-        leave_room(abs_path)
-        print(f"[SocketIO] Client disconnected from room: {abs_path}")
+        print(f"[SocketIO] Client disconnected.")
 
     @app.route("/client-connect", methods=["POST"])
     def client_connect():
@@ -275,4 +274,3 @@ def cmd_stop(args):
 
 def cmd_list(args):
     list_servers()
-

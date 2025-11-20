@@ -4,6 +4,8 @@
 #   /update-node, /edit-status, /save-graph, /client-connect, /client-disconnect
 # - Starts a background server for the Workfile if none is registered.
 
+import logging
+
 import os
 import sys
 import time
@@ -14,6 +16,9 @@ from tkinter.scrolledtext import ScrolledText
 import requests
 import socketio
 import atexit
+
+# Add this right after your imports
+logging.basicConfig(level=logging.DEBUG)
 
 from workforce.utils import load_registry, default_workfile, resolve_port
 from workforce.server import start_server
@@ -97,6 +102,9 @@ class WorkflowApp:
         self.master.bind('t', lambda e: self.toggle_terminal())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
+        
+        # shouldnt need this
+        self.master.bind('<F5>', lambda e: self._reload_graph())
 
         # Add mouse-wheel zoom bindings
         self.canvas.bind("<MouseWheel>", self.on_zoom)
@@ -204,16 +212,45 @@ class WorkflowApp:
     def _start_socketio(self):
         if self.sio is not None:
             return
-        try:
-            self.sio = socketio.Client()
-            self.sio.on('graph_update', self.on_graph_update)
-            # connect (use base_url)
-            # socketio wants ws/http root (no path)
-            self.sio.connect(self.base_url, wait_timeout=1)
-        except Exception as e:
-            # non-fatal; fallback to polling
-            print(f"[Warning] SocketIO connect failed: {e}")
-            self.sio = None
+
+        # We run this in a thread so the GUI doesn't freeze while connecting
+        def connect_worker():
+            try:
+                # Create the client with logging enabled
+                self.sio = socketio.Client(logger=True, engineio_logger=True)
+
+                # --- Define Event Handlers ---
+                @self.sio.event
+                def connect():
+                    print(f"[SocketIO] Successfully connected to {self.base_url}")
+
+                @self.sio.event
+                def connect_error(data):
+                    print(f"[SocketIO] Connection failed: {data}")
+
+                @self.sio.event
+                def disconnect():
+                    print("[SocketIO] Disconnected")
+
+                # Register the specific graph update handler
+                self.sio.on('graph_update', self.on_graph_update)
+
+                # Attempt connection
+                print(f"[DEBUG] Attempting background connection to {self.base_url}...")
+                self.sio.connect(self.base_url, wait_timeout=5)
+                
+            except Exception as e:
+                print(f"[Warning] SocketIO setup failed: {e}")
+                self.sio = None
+
+        # Start the thread
+        t = threading.Thread(target=connect_worker, daemon=True)
+        t.start()
+
+    def on_graph_update(self, data=None):
+        print(f"[SocketIO] Graph update received! Payload: {data}")
+        # Schedule the visual update on the main GUI thread
+        self.master.after(0, self._reload_graph)
 
     def _client_connect(self):
         if self.client_connected or not self.base_url:
@@ -256,35 +293,22 @@ class WorkflowApp:
     def _reload_graph(self):
         # Fetch authoritative node-link dict from server if possible
         if not self.filename:
-            self.graph = {"nodes": [], "links": []}
             return
-        try:
-            # ensure we have base_url for this file
-            # try resolve_port to set base_url if possible
+            
+        # Simple internal function to fetch and redraw
+        def _fetch():
             try:
-                abs_path, port = resolve_port(self.filename)
-                self.base_url = f"http://127.0.0.1:{port}"
-            except SystemExit:
-                # resolve_port may call sys.exit; ignore
-                pass
-            r = requests.get(self._url("/get-graph"), timeout=2.0)
-            r.raise_for_status()
-            self.graph = r.json() or {"nodes": [], "links": []}
-        except Exception:
-            # fallback: if the file exists, read GraphML locally for display only
-            try:
-                import networkx as nx
-                if os.path.exists(self.filename):
-                    G = nx.read_graphml(self.filename)
-                    from networkx.readwrite import json_graph
-                    self.graph = json_graph.node_link_data(G)
-                else:
-                    self.graph = {"nodes": [], "links": []}
-            except Exception:
-                self.graph = {"nodes": [], "links": []}
+                # Use a short timeout so we don't freeze the UI
+                r = requests.get(self._url("/get-graph"), timeout=1.0)
+                if r.status_code == 200:
+                    self.graph = r.json()
+                    # Schedule the drawing on the main thread
+                    self.master.after(0, self._redraw_graph)
+            except Exception as e:
+                print(f"Background fetch failed: {e}")
 
-        # redrawing must be done on the Tk main thread
-        self.master.after(0, self._redraw_graph)
+        # Run the network request in a separate thread to avoid freezing GUI
+        threading.Thread(target=_fetch, daemon=True).start()
 
     # New helper: centralized, thread-safe redraw of the current self.graph
     def _redraw_graph(self):
@@ -826,19 +850,6 @@ class WorkflowApp:
 
     # ----------------------
     # SocketIO handler
-    # ----------------------
-    def on_graph_update(self, data=None):
-        """
-        Called from background SocketIO thread — must not touch Tkinter directly.
-        Receives graph data from the server and schedules a redraw on the main UI thread.
-        """
-        print("[SocketIO] Graph update event received.")
-        if data:
-            # Replace local graph object
-            self.graph = data
-            # Schedule UI update on Tkinter's main thread
-            self.master.after(0, self._redraw_graph)
-
     # ----------------------
     # Toolbar / menus / small helpers
     # ----------------------
