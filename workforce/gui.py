@@ -20,13 +20,12 @@ import atexit
 # Add this right after your imports
 logging.basicConfig(level=logging.DEBUG)
 
-from workforce.utils import load_registry, default_workfile, resolve_port
-from workforce.server import start_server
+from workforce.utils import load_registry
 
 class WorkflowApp:
-    def __init__(self, master, filename: str | None = None):
+    def __init__(self, master, url: str):
         self.master = master
-        self.filename = filename or default_workfile()
+        self.base_url = url
         self.base_url = ""
         self.graph = {"nodes": [], "links": []}
         self.node_widgets = {}
@@ -63,22 +62,9 @@ class WorkflowApp:
         self.zoom_slider.set(1.0)
         self.zoom_slider.grid(row=1, column=1, sticky="ns")
 
-        self.terminal_frame = tk.Frame(master)
-        self.terminal_text = ScrolledText(self.terminal_frame, height=8, bg="#181818", fg="#e0e0e0")
-        self.terminal_text.pack(fill=tk.BOTH, expand=True)
-        self.terminal_text.config(state=tk.DISABLED)
-        self.terminal_frame.grid(row=2, column=0, sticky="nsew")
-        self.terminal_frame.grid_remove()
-
-        # Terminal & prefix/suffix state
+        # Prefix/suffix state
         self.prefix = ""
         self.suffix = ""
-        self.terminal_visible = False
-        self.terminal_height = 180
-
-        # Place terminal_frame (hidden by default)
-        self.terminal_frame.grid(row=2, column=0, sticky="nsew")
-        self.terminal_frame.grid_remove()
 
         # Bindings
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
@@ -98,8 +84,6 @@ class WorkflowApp:
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
         self.master.bind('p', lambda e: self.prefix_suffix_popup())
         self.master.bind('q', lambda e: self.save_and_exit())
-        self.master.bind('o', lambda e: self.open_file())
-        self.master.bind('t', lambda e: self.toggle_terminal())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
         
@@ -120,27 +104,17 @@ class WorkflowApp:
         self.sio = None
         self.client_connected = False
 
-        # Recent files
-        self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
-        self.recent_files = self.load_recent_files()
         menubar = tk.Menu(self.master)
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Open", command=self.load_graph, accelerator="O")
-        file_menu.add_command(label="Save", command=self.save_graph, accelerator="Ctrl+S")
-        self.recent_menu = tk.Menu(file_menu, tearoff=0)
-        file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
-        self.update_recent_menu()
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.save_and_exit, accelerator="Q")
+        file_menu.add_command(label="Exit", command=self.master.quit, accelerator="Q")
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
         edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D")
-        edit_menu.add_command(label="Update Node", command=self.update_node, accelerator="dbl click node")
         edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
         edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
         edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
@@ -155,54 +129,21 @@ class WorkflowApp:
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
         tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup, accelerator="P")
-        tools_menu.add_command(label="Show/Hide Terminal", command=self.toggle_terminal, accelerator="T")
         menubar.add_cascade(label="Tools", menu=tools_menu)
 
         self.master.config(menu=menubar)
 
-        # Ensure server for file and load
-        if self.filename:
-            try:
-                self._ensure_server_for_file(self.filename)
-            except Exception as e:
-                print(f"[Warning] server ensure failed: {e}")
+        # Set the base_url from the provided URL
+        self.base_url = url
+
         # Try connect socketio and notify server
         self._start_socketio()
         self._client_connect()
         self._reload_graph()
 
-        self.master.after_idle(self.try_load_workfile)
-
         # cleanup on exit
         atexit.register(self._atexit_disconnect)
         self.master.protocol("WM_DELETE_WINDOW", self._on_close)
-
-
-    def _ensure_server_for_file(self, filename: str, timeout: float = 6.0):
-        abs_path = os.path.abspath(filename)
-        reg = load_registry()
-        if abs_path in reg:
-            port = reg[abs_path]["port"]
-            self.base_url = f"http://127.0.0.1:{port}"
-            return
-        # start background server
-        start_server(abs_path, background=True)
-        # wait until registry updated and responsive
-        start = time.time()
-        while time.time() - start < timeout:
-            reg = load_registry()
-            if abs_path in reg:
-                port = reg[abs_path]["port"]
-                self.base_url = f"http://127.0.0.1:{port}"
-                # quick probe
-                try:
-                    r = requests.get(self._url("/get-graph"), timeout=1.0)
-                    if r.status_code == 200:
-                        return
-                except Exception:
-                    pass
-            time.sleep(0.2)
-        raise RuntimeError(f"Server for '{filename}' not available after {timeout}s")
 
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
@@ -292,9 +233,7 @@ class WorkflowApp:
     # ----------------------
     def _reload_graph(self):
         # Fetch authoritative node-link dict from server if possible
-        if not self.filename:
-            return
-            
+
         # Simple internal function to fetch and redraw
         def _fetch():
             try:
@@ -328,9 +267,9 @@ class WorkflowApp:
             self.draw_edge(link.get("source"), link.get("target"))
 
     # Add server-backed save (used by run/save actions)
-    def save_to_current_file(self):
-        """Ask the server to persist the current graph for the active file (no-op if server saved)."""
-        if not self.filename:
+    def _save_graph_on_server(self):
+        """Ask the server to persist the current graph (no-op if server saved)."""
+        if not self.base_url:
             return
         try:
             requests.post(self._url("/save-graph"), timeout=1.0)
@@ -429,31 +368,33 @@ class WorkflowApp:
         self.node_label_popup(current, on_save)
 
     def update_node(self):
-        if len(self.selected_nodes) != 1:
-            return
-        node_id = self.selected_nodes[0]
-        new_label = simpledialog.askstring("Update Node", "New label/command:")
-        if new_label:
-            try:
-                requests.post(self._url("/update-node"), json={"id": node_id, "label": new_label}, timeout=2.0)
-                # self._reload_graph() # Wait for graph_update event
-            except Exception as e:
-                messagebox.showerror("Update error", str(e))
+        # This method is removed as the primary way to update a node label is via double-clicking a node
+        # which calls node_label_popup and then uses the server's /update-node endpoint.
+        # The menu item "Update Node" is also removed.
+        pass
     
     def run_selected(self):
-        if self.filename:
-            for node_id in self.selected_nodes:
-                self.run_in_terminal([
-                    sys.executable, "-m", "workforce", "run", "node", self.filename, node_id,
-                    "--prefix", self.prefix, "--suffix", self.suffix
-                ], title=f"Run Node: {node_id}")
+        if self.base_url:
+            payload = {
+                "nodes": self.selected_nodes,
+                "prefix": self.prefix,
+                "suffix": self.suffix
+            }
+            try:
+                requests.post(self._url("/run"), json=payload, timeout=2.0)
+            except Exception as e:
+                messagebox.showerror("Run Error", f"Failed to start node(s): {e}")
     
-    def run_pipeline(self):
-        if self.filename:
-            self.run_in_terminal([
-                sys.executable, "-m", "workforce", "run", self.filename,
-                "--prefix", self.prefix, "--suffix", self.suffix
-            ], title="Run Pipeline")
+    def run_pipeline(self): # Renamed from run_pipeline to match CLI
+        if self.base_url:
+            payload = {
+                "prefix": self.prefix,
+                "suffix": self.suffix
+            }
+            try:
+                requests.post(self._url("/run"), json=payload, timeout=2.0)
+            except Exception as e:
+                messagebox.showerror("Run Error", f"Failed to start pipeline: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):
@@ -477,22 +418,8 @@ class WorkflowApp:
                 except Exception:
                     pass
         # self._reload_graph() # Wait for graph_update event
-    
-    def toggle_terminal(self):
-        if self.terminal_visible:
-            self.terminal_frame.grid_remove()
-            self.terminal_visible = False
-        else:
-            self.terminal_frame.grid(row=2, column=0, sticky="nsew")
-            self.terminal_visible = True
-    
-    def terminal_write(self, text):
-        self.terminal_text.config(state=tk.NORMAL)
-        self.terminal_text.insert(tk.END, text)
-        self.terminal_text.see(tk.END)
-        self.terminal_text.config(state=tk.DISABLED)
 
-    def prefix_suffix_popup(self):
+    def prefix_suffix_popup(self): # Restore this method
         editor = tk.Toplevel(self.master)
         editor.title("Prefix/Suffix")
         editor.geometry("800x300")
@@ -523,6 +450,7 @@ class WorkflowApp:
         def save_and_close(event=None):
             self.prefix = prefix_text.get("1.0", "end-1c")
             self.suffix = suffix_text.get("1.0", "end-1c")
+            self.save_prefix_suffix() # Save to server
             editor.destroy()
 
         def cancel_and_close(event=None):
@@ -543,6 +471,15 @@ class WorkflowApp:
         editor.transient(self.master)
         editor.grab_set()
         prefix_text.focus_set()
+
+    def save_prefix_suffix(self):
+        """Sends the current prefix and suffix to the server to be saved."""
+        if not self.base_url:
+            return
+        try:
+            requests.post(self._url("/edit-prefix-suffix"), json={"prefix": self.prefix, "suffix": self.suffix}, timeout=2.0)
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Failed to save prefix/suffix: {e}")
 
     # ----------------------
     # Drawing and UI helpers
@@ -854,26 +791,17 @@ class WorkflowApp:
     # Toolbar / menus / small helpers
     # ----------------------
     def create_toolbar(self):
-        self.recent_file_path = os.path.join(os.path.expanduser('~'), '.workforce_recent')
-        self.recent_files = self.load_recent_files()
         menubar = tk.Menu(self.master)
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Open", command=self.load_graph, accelerator="O")
-        file_menu.add_command(label="Save", command=self.save_graph, accelerator="Ctrl+S")
-        self.recent_menu = tk.Menu(file_menu, tearoff=0)
-        file_menu.add_cascade(label="Open Recent", menu=self.recent_menu)
-        self.update_recent_menu()
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.save_and_exit, accelerator="Q")
+        file_menu.add_command(label="Exit", command=self._on_close, accelerator="Q")
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
         edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D")
-        edit_menu.add_command(label="Update Node", command=self.update_node, accelerator="dbl click node")
         edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
         edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
         edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
@@ -888,91 +816,9 @@ class WorkflowApp:
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
         tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup, accelerator="P")
-        tools_menu.add_command(label="Show/Hide Terminal", command=self.toggle_terminal, accelerator="T")
         menubar.add_cascade(label="Tools", menu=tools_menu)
 
         self.master.config(menu=menubar)
-
-    # Recent files helpers
-    def load_recent_files(self):
-        try:
-            with open(self.recent_file_path, "r") as f:
-                files = [line.strip() for line in f if line.strip() and os.path.exists(line.strip())]
-            return files
-        except Exception:
-            return []
-
-    def save_recent_files(self):
-        try:
-            with open(self.recent_file_path, "w") as f:
-                for p in self.recent_files:
-                    f.write(p + "\n")
-        except Exception:
-            pass
-
-    def add_recent_file(self, filename):
-        if not filename:
-            return
-        if filename in self.recent_files:
-            self.recent_files.remove(filename)
-        self.recent_files.insert(0, filename)
-        if len(self.recent_files) > 10:
-            self.recent_files = self.recent_files[:10]
-        self.save_recent_files()
-        self.update_recent_menu()
-
-    def update_recent_menu(self):
-        try:
-            self.recent_menu.delete(0, tk.END)
-            if not self.recent_files:
-                self.recent_menu.add_command(label="(No recent files)", state=tk.DISABLED)
-            else:
-                for f in self.recent_files:
-                    self.recent_menu.add_command(label=f, command=lambda fn=f: self.open_recent_file(fn))
-        except Exception:
-            pass
-
-    def open_recent_file(self, filename):
-        # change cwd to file's directory (as in new code)
-        base_dir = os.path.dirname(os.path.abspath(filename))
-        try:
-            os.chdir(base_dir)
-        except Exception:
-            pass
-        self.filename = filename
-        try:
-            self._ensure_server_for_file(self.filename)
-        except Exception:
-            pass
-        try:
-            self._reload_graph()
-        except Exception:
-            pass
-        self.master.title(f"Workforce - {os.path.basename(filename)}")
-        self.add_recent_file(filename)
-
-    def open_file(self):
-        fn = filedialog.askopenfilename()
-        if fn:
-            self.filename = fn
-            try:
-                self._ensure_server_for_file(self.filename)
-            except Exception:
-                pass
-            self.add_recent_file(fn)
-            self._reload_graph()
-
-    def load_graph(self):
-        # wrapper that mirrors previous "open_file" behavior but named load_graph for toolbar compatibility
-        fn = filedialog.askopenfilename()
-        if fn:
-            self.filename = fn
-            try:
-                self._ensure_server_for_file(self.filename)
-            except Exception:
-                pass
-            self.add_recent_file(fn)
-            self._reload_graph()
 
     def on_shift_left_press(self, event):
         # Start selection rectangle
@@ -995,19 +841,8 @@ class WorkflowApp:
         x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         self.canvas.coords(self._select_rect_id, x0, y0, x1, y1)
 
-    # Save as prompt (sets filename then delegates to save_to_current_file)
-    def save_graph(self):
-        initialfile = None
-        if not self.filename:
-            initialfile = "Workfile"
-        filename = filedialog.asksaveasfilename(initialfile=initialfile)
-        if filename:
-            self.filename = filename
-            self.master.title(f"Workforce - {os.path.basename(filename)}")
-            self.add_recent_file(filename)
-    
     def save_and_exit(self, event=None):
-        self.master.quit()
+        self._on_close()
                 
     def on_shift_left_release(self, event):
         if (
@@ -1033,44 +868,6 @@ class WorkflowApp:
         self._select_rect_id = None
         self._select_rect_start = None
         self._select_rect_active = False
-
-    # ----------------------
-    # Replace run_in_terminal to ensure subprocess is imported locally
-    def run_in_terminal(self, cmd, title=None):
-        """Run command in background and stream stdout -> terminal panel."""
-        import queue
-        import subprocess
-        q = queue.Queue()
-
-        if title:
-            self.terminal_write(f"\n=== {title} ===\n")
-        else:
-            self.terminal_write(f"\n$ {' '.join(cmd)}\n")
-
-        def _reader():
-            try:
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-                for line in proc.stdout:
-                    q.put(line)
-                proc.wait()
-            except Exception as e:
-                q.put(f"\n[Error running command: {e}]\n")
-        threading.Thread(target=_reader, daemon=True).start()
-
-        def _poll():
-            try:
-                while True:
-                    line = q.get_nowait()
-                    self.terminal_write(line)
-            except Exception:
-                pass
-            # continue polling while threads exist
-            if threading.active_count() > 1 or not q.empty():
-                self.master.after(50, _poll)
-        # ensure terminal visible
-        if not self.terminal_visible:
-            self.toggle_terminal()
-        _poll()
 
     # ----------------------
     # Zoom helpers (wheel + slider)
@@ -1136,30 +933,15 @@ class WorkflowApp:
             if nd:
                 self.draw_node(nid, node_data=nd)
 
-    # Workfile auto-load
-    def try_load_workfile(self):
-        default_file = default_workfile()
-        if os.path.exists(default_file) and not self.filename:
-            self.filename = os.path.abspath(default_file)
-            try:
-                self._ensure_server_for_file(self.filename)
-                self._reload_graph()
-                self.master.title(f"Workforce - {self.filename}")
-            except Exception:
-                pass
-
 class Gui:
-    def __init__(self, filename=None):
+    def __init__(self, url: str):
         self.root = tk.Tk()
-        self.app = WorkflowApp(self.root)
-        if filename:
-            self.app.filename = filename
-            try:
-                self.app._reload_graph()
-                self.app.master.title(f"Workforce - {filename}")
-            except Exception as e:
-                messagebox.showerror("Load Error", f"Failed to load {filename}:\n{e}")
+        self.app = WorkflowApp(self.root, url)
+        try:
+            self.app.master.title(f"Workforce - {url}")
+        except Exception as e:
+            messagebox.showerror("GUI Init Error", f"Failed to initialize GUI for {url}:\n{e}")
         self.root.mainloop()
 
-def main(args):
-    Gui(args.filename)
+def main(url: str):
+    Gui(url)

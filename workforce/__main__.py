@@ -2,116 +2,146 @@
 # -*- coding: utf-8 -*-
 
 """
-workforce — unified CLI entrypoint
-Default: launch GUI with Workfile (if present) or fallback to get_default_workfile().
-Subcommands: gui, run, server, edit.
+workforce — unified CLI entrypoint.
+All GUI/RUN/EDIT operations resolve either a URL or a filename into
+an active server URL automatically using utils.resolve_target().
 """
 
 import argparse
 import sys
-import os
-from importlib import import_module
+from workforce.utils import default_workfile, resolve_target
+from workforce.gui import main as gui_main
+from workforce.run import main as run_main
+from workforce.server import (
+    cmd_start as server_cmd_start,
+    cmd_stop as server_cmd_stop,
+    cmd_list as server_cmd_list,
+)
+from workforce.edit import (
+    cmd_add_node,
+    cmd_add_edge,
+    cmd_remove_node,
+    cmd_remove_edge,
+    cmd_edit_status,
+)
 
-DEFAULT_WORKFILE = "Workfile"
-
-def find_workfile():
-    path = os.path.join(os.getcwd(), DEFAULT_WORKFILE)
-    return path if os.path.exists(path) else None
-
-def launch_gui():
-    from workforce.gui import main as gui_main
-    class Args: filename = find_workfile()
-    gui_main(Args)
+# -----------------------------------------------------------------------------
 
 def main():
-    # Case 1: no arguments -> launch GUI
+    # Default behaviour: GUI with default workfile
     if len(sys.argv) == 1:
-        launch_gui()
+        url = resolve_target(default_workfile())
+        gui_main(url)
         return
 
-    # Top-level parser
     parser = argparse.ArgumentParser(prog="workforce", description="Workforce CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # ---------------- GUI ----------------
-    gui_parser = subparsers.add_parser("gui", help="Launch graphical interface")
-    gui_parser.add_argument("filename", nargs="?", default=find_workfile(), help="GraphML file")
-    gui_parser.set_defaults(func=lambda args: import_module("workforce.gui").main(args))
+    gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
+    gui_p.add_argument("url_or_path", nargs="?", default=default_workfile())
+    gui_p.set_defaults(func=lambda args: gui_main(resolve_target(args.url_or_path)))
 
     # ---------------- RUN ----------------
-    run_parser = subparsers.add_parser("run", help="Execute workflow nodes")
-    run_parser.add_argument("filename", help="Workflow file (GraphML) or Server URL")
-    run_parser.add_argument("--prefix", default="", help="Command prefix")
-    run_parser.add_argument("--suffix", default="", help="Command suffix")
-    run_parser.set_defaults(func=lambda args: import_module("workforce.run").main(args))
+    run_p = subparsers.add_parser("run", help="Execute workflow")
+    run_p.add_argument("url_or_path", nargs="?", default=default_workfile())
+    run_p.add_argument("--prefix", default="")
+    run_p.add_argument("--suffix", default="")
+    run_p.set_defaults(
+        func=lambda args: run_main(
+            resolve_target(args.url_or_path),
+            prefix=args.prefix,
+            suffix=args.suffix,
+        )
+    )
 
     # ---------------- SERVER ----------------
-    server_parser = subparsers.add_parser("server", help="Manage workforce servers")
-    server_subs = server_parser.add_subparsers(dest="server_command", required=True)
+    server_p = subparsers.add_parser("server", help="Manage servers")
+    server_sub = server_p.add_subparsers(dest="server_command", required=True)
 
     # Start
-    start_p = server_subs.add_parser("start", help="Start a server")
-    start_p.add_argument("filename", nargs="?", help="Workflow file (GraphML)")
-    start_p.add_argument("--foreground", "-f", action="store_true")
-    start_p.add_argument("--port", type=int)
-    start_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_start(args))
+    sp = server_sub.add_parser("start", help="Start a server")
+    sp.add_argument("filename", nargs="?", default=default_workfile())
+    sp.add_argument("--foreground", "-f", action="store_true")
+    sp.add_argument("--port", type=int)
+    sp.set_defaults(func=lambda args: server_cmd_start(args))
 
     # Stop
-    stop_p = server_subs.add_parser("stop", help="Stop a server")
-    stop_p.add_argument("filename", nargs="?", help="Workflow file (GraphML)")
-    stop_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_stop(args))
+    sp2 = server_sub.add_parser("stop", help="Stop a server")
+    sp2.add_argument("filename", nargs="?", default=default_workfile())
+    sp2.set_defaults(func=lambda args: server_cmd_stop(args))
 
     # List
-    list_p = server_subs.add_parser("ls", help="List active servers")
-    list_p.set_defaults(func=lambda args: import_module("workforce.server").cmd_list(args))
+    sp3 = server_sub.add_parser("ls", help="List active servers")
+    sp3.set_defaults(func=lambda args: server_cmd_list(args))
 
     # ---------------- EDIT ----------------
-    edit_parser = subparsers.add_parser("edit", help="Edit running workflow via API")
-    edit_sub = edit_parser.add_subparsers(dest="subcommand", required=True)
+    edit_p = subparsers.add_parser("edit", help="Edit workflow graph via API")
+    edit_sub = edit_p.add_subparsers(dest="edit_cmd", required=True)
 
-    # Add-node
-    p_add = edit_sub.add_parser("add-node", help="Add node to graph")
-    p_add.add_argument("filename", help="Workflow file (GraphML)")
-    p_add.add_argument("label", help="Node label")
-    p_add.add_argument("--x", type=float, default=0)
-    p_add.add_argument("--y", type=float, default=0)
-    p_add.add_argument("--status", default="")
-    p_add.set_defaults(func=lambda args: import_module("workforce.edit").cmd_add_node(args))
 
-    # Remove-node
-    p_rmnode = edit_sub.add_parser("remove-node", help="Remove node by ID")
-    p_rmnode.add_argument("filename", help="Workflow file (GraphML)")
-    p_rmnode.add_argument("node_id")
-    p_rmnode.set_defaults(func=lambda args: import_module("workforce.edit").cmd_remove_node(args))
+    # --- add-node ---
+    en = edit_sub.add_parser("add-node")
+    en.add_argument("filename")
+    en.add_argument("label")
+    en.add_argument("--x", type=float, default=0)
+    en.add_argument("--y", type=float, default=0)
+    en.add_argument("--status", default="")
+    def _add_node(args):
+        path, port = resolve_port(args.filename)
+        cmd_add_node(args, port)
+    en.set_defaults(func=_add_node)
 
-    # Add-edge
-    p_addedge = edit_sub.add_parser("add-edge", help="Add edge between nodes")
-    p_addedge.add_argument("filename", help="Workfile file (GraphML)")
-    p_addedge.add_argument("source")
-    p_addedge.add_argument("target")
-    p_addedge.set_defaults(func=lambda args: import_module("workforce.edit").cmd_add_edge(args))
 
-    # Remove-edge
-    p_rmedge = edit_sub.add_parser("remove-edge", help="Remove edge between nodes")
-    p_rmedge.add_argument("filename", help="Workfile file (GraphML)")
-    p_rmedge.add_argument("source")
-    p_rmedge.add_argument("target")
-    p_rmedge.set_defaults(func=lambda args: import_module("workforce.edit").cmd_remove_edge(args))
+    # --- remove-node ---
+    ern = edit_sub.add_parser("remove-node")
+    ern.add_argument("filename")
+    ern.add_argument("node_id")
+    def _remove_node(args):
+        path, port = resolve_port(args.filename)
+        cmd_remove_node(args, port)
+    ern.set_defaults(func=_remove_node)
 
-    # Edit-status
-    p_status = edit_sub.add_parser("edit-status", help="Edit node/edge status")
-    p_status.add_argument("filename", help="Workfile file (GraphML)")
-    p_status.add_argument("element_type", choices=["node", "edge"])
-    p_status.add_argument("element_id")
-    p_status.add_argument("value", help="New status value")
-    p_status.set_defaults(func=lambda args: import_module("workforce.edit").cmd_edit_status(args))
 
-    # ---------------- PARSE & DISPATCH ----------------
+    # --- add-edge ---
+    ee = edit_sub.add_parser("add-edge")
+    ee.add_argument("filename")
+    ee.add_argument("source")
+    ee.add_argument("target")
+    def _add_edge(args):
+        path, port = resolve_port(args.filename)
+        cmd_add_edge(args, port)
+    ee.set_defaults(func=_add_edge)
+
+
+    # --- remove-edge ---
+    ere = edit_sub.add_parser("remove-edge")
+    ere.add_argument("filename")
+    ere.add_argument("source")
+    ere.add_argument("target")
+    def _remove_edge(args):
+        path, port = resolve_port(args.filename)
+        cmd_remove_edge(args, port)
+    ere.set_defaults(func=_remove_edge)
+
+
+    # --- edit-status ---
+    es = edit_sub.add_parser("edit-status")
+    es.add_argument("filename")
+    es.add_argument("element_type", choices=["node", "edge"])
+    es.add_argument("element_id")
+    es.add_argument("value")
+    def _edit_status(args):
+        path, port = resolve_port(args.filename)
+        cmd_edit_status(args, port)
+    es.set_defaults(func=_edit_status)
+
+    # Parse arguments and execute the corresponding function
     args = parser.parse_args()
-    if hasattr(args, "func"):
-        args.func(args)
-    else:
-        parser.print_help()
+    args.func(args)
+
+
+# -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

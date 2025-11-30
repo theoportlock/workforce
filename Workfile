@@ -12,18 +12,6 @@
       <data key="d2">134.0</data>
       <data key="d3" />
     </node>
-    <node id="82c44891-3d64-43b8-b2f9-30610fd9496c">
-      <data key="d0">pwd</data>
-      <data key="d1">816.0</data>
-      <data key="d2">326.0</data>
-      <data key="d3" />
-    </node>
-    <node id="627bb835-ba2c-4f6a-91ab-6b930126590b">
-      <data key="d0">pwd</data>
-      <data key="d1">702.0</data>
-      <data key="d2">354.0</data>
-      <data key="d3" />
-    </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d0">ls</data>
       <data key="d1">393.0</data>
@@ -33,14 +21,14 @@
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d0">ls
 </data>
-      <data key="d1">234.0</data>
-      <data key="d2">125.0</data>
+      <data key="d1">274.0</data>
+      <data key="d2">181.0</data>
       <data key="d3" />
     </node>
     <node id="17fdc5dd-f379-41d4-a64d-3c162feb0fb7">
       <data key="d0">ls</data>
-      <data key="d1">109.0</data>
-      <data key="d2">220.0</data>
+      <data key="d1">63.0</data>
+      <data key="d2">169.0</data>
       <data key="d3" />
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
@@ -55,17 +43,14 @@
       <data key="d2">311.0</data>
       <data key="d3" />
     </node>
-    <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="627bb835-ba2c-4f6a-91ab-6b930126590b">
-      <data key="d4">0b37ae85-70d5-453a-af88-ededeb4a140c</data>
-    </edge>
-    <edge source="627bb835-ba2c-4f6a-91ab-6b930126590b" target="82c44891-3d64-43b8-b2f9-30610fd9496c">
-      <data key="d4">b695e2a6-be82-4bc7-b999-f3b7f7a0631f</data>
-    </edge>
+    <node id="e24f25a1-8335-4557-a2aa-583b60ad9b83">
+      <data key="d0">pwd</data>
+      <data key="d1">728.0</data>
+      <data key="d2">157.0</data>
+      <data key="d3" />
+    </node>
     <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d4">096c5ccf-f859-4734-9418-ef39756348c8</data>
-    </edge>
-    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="627bb835-ba2c-4f6a-91ab-6b930126590b">
-      <data key="d4">ea5ec160-e5a4-4fe7-a1e2-1379584028b4</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d4">ea7603db-64b8-4f6c-9c88-4727cdb1cdbf</data>

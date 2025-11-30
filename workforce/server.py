@@ -75,17 +75,37 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     if port is None:
         port = utils.find_free_port()
 
+    # ---------------------------------------------------------
+    # BACKGROUND MODE: spawn a new Python process
+    # ---------------------------------------------------------
     if background:
-        # Use -m workforce.server to ensure imports work correctly in the child process
-        cmd = [sys.executable, "-m", "workforce.server", "start", abs_path, "--foreground", "--port", str(port)]
+        cmd = [
+            sys.executable,
+            "-m", "workforce",
+            "server", "start",
+            abs_path,
+            "--foreground",
+            "--port", str(port)
+        ]
 
-        # Popen inherits env by default, which is what we want
-        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=os.getcwd())
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=os.getcwd(),
+        )
 
         registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0}
         utils.save_registry(registry)
+
         print(f"Server started for '{abs_path}' on port {port}")
         return
+
+    # ---------------------------------------------------------
+    # FOREGROUND MODE: actually serve
+    # ---------------------------------------------------------
+    # Everything below EXACTLY as you currently have it
+    # (Flask app, SocketIO, routes, worker thread, etc)
 
     # ============================================================
     # Foreground Server
@@ -179,12 +199,27 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     def client_disconnect():
         client_count["count"] = max(0, client_count["count"] - 1)
         update_registry_clients()
-        return current_app.json.response({"clients": client_count["count"]})
+
+        if client_count["count"] == 0:
+            print("[Server] Last client disconnected. Scheduling shutdown in 1 second.")
+            # Shutdown in a separate thread to allow this request to complete
+            def shutdown():
+                time.sleep(1)
+                os.kill(os.getpid(), signal.SIGTERM)
+            threading.Thread(target=shutdown, daemon=True).start()
+
+        response = {"clients": client_count["count"], "status": "disconnecting" if client_count["count"] == 0 else "ok"}
+        return current_app.json.response(response)
 
 
     @app.route("/get-graph")
     def get_graph():
-        data = nx.node_link_data(edit.load_graph(abs_path), edges="links")
+        G = edit.load_graph(abs_path)
+        data = nx.node_link_data(G, link="links") # use link instead of edges
+        data['graph'] = G.graph
+        # Ensure prefix/suffix are present
+        data['graph'].setdefault('prefix', '')
+        data['graph'].setdefault('suffix', '')
         return current_app.json.response(data)
 
 
@@ -240,7 +275,17 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             data["x"],
             data["y"]
         )
-    # Want to add changes here so that if a node is edited to run then the id and the run is flagged that can get triggered by the runner
+
+    @app.route("/edit-prefix-suffix", methods=["POST"])
+    def edit_prefix_suffix():
+        data = request.get_json(force=True)
+        return enqueue(
+            edit.edit_prefix_suffix_in_graph,
+            abs_path,
+            data.get("prefix"),
+            data.get("suffix")
+        )
+
 
     @app.route("/run", methods=["POST"])
     def run_pipeline():

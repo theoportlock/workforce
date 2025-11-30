@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
-edit.py — Command-line client for Workforce server API.
-Performs remote edits via HTTP endpoints exposed by server.py.
+edit.py — CLI client for remote Workforce server API.
+All operations send HTTP requests to the server corresponding to the given Workfile.
 """
 
 import networkx as nx
 import os
-import pandas as pd
 import tempfile
 import uuid
 
+from workforce.utils import _post
+
+# ----------------------------------------------------------------------
+# Graph-manipulation helpers (leave unchanged)
+# ----------------------------------------------------------------------
+
 def load_graph(path: str) -> nx.DiGraph:
-    """Load or create GraphML file."""
     if not os.path.exists(path):
         G = nx.DiGraph()
         nx.write_graphml(G, path)
         return G
     G = nx.read_graphml(path)
-    if not isinstance(G, nx.DiGraph):
-        G = nx.DiGraph(G)
-    return G
-
+    return nx.DiGraph(G)
 
 def save_graph(G: nx.DiGraph, path: str):
     dirpath = os.path.dirname(path)
@@ -30,8 +32,7 @@ def save_graph(G: nx.DiGraph, path: str):
     nx.write_graphml(G, tmppath)
     os.replace(tmppath, path)
 
-
-def add_node_to_graph(path: str, label: str, x: float = 0.0, y: float = 0.0, status: str = "") -> dict:
+def add_node_to_graph(path, label, x=0.0, y=0.0, status=""):
     G = load_graph(path)
     node_id = str(uuid.uuid4())
     G.add_node(node_id, label=label, x=str(x), y=str(y), status=status)
@@ -39,8 +40,7 @@ def add_node_to_graph(path: str, label: str, x: float = 0.0, y: float = 0.0, sta
     print(f"[GRAPH] Add node {node_id}")
     return {"node_id": node_id}
 
-
-def remove_node_from_graph(path: str, node_id: str) -> dict:
+def remove_node_from_graph(path, node_id):
     G = load_graph(path)
     if node_id in G:
         G.remove_node(node_id)
@@ -49,8 +49,7 @@ def remove_node_from_graph(path: str, node_id: str) -> dict:
         return {"status": "removed"}
     return {"error": "Node not found"}
 
-
-def add_edge_to_graph(path: str, source: str, target: str) -> dict:
+def add_edge_to_graph(path, source, target):
     G = load_graph(path)
     if source not in G or target not in G:
         return {"error": "Both source and target must exist"}
@@ -60,8 +59,7 @@ def add_edge_to_graph(path: str, source: str, target: str) -> dict:
     print(f"[GRAPH] Add edge {edge_id}")
     return nx.node_link_data(G)
 
-
-def remove_edge_from_graph(path: str, source: str, target: str) -> dict:
+def remove_edge_from_graph(path, source, target):
     G = load_graph(path)
     if G.has_edge(source, target):
         G.remove_edge(source, target)
@@ -70,8 +68,7 @@ def remove_edge_from_graph(path: str, source: str, target: str) -> dict:
         return {"status": "removed"}
     return {"error": "Edge not found"}
 
-
-def edit_status_in_graph(path: str, element_type: str, element_id: str, value: str) -> dict:
+def edit_status_in_graph(path, element_type, element_id, value):
     G = load_graph(path)
 
     if element_type == "node":
@@ -93,19 +90,83 @@ def edit_status_in_graph(path: str, element_type: str, element_id: str, value: s
 
     return {"error": "element_type must be node or edge"}
 
-
-def edit_node_position_in_graph(path: str, node_id: str, x: float, y: float) -> dict:
-    """Edit the (x, y) position of a node in the GraphML graph."""
+def edit_node_position_in_graph(path, node_id, x, y):
     G = load_graph(path)
-
     if node_id not in G:
         return {"error": "Node not found"}
-
-    # GraphML stores attributes as strings, so convert
     G.nodes[node_id]["x"] = str(x)
     G.nodes[node_id]["y"] = str(y)
-
     save_graph(G, path)
     print(f"[GRAPH] Node {node_id} position=({x}, {y})")
-
     return {"status": "updated"}
+
+def edit_prefix_suffix_in_graph(path, prefix, suffix):
+    G = load_graph(path)
+    if prefix is not None:
+        G.graph['prefix'] = prefix
+    if suffix is not None:
+        G.graph['suffix'] = suffix
+    save_graph(G, path)
+    print(f"[GRAPH] Graph prefix='{prefix}', suffix='{suffix}'")
+    return nx.node_link_data(G)
+
+
+# ============================================================
+#  Remote Command Implementations (NOW TAKING port ARGUMENT)
+# ============================================================
+
+def cmd_add_node(args, port):
+    payload = {
+        "label": args.label,
+        "x": args.x,
+        "y": args.y,
+        "status": args.status,
+    }
+    print(f"[CLIENT] POST /add-node {payload}")
+    resp = _post(port, "/add-node", payload)
+    print(resp)
+
+
+def cmd_remove_node(args, port):
+    payload = {"node_id": args.node_id}
+    print(f"[CLIENT] POST /remove-node {payload}")
+    resp = _post(port, "/remove-node", payload)
+    print(resp)
+
+
+def cmd_add_edge(args, port):
+    payload = {"source": args.source, "target": args.target}
+    print(f"[CLIENT] POST /add-edge {payload}")
+    resp = _post(port, "/add-edge", payload)
+    print(resp)
+
+
+def cmd_remove_edge(args, port):
+    payload = {"source": args.source, "target": args.target}
+    print(f"[CLIENT] POST /remove-edge {payload}")
+    resp = _post(port, "/remove-edge", payload)
+    print(resp)
+
+
+def cmd_edit_status(args, port):
+    payload = {
+        "element_type": args.element_type,
+        "element_id": args.element_id,
+        "value": args.value,
+    }
+    print(f"[CLIENT] POST /edit-status {payload}")
+    resp = _post(port, "/edit-status", payload)
+    print(resp)
+
+
+def cmd_edit_position(args, port):
+    payload = {"node_id": args.node_id, "x": args.x, "y": args.y}
+    print(f"[CLIENT] POST /edit-node-position {payload}")
+    resp = _post(port, "/edit-node-position", payload)
+    print(resp)
+
+def cmd_edit_prefix_suffix(args, port):
+    payload = {"prefix": args.prefix, "suffix": args.suffix}
+    print(f"[CLIENT] POST /edit-prefix-suffix {payload}")
+    resp = _post(port, "/edit-prefix-suffix", payload)
+    print(resp)

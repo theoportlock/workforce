@@ -1,187 +1,262 @@
 #!/usr/bin/env python
 import socketio
-import sys
 import subprocess
-import time
 import requests
 import threading
 import argparse
+import os
+from workforce import utils
 
 # Initialize SocketIO Client
 sio = socketio.Client()
 
 # Global configuration
 CONFIG = {
-    "url": "",
+    "base_url": "",
     "prefix": "",
     "suffix": ""
 }
 
-def get_prefix_suffix(graph, prefix='', suffix=''):
-    graph_prefix = graph.get('graph', {}).get('prefix', '')
-    graph_suffix = graph.get('graph', {}).get('suffix', '')
-    use_prefix = prefix if prefix else graph_prefix
-    use_suffix = suffix if suffix else graph_suffix
-    return use_prefix, use_suffix
+# --- API Helpers ---
+
+def get_graph_safe():
+    """Fetch graph from server to get labels/commands."""
+    try:
+        resp = requests.get(f"{CONFIG['base_url']}/get-graph", timeout=2)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print(f"[Error] Could not fetch graph: {e}")
+        return None
+
+def set_node_status(node_id, status):
+    """
+    Sends update to server.
+    Server expects: {"element_type": "node", "element_id": ..., "value": ...}
+    """
+    url = f"{CONFIG['base_url']}/edit-status"
+    payload = {
+        "element_type": "node",
+        "element_id": node_id,
+        "value": status
+    }
+    try:
+        requests.post(url, json=payload, timeout=2)
+    except Exception as e:
+        print(f"[Error] Failed to set status {status} for {node_id}: {e}")
 
 def shell_quote_multiline(script: str) -> str:
     return script.replace("'", "'\\''")
 
-def run_tasks():
+# --- Core Logic ---
+
+def execute_specific_node(node_id):
     """
-    Check for nodes with status='run' and execute them.
+    The core worker. 
+    1. Fetches node details (label/command).
+    2. Sets status -> 'running'.
+    3. Runs command.
+    4. Sets status -> 'ran' or 'fail'.
     """
-    url = CONFIG['url']
-    try:
-        graph = requests.get(url).json()
-    except Exception:
+    graph = get_graph_safe()
+    if not graph:
         return
 
-    use_prefix, use_suffix = get_prefix_suffix(graph, CONFIG['prefix'], CONFIG['suffix'])
-
-    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
-    run_nodes = [node for node, status in node_status.items() if status == 'run']
-
-    # Pick the first available node
-    node = run_nodes[0] if run_nodes else None
-
-    if node:
-        print(f"--> Executing node: {node}")
-        requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": "running"})
-
-        # We actually run the logic here instead of calling the endpoint /run_node
-        # to keep the logic contained in the runner, or we can call the logic function directly.
-        # Below mirrors the logic in your original 'run_node' function:
-
-        label = next((n.get('label', '') for n in graph['nodes'] if n['id'] == node), '')
-        quoted_label = shell_quote_multiline(label)
-        command = f"{use_prefix}{quoted_label}{use_suffix}".strip()
-
-        try:
-            subprocess.run(command, shell=True, check=True)
-            print(f"--> Finished node: {node}")
-            requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": "ran"})
-        except subprocess.CalledProcessError:
-            print(f"!! Failed node: {node}")
-            requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": "fail"})
-
-def schedule_tasks():
-    """
-    Check for nodes with status='ran', unlock their neighbors, and clean up.
-    """
-    url = CONFIG['url']
-    try:
-        graph = requests.get(url).json()
-    except Exception:
+    # Find the specific node data by ID
+    node = next((n for n in graph['nodes'] if n['id'] == node_id), None)
+    
+    if not node:
+        print(f"[Error] Server asked to run {node_id}, but it is not in the graph.")
         return
 
-    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
-    ran_nodes = [node for node, status in node_status.items() if status == 'ran']
+    # Check if we are already running or ran (prevent double execution)
+    # Although server logic helps, client double-check is good.
+    if node.get('status') in ['running', 'ran']:
+        print(f"[Skip] Node {node_id} is already {node.get('status')}.")
+        return
 
-    # 1. For every 'ran' node, mark outgoing edges as 'to_run'
-    for node in ran_nodes:
-        for link in graph['links']:
-            if link['source'] == node:
-                requests.post(f"{url}/update_status", json={"element_type": "edge", "element_id": [link['source'], link['target']], "status": "to_run"})
-        # Clear status of the node itself so we don't process it again
-        requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": None})
+    print(f"--> Executing node: {node.get('label', node_id)}")
+    
+    # 1. Mark as running (UI turns Blue)
+    set_node_status(node_id, "running")
 
-    # Refresh graph after updates above
-    graph = requests.get(url).json()
-    edge_status = {(l['source'], l['target']): l.get('status', '') for l in graph['links']}
+    # 2. Construct Command
+    label = node.get('label', '')
+    use_prefix = CONFIG['prefix']
+    use_suffix = CONFIG['suffix']
+    
+    quoted_label = shell_quote_multiline(label)
+    command = f"{use_prefix}{quoted_label}{use_suffix}".strip()
 
-    # 2. Find nodes where ALL incoming edges are 'to_run'
-    ready_nodes = []
+    if not command:
+        print(f"--> Empty command for {node_id}, marking done.")
+        set_node_status(node_id, "ran")
+        return
+
+    # 3. Execute Subprocess
+    try:
+        # Shell=True allows complex commands (pipes, etc), check=True raises error on failure
+        subprocess.run(command, shell=True, check=True)
+        print(f"--> Finished: {node.get('label', node_id)}")
+        set_node_status(node_id, "ran")
+        # Note: We do NOT call check_dependencies here directly.
+        # The 'ran' status update will trigger 'node_done' event from server.
+    except subprocess.CalledProcessError:
+        print(f"!! Failed: {node.get('label', node_id)}")
+        set_node_status(node_id, "fail")
+    except Exception as e:
+        print(f"!! Error executing {node_id}: {e}")
+        set_node_status(node_id, "fail")
+
+def check_dependencies_and_schedule(finished_node_id):
+    """
+    Triggered when a node finishes ('ran').
+    We look at the graph. If a child node has ALL parents 'ran', we set it to 'run'.
+    Setting it to 'run' will cause the Server to emit 'node_ready', closing the loop.
+    """
+    graph = get_graph_safe()
+    if not graph:
+        return
+
+    status_map = {n['id']: n.get('status', '') for n in graph['nodes']}
+
+    # Find all nodes that depend on the finished node
+    # (Optimization: only look at children of the finished node)
+    outgoing_edges = [l for l in graph['links'] if l['source'] == finished_node_id]
+    children_ids = [l['target'] for l in outgoing_edges]
+
+    for child_id in children_ids:
+        child_status = status_map.get(child_id)
+
+        # Skip if already done or running
+        if child_status in ['ran', 'run', 'running', 'fail']:
+            continue
+
+        # Check inputs for this child
+        incoming_links = [l for l in graph['links'] if l['target'] == child_id]
+        parents_all_ran = True
+        
+        for link in incoming_links:
+            parent_id = link['source']
+            if status_map.get(parent_id) != 'ran':
+                parents_all_ran = False
+                break
+        
+        if parents_all_ran:
+            print(f"--> Dependencies met for {child_id}. Requesting run...")
+            # WE DO NOT RUN IT HERE. We tell the server to mark it 'run'.
+            # The server will then emit 'node_ready', and on_node_ready will fire.
+            set_node_status(child_id, "run")
+
+def scan_for_abandoned_tasks():
+    """
+    Run ONCE at startup.
+    Finds nodes that are stuck in 'run' (from a previous crash) and runs them.
+    """
+    graph = get_graph_safe()
+    if not graph:
+        return
+    
     for node in graph['nodes']:
-        node_id = node['id']
-        indegree = sum(1 for l in graph['links'] if l['target'] == node_id)
-        if indegree > 0:
-            incoming = [l for l in graph['links'] if l['target'] == node_id]
-            if all(edge_status.get((l['source'], l['target'])) == 'to_run' for l in incoming):
-                ready_nodes.append(node_id)
-
-    # 3. Activate ready nodes
-    for node in ready_nodes:
-        print(f"--> Scheduling node: {node}")
-        requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": "run"})
-        # Clean up edges
-        for l in graph['links']:
-            if l['target'] == node:
-                requests.post(f"{url}/update_status", json={"element_type": "edge", "element_id": [l['source'], l['target']], "status": None})
-
-    # Check completion
-    graph = requests.get(url).json()
-    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
-    active_nodes = [node for node, status in node_status.items() if status in ('run', 'ran', 'running')]
-
-    if not active_nodes:
-        print("== Pipeline Complete ==")
-        # Optional: sys.exit(0) or keep listening for new nodes added manually
-
-def initialize_pipeline(url):
-    print("Initializing pipeline...")
-    graph = requests.get(url).json()
-    node_status = {n['id']: n.get('status', '') for n in graph['nodes']}
-
-    failed_nodes = [node for node, status in node_status.items() if status == 'fail']
-    for node in failed_nodes:
-        requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node, "status": "run"})
-
-    if not node_status:
-        for node in graph['nodes']:
-            node_id = node['id']
-            indegree = sum(1 for e in graph['links'] if e['target'] == node_id)
-            if indegree == 0:
-                requests.post(f"{url}/update_status", json={"element_type": "node", "element_id": node_id, "status": "run"})
+        if node.get('status') == 'run':
+            print(f"[Startup] Found pending node {node['id']}, queuing...")
+            threading.Thread(target=execute_specific_node, args=(node['id'],)).start()
 
 # --- SocketIO Event Handlers ---
 
 @sio.event
 def connect():
-    print("Connected to server.")
-    # Run initialization in a thread so we don't block the connect handler
-    threading.Thread(target=initialize_pipeline, args=(CONFIG['url'],)).start()
+    print(f"[SocketIO] Connected to {CONFIG['base_url']}")
+    # Check if there were tasks waiting while we were offline
+    threading.Thread(target=scan_for_abandoned_tasks).start()
 
 @sio.event
 def disconnect():
-    print("Disconnected from server.")
+    print("[SocketIO] Disconnected.")
 
 @sio.on('node_ready')
 def on_node_ready(data):
-    print(f"Event received: Node {data.get('node_id')} is ready.")
-    # Run execution in a separate thread to keep socket heartbeat alive
-    threading.Thread(target=run_tasks).start()
+    """
+    CRITICAL: This is the trigger.
+    Server says: Node X status changed to 'run'.
+    We say: Okay, I will execute Node X.
+    """
+    node_id = data.get('node_id')
+    if node_id:
+        # Run in thread to prevent blocking the socket listener
+        threading.Thread(target=execute_specific_node, args=(node_id,)).start()
 
 @sio.on('node_done')
 def on_node_done(data):
-    print(f"Event received: Node {data.get('node_id')} finished.")
-    # Run scheduling in a separate thread
-    threading.Thread(target=schedule_tasks).start()
+    """
+    Server says: Node X status changed to 'ran'.
+    We say: Okay, I will check if Node X's children can run now.
+    """
+    node_id = data.get('node_id')
+    if node_id:
+        threading.Thread(target=check_dependencies_and_schedule, args=(node_id,)).start()
 
-# --- Main ---
-
-def main():
+# Accept the args object passed by the outer 'wf' entrypoint.
+def main(args=None): 
+    
+    # 1. Setup Argument Parser for Local or Wrapper Use
     parser = argparse.ArgumentParser()
-    parser.add_argument("url", help="URL of the workforce server (e.g. http://127.0.0.1:8000/get-graph)")
+    parser.add_argument("url_or_path", help="URL of the workforce server (e.g. http://127.0.0.1:5000) or a path to a Workfile.")
     parser.add_argument("--prefix", default="", help="Command prefix")
     parser.add_argument("--suffix", default="", help="Command suffix")
-    args = parser.parse_args()
+    
+    # If called directly (args is None) or we need to re-parse (e.g., using sys.argv),
+    # otherwise use the passed args object.
+    if args is None:
+        args = parser.parse_args()
+    
+    # 2. Resolve URL from Argument
+    input_value = args.url_or_path
+    base_url = ""
+    
+    if input_value.startswith("http"):
+        # Case A: User explicitly provided a URL
+        base_url = input_value
+        print(f"Runner using explicit URL: {base_url}")
+    else:
+        # Case B: Treat as a Workfile path
+        
+        # Check if the input value points to a real file path
+        if not os.path.exists(input_value):
+            # If not a file, it might still be a URL without http:// prefix
+            # However, for simplicity and adherence to the request, 
+            # we'll assume non-existent paths are an error for now.
+             print(f"[Error] '{input_value}' is not a valid URL (missing http://) and not a file path.", file=sys.stderr)
+             sys.exit(1)
+            
+        try:
+            # Try to resolve the path to a port using the registry
+            # We don't care about the returned path, just the port.
+            _, port = utils.resolve_port(input_value)
+            base_url = f"http://127.0.0.1:{port}"
+            print(f"Runner resolved path '{input_value}' to server at {base_url}")
+        except SystemExit:
+            # resolve_port prints the error and calls sys.exit(1) if server is not found
+            # We re-raise the exit.
+            raise 
 
-    # Clean up URL to get base root
-    base_url = args.url.replace("/get-graph", "").rstrip("/")
-
-    CONFIG['url'] = base_url
+    # 3. Apply Configuration and Connect
+    # Normalize URL (This is still necessary for /get-graph stripping)
+    base = base_url.replace("/get-graph", "").rstrip("/")
+    
+    CONFIG['base_url'] = base
     CONFIG['prefix'] = args.prefix
     CONFIG['suffix'] = args.suffix
 
-    print(f"Connecting to {base_url}...")
-
+    print(f"Runner starting. Waiting for events from {base}...")
+    
     try:
-        sio.connect(base_url)
-        sio.wait() # Keeps the script running
+        # Using threading mode to ensure compatibility
+        sio.connect(base, wait_timeout=10)
+        sio.wait()
+    except Exception as e:
+        print(f"Connection error: {e}")
     except KeyboardInterrupt:
         print("Stopping runner.")
         sio.disconnect()
 
-if __name__ == "__main__":
-    main()
