@@ -87,8 +87,13 @@ def execute_specific_node(node_id):
             text=True
         )
         stdout, stderr = process.communicate()
-        log_text = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
+        
+        # --- MODIFICATION START ---
+        # Simply concatenate stdout and stderr with a single newline separator.
+        # This removes the "STDOUT:\n" and "STDERR:\n" headers.
+        log_text = f"{stdout}\n{stderr}"
         send_node_log(node_id, log_text)
+        # --- MODIFICATION END ---
 
         if process.returncode == 0:
             print(f"--> Finished: {node.get('label', node_id)}")
@@ -130,6 +135,14 @@ def scan_for_abandoned_tasks(graph):
     node_status = {n["id"]: n.get("status") for n in nodes}
 
     # Restart failed nodes
+    # Also pick up any nodes that are already marked as 'run'
+    ready_to_run_nodes = [nid for nid, status in node_status.items() if status == "run"]
+    if ready_to_run_nodes:
+        print(f"[scan] Found pre-marked nodes to run: {ready_to_run_nodes}")
+        for nid in ready_to_run_nodes:
+            sio.emit("node_ready", {"node_id": nid}) # Directly trigger execution
+        return
+
     failed_nodes = [nid for nid, status in node_status.items() if status == "fail"]
     if failed_nodes:
         print(f"[scan] Restarting failed nodes: {failed_nodes}")
@@ -196,8 +209,6 @@ def on_node_done(data):
     if node_id:
         threading.Thread(target=check_dependencies_and_schedule, args=(node_id,), daemon=True).start()
 
-# --- Entry Point ---
-
 def main(base_url, prefix="", suffix=""):
     base = base_url.replace("/get-graph", "").rstrip("/")
     CONFIG['base_url'] = base
@@ -214,4 +225,3 @@ def main(base_url, prefix="", suffix=""):
     except KeyboardInterrupt:
         print("Stopping runner.")
         sio.disconnect()
-
