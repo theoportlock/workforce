@@ -8,21 +8,20 @@
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d0">echo test</data>
-      <data key="d1">555.0</data>
-      <data key="d2">134.0</data>
+      <data key="d1">753.0</data>
+      <data key="d2">231.0</data>
       <data key="d3" />
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d0">ls</data>
-      <data key="d1">393.0</data>
-      <data key="d2">340.0</data>
+      <data key="d1">541.0</data>
+      <data key="d2">349.0</data>
       <data key="d3" />
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d0">ls
-</data>
-      <data key="d1">274.0</data>
-      <data key="d2">181.0</data>
+      <data key="d0">ls</data>
+      <data key="d1">447.0</data>
+      <data key="d2">141.0</data>
       <data key="d3" />
     </node>
     <node id="17fdc5dd-f379-41d4-a64d-3c162feb0fb7">
@@ -33,20 +32,14 @@
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
       <data key="d0">echo test</data>
-      <data key="d1">55.0</data>
-      <data key="d2">383.0</data>
+      <data key="d1">172.0</data>
+      <data key="d2">413.0</data>
       <data key="d3" />
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d0">pwd</data>
-      <data key="d1">156.0</data>
-      <data key="d2">311.0</data>
-      <data key="d3" />
-    </node>
-    <node id="e24f25a1-8335-4557-a2aa-583b60ad9b83">
-      <data key="d0">pwd</data>
-      <data key="d1">728.0</data>
-      <data key="d2">157.0</data>
+      <data key="d0">pwd ls</data>
+      <data key="d1">289.0</data>
+      <data key="d2">268.0</data>
       <data key="d3" />
     </node>
     <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="864cd165-6568-421b-a805-7db8fe430a2c">

@@ -45,6 +45,16 @@ def set_node_status(node_id, status):
     except Exception as e:
         print(f"[Error] Failed to set status {status} for {node_id}: {e}")
 
+def send_node_log(node_id, log_text):
+    """Sends captured log output to the server."""
+    url = f"{CONFIG['base_url']}/save-node-log"
+    payload = {"node_id": node_id, "log": log_text}
+    try:
+        # Using a slightly longer timeout for potentially large logs
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"[Error] Failed to send log for {node_id}: {e}")
+
 def shell_quote_multiline(script: str) -> str:
     return script.replace("'", "'\\''")
 
@@ -95,16 +105,32 @@ def execute_specific_node(node_id):
 
     # 3. Execute Subprocess
     try:
-        # Shell=True allows complex commands (pipes, etc), check=True raises error on failure
-        subprocess.run(command, shell=True, check=True)
-        print(f"--> Finished: {node.get('label', node_id)}")
-        set_node_status(node_id, "ran")
-        # Note: We do NOT call check_dependencies here directly.
-        # The 'ran' status update will trigger 'node_done' event from server.
-    except subprocess.CalledProcessError:
-        print(f"!! Failed: {node.get('label', node_id)}")
-        set_node_status(node_id, "fail")
+        # Use Popen to capture stdout/stderr
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = process.communicate()
+
+        # Combine stdout + stderr into a single log string
+        log_text = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
+        send_node_log(node_id, log_text)
+
+        # Set status based on the subprocess return code
+        if process.returncode == 0:
+            print(f"--> Finished: {node.get('label', node_id)}")
+            set_node_status(node_id, "ran")
+            # Note: We do NOT call check_dependencies here directly.
+            # The 'ran' status update will trigger 'node_done' event from server.
+        else:
+            print(f"!! Failed: {node.get('label', node_id)}")
+            set_node_status(node_id, "fail")
+
     except Exception as e:
+        send_node_log(node_id, f"[Runner internal error]\n{e}")
         print(f"!! Error executing {node_id}: {e}")
         set_node_status(node_id, "fail")
 
@@ -259,4 +285,3 @@ def main(args=None):
     except KeyboardInterrupt:
         print("Stopping runner.")
         sio.disconnect()
-

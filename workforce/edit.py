@@ -110,6 +110,24 @@ def edit_prefix_suffix_in_graph(path, prefix, suffix):
     print(f"[GRAPH] Graph prefix='{prefix}', suffix='{suffix}'")
     return nx.node_link_data(G)
 
+def edit_node_label_in_graph(path, node_id, label):
+    G = load_graph(path)
+    if node_id not in G:
+        return {"error": "Node not found"}
+    G.nodes[node_id]["label"] = label
+    save_graph(G, path)
+    print(f"[GRAPH] Node {node_id} label updated.")
+    return {"status": "updated"}
+
+def save_node_log_in_graph(path, node_id, log):
+    G = load_graph(path)
+    if node_id not in G:
+        return {"error": "Node not found"}
+    G.nodes[node_id]["log"] = log
+    save_graph(G, path)
+    print(f"[GRAPH] Log saved for node {node_id}.")
+    return {"status": "updated"}
+
 
 # ============================================================
 #  Remote Command Implementations (NOW TAKING port ARGUMENT)
@@ -169,4 +187,16 @@ def cmd_edit_prefix_suffix(args, port):
     payload = {"prefix": args.prefix, "suffix": args.suffix}
     print(f"[CLIENT] POST /edit-prefix-suffix {payload}")
     resp = _post(port, "/edit-prefix-suffix", payload)
+    print(resp)
+
+def cmd_edit_node_label(args, port):
+    payload = {"node_id": args.node_id, "label": args.label}
+    print(f"[CLIENT] POST /edit-node-label {payload}")
+    resp = _post(port, "/edit-node-label", payload)
+    print(resp)
+
+def cmd_save_node_log(args, port):
+    payload = {"node_id": args.node_id, "log": args.log}
+    print(f"[CLIENT] POST /save-node-log {payload}")
+    resp = _post(port, "/save-node-log", payload)
     print(resp)

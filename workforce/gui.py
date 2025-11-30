@@ -351,21 +351,28 @@ class WorkflowApp:
                     print(f"remove-edge error: {e}")
         # self._reload_graph() # Wait for graph_update event
 
-    def edit_node_label(self, node_id):
-        current = ""
-        for n in self.graph.get("nodes", []):
-            if n.get("id") == node_id:
-                current = n.get("label", "")
-                break
+    def on_node_double_click(self, event, node_id):
+        """Handles double-click on a node to edit its label."""
+        node_data = next((n for n in self.graph.get("nodes", []) if n.get("id") == node_id), None)
+        if not node_data:
+            return "break"  # Stop propagation even if node data is not found
+
+        current_label = node_data.get("label", "")
 
         def on_save(new_label):
             try:
-                requests.post(self._url("/update-node"), json={"id": node_id, "label": new_label}, timeout=2.0)
-                # self._reload_graph() # Wait for graph_update event
+                requests.post(
+                    self._url("/edit-node-label"),
+                    json={"node_id": node_id, "label": new_label},
+                    timeout=2.0
+                )
             except Exception as e:
                 messagebox.showerror("Update error", str(e))
 
-        self.node_label_popup(current, on_save)
+        self.node_label_popup(current_label, on_save)
+
+        return "break"  # This is crucial to prevent the canvas double-click event
+
 
     def update_node(self):
         # This method is removed as the primary way to update a node label is via double-clicking a node
@@ -517,6 +524,8 @@ class WorkflowApp:
             self.canvas.tag_bind(item, "<ButtonPress-1>", lambda e, nid=node_id: self.on_node_press(e, nid))
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
+            self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.on_node_double_click(e, nid))
+
 
     def draw_edge(self, src, tgt):
         x1, y1 = self._get_node_center(src)
@@ -614,6 +623,11 @@ class WorkflowApp:
     def on_canvas_double_click(self, event):
         x = self.canvas.canvasx(event.x)
         y = self.canvas.canvasy(event.y)
+        # Check if we clicked on an existing item. If so, do nothing.
+        # The node's own double-click handler will take care of it.
+        items = self.canvas.find_overlapping(x, y, x, y)
+        if items:
+            return
         self.add_node_at(x, y)
 
     def on_left_press(self, event):

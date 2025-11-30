@@ -286,6 +286,26 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             data.get("suffix")
         )
 
+    @app.route("/edit-node-label", methods=["POST"])
+    def edit_node_label():
+        data = request.get_json(force=True)
+        return enqueue(
+            edit.edit_node_label_in_graph,
+            abs_path,
+            data["node_id"],
+            data["label"]
+        )
+
+    @app.route("/save-node-log", methods=["POST"])
+    def save_node_log_api():
+        data = request.get_json(force=True)
+        return enqueue(
+            edit.save_node_log_in_graph,
+            abs_path,
+            data["node_id"],
+            data["log"]
+        )
+
 
     @app.route("/run", methods=["POST"])
     def run_pipeline():
