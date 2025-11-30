@@ -241,6 +241,11 @@ class WorkflowApp:
                 r = requests.get(self._url("/get-graph"), timeout=1.0)
                 if r.status_code == 200:
                     self.graph = r.json()
+                    # Update local prefix/suffix from the loaded graph data
+                    graph_attrs = self.graph.get('graph', {})
+                    self.prefix = graph_attrs.get('prefix', '')
+                    self.suffix = graph_attrs.get('suffix', '')
+
                     # Schedule the drawing on the main thread
                     self.master.after(0, self._redraw_graph)
             except Exception as e:

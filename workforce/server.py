@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import queue
+import time
 
 import networkx as nx
 from flask import Flask, request, current_app
@@ -76,7 +77,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         port = utils.find_free_port()
 
     # ---------------------------------------------------------
-    # BACKGROUND MODE: spawn a new Python process
+    # BACKGROUND MODE
     # ---------------------------------------------------------
     if background:
         cmd = [
@@ -101,62 +102,57 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         print(f"Server started for '{abs_path}' on port {port}")
         return
 
-    # ---------------------------------------------------------
-    # FOREGROUND MODE: actually serve
-    # ---------------------------------------------------------
-    # Everything below EXACTLY as you currently have it
-    # (Flask app, SocketIO, routes, worker thread, etc)
-
     # ============================================================
-    # Foreground Server
+    # FOREGROUND — ACTUAL SERVER
     # ============================================================
 
     app = Flask(__name__)
-    # Allow all origins for local dev, or restrict if needed
     socketio = SocketIO(
         app,
         cors_allowed_origins="*",
-        async_mode='threading',  # <--- ADD THIS LINE
-        ping_interval=30,  # Send a ping every 30 seconds
-        ping_timeout=90    # Wait 90 seconds for a pong response before disconnecting
+        async_mode="threading",
+        ping_interval=30,
+        ping_timeout=90,
     )
+
     MODIFICATION_QUEUE = queue.Queue()
 
+    # ------------------------------------------------------------
+    # GRAPH WORKER — simplified, no diffing, always emits lifecycle
+    # ------------------------------------------------------------
     def graph_worker():
         print("Graph worker thread started.")
-        last_graph = None
         while True:
             func, args, kwargs = MODIFICATION_QUEUE.get()
             try:
                 result = func(*args, **kwargs)
-                # Broadcast an updated graph to connected clients in the room named by abs_path
-                # FIX 1: Explicit namespace ensures it reaches the connected client
-                print(f"[DEBUG] Emitting graph_update for {abs_path}") # Add debug print
-                socketio.emit("graph_update", result, namespace='/')
 
-                # If we have a previous graph, check for status transitions to emit node lifecycle events
-                if last_graph and isinstance(result, dict) and 'nodes' in result:
-                    old_status = {n['id']: n.get('status') for n in last_graph.get('nodes', [])}
-                    for node in result.get('nodes', []):
-                        nid = node['id']
-                        new_stat = node.get('status')
-                        old_stat = old_status.get(nid)
+                # Broadcast graph update
+                print(f"[DEBUG] Emitting graph_update for {abs_path}")
+                socketio.emit("graph_update", result, namespace="/")
 
-                        if new_stat == 'run' and old_stat != 'run':
-                            socketio.emit("node_ready", {"node_id": nid}, namespace='/')
-                        elif new_stat == 'ran' and old_stat != 'ran':
-                            socketio.emit("node_done", {"node_id": nid}, namespace='/')
-                last_graph = result
+                # Emit lifecycle messages for every node
+                for node in result.get("nodes", []):
+                    nid = node["id"]
+                    stat = node.get("status", "")
+
+                    if stat == "run":
+                        print(f"[DEBUG] node_ready: {nid}")
+                        socketio.emit("node_ready", {"node_id": nid}, namespace="/")
+
+                    elif stat == "ran":
+                        print(f"[DEBUG] node_done: {nid}")
+                        socketio.emit("node_done", {"node_id": nid}, namespace="/")
+
             except Exception as e:
                 print(f"[ERROR] Graph worker: {e}")
+
             finally:
                 MODIFICATION_QUEUE.task_done()
 
-    # FIX 2: Use SocketIO's background task spawner instead of standard threading
-    # This ensures the thread can talk to the WebSocket loop.
     socketio.start_background_task(target=graph_worker)
 
-    # Update registry with actual PID (os.getpid) since this is the running process
+    # Update registry with running server info
     registry[abs_path] = {"port": port, "pid": os.getpid(), "clients": 0}
     utils.save_registry(registry)
 
@@ -171,23 +167,25 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             reg[abs_path]["clients"] = client_count["count"]
             utils.save_registry(reg)
 
+    # Helper to enqueue graph modifications
     def enqueue(func, *args, **kwargs):
-        """
-        Place a modification function in the worker queue and return
-        a 202 Accepted JSON response using Flask 3.x JSON provider.
-        """
         MODIFICATION_QUEUE.put((func, args, kwargs))
-        # Use current_app.json.response to avoid Flask jsonify args/kwargs ambiguity in Flask >= 3.x
         return current_app.json.response({"status": "queued"}), 202
 
-    @socketio.on('connect')
+    # ------------------------------------------------------------
+    # SOCKETIO EVENTS
+    # ------------------------------------------------------------
+    @socketio.on("connect")
     def on_connect():
-        # This handler is for logging. Room logic is removed for simplicity.
-        print(f"[SocketIO] Client connected.")
+        print("[SocketIO] Client connected.")
 
-    @socketio.on('disconnect')
+    @socketio.on("disconnect")
     def on_disconnect():
-        print(f"[SocketIO] Client disconnected.")
+        print("[SocketIO] Client disconnected.")
+
+    # ------------------------------------------------------------
+    # HTTP ROUTES
+    # ------------------------------------------------------------
 
     @app.route("/client-connect", methods=["POST"])
     def client_connect():
@@ -202,26 +200,27 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
         if client_count["count"] == 0:
             print("[Server] Last client disconnected. Scheduling shutdown in 1 second.")
-            # Shutdown in a separate thread to allow this request to complete
+
             def shutdown():
                 time.sleep(1)
                 os.kill(os.getpid(), signal.SIGTERM)
+
             threading.Thread(target=shutdown, daemon=True).start()
 
-        response = {"clients": client_count["count"], "status": "disconnecting" if client_count["count"] == 0 else "ok"}
+        response = {
+            "clients": client_count["count"],
+            "status": "disconnecting" if client_count["count"] == 0 else "ok"
+        }
         return current_app.json.response(response)
-
 
     @app.route("/get-graph")
     def get_graph():
         G = edit.load_graph(abs_path)
-        data = nx.node_link_data(G, link="links") # use link instead of edges
-        data['graph'] = G.graph
-        # Ensure prefix/suffix are present
-        data['graph'].setdefault('prefix', '')
-        data['graph'].setdefault('suffix', '')
+        data = nx.node_link_data(G, link="links")
+        data["graph"] = G.graph
+        data["graph"].setdefault("prefix", "")
+        data["graph"].setdefault("suffix", "")
         return current_app.json.response(data)
-
 
     @app.route("/add-node", methods=["POST"])
     def add_node():
@@ -235,24 +234,20 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             data.get("status", "")
         )
 
-
     @app.route("/remove-node", methods=["POST"])
     def remove_node():
         data = request.get_json(force=True)
         return enqueue(edit.remove_node_from_graph, abs_path, data["node_id"])
-
 
     @app.route("/add-edge", methods=["POST"])
     def add_edge():
         data = request.get_json(force=True)
         return enqueue(edit.add_edge_to_graph, abs_path, data["source"], data["target"])
 
-
     @app.route("/remove-edge", methods=["POST"])
     def remove_edge():
         data = request.get_json(force=True)
         return enqueue(edit.remove_edge_from_graph, abs_path, data["source"], data["target"])
-
 
     @app.route("/edit-status", methods=["POST"])
     def edit_status():
@@ -306,7 +301,6 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             data["log"]
         )
 
-
     @app.route("/run", methods=["POST"])
     def run_pipeline():
         data = request.get_json(force=True) if request.data else {}
@@ -318,6 +312,9 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         ).start()
         return current_app.json.response({"status": "started"}), 202
 
+    # ------------------------------------------------------------
+    # RUN SERVER
+    # ------------------------------------------------------------
     try:
         socketio.run(app, port=port)
     finally:
@@ -328,9 +325,8 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
 
 # ============================================================
-# CLI Bridge Functions
+# CLI BRIDGE
 # ============================================================
-
 def cmd_start(args):
     start_server(args.filename or utils.default_workfile(), port=args.port, background=not args.foreground)
 

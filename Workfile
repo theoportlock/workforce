@@ -1,67 +1,122 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d4" for="edge" attr.name="id" attr.type="string" />
-  <key id="d3" for="node" attr.name="status" attr.type="string" />
-  <key id="d2" for="node" attr.name="y" attr.type="string" />
-  <key id="d1" for="node" attr.name="x" attr.type="string" />
-  <key id="d0" for="node" attr.name="label" attr.type="string" />
+  <key id="d7" for="edge" attr.name="id" attr.type="string" />
+  <key id="d6" for="node" attr.name="log" attr.type="string" />
+  <key id="d5" for="node" attr.name="status" attr.type="string" />
+  <key id="d4" for="node" attr.name="y" attr.type="string" />
+  <key id="d3" for="node" attr.name="x" attr.type="string" />
+  <key id="d2" for="node" attr.name="label" attr.type="string" />
+  <key id="d1" for="graph" attr.name="suffix" attr.type="string" />
+  <key id="d0" for="graph" attr.name="prefix" attr.type="string" />
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d0">echo test</data>
-      <data key="d1">753.0</data>
-      <data key="d2">231.0</data>
-      <data key="d3" />
+      <data key="d2">echo test</data>
+      <data key="d3">664.0</data>
+      <data key="d4">273.0</data>
+      <data key="d5" />
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
-      <data key="d0">ls</data>
-      <data key="d1">541.0</data>
-      <data key="d2">349.0</data>
-      <data key="d3" />
+      <data key="d2">ls</data>
+      <data key="d3">587.0</data>
+      <data key="d4">360.0</data>
+      <data key="d5" />
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d0">ls</data>
-      <data key="d1">447.0</data>
-      <data key="d2">141.0</data>
-      <data key="d3" />
+      <data key="d2">ls</data>
+      <data key="d3">536.0</data>
+      <data key="d4">105.0</data>
+      <data key="d5">run</data>
     </node>
     <node id="17fdc5dd-f379-41d4-a64d-3c162feb0fb7">
-      <data key="d0">ls</data>
-      <data key="d1">63.0</data>
-      <data key="d2">169.0</data>
-      <data key="d3" />
+      <data key="d2">ls</data>
+      <data key="d3">444.0</data>
+      <data key="d4">-4.0</data>
+      <data key="d5">ran</data>
+      <data key="d6">STDOUT:
+AUTHORS.rst
+build
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+requirements.txt
+tests
+todo.md
+venv
+Workfile
+workforce
+workforce.egg-info
+
+
+STDERR:
+</data>
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
-      <data key="d0">echo test</data>
-      <data key="d1">172.0</data>
-      <data key="d2">413.0</data>
-      <data key="d3" />
+      <data key="d2">echo test</data>
+      <data key="d3">378.0</data>
+      <data key="d4">120.0</data>
+      <data key="d5">ran</data>
+      <data key="d6">STDOUT:
+test
+
+
+STDERR:
+</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d0">pwd ls</data>
-      <data key="d1">289.0</data>
-      <data key="d2">268.0</data>
-      <data key="d3" />
+      <data key="d2">pwd ls</data>
+      <data key="d3">346.0</data>
+      <data key="d4">267.0</data>
+      <data key="d5" />
     </node>
-    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d4">096c5ccf-f859-4734-9418-ef39756348c8</data>
+    <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
+      <data key="d2">pwd</data>
+      <data key="d3">284.0</data>
+      <data key="d4">155.0</data>
+      <data key="d5">ran</data>
+      <data key="d6">STDOUT:
+/home/tpor598/workforce
+
+
+STDERR:
+</data>
+    </node>
+    <node id="3465997d-7dce-4218-b0c5-98009ffb857a">
+      <data key="d2">pwd</data>
+      <data key="d3">705.0</data>
+      <data key="d4">395.0</data>
+      <data key="d5" />
+    </node>
+    <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
+      <data key="d7">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
     </edge>
-    <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
-      <data key="d4">ea7603db-64b8-4f6c-9c88-4727cdb1cdbf</data>
+    <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="3465997d-7dce-4218-b0c5-98009ffb857a">
+      <data key="d7">21889cac-e338-42f8-b826-8277cea1997d</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d4">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
+      <data key="d7">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d4">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
+      <data key="d7">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
     </edge>
     <edge source="17fdc5dd-f379-41d4-a64d-3c162feb0fb7" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d4">c55ebe8a-d156-4051-9659-feb52f31b159</data>
+      <data key="d7">c55ebe8a-d156-4051-9659-feb52f31b159</data>
     </edge>
     <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d4">24331ba4-3f59-4a85-b791-bfff4b733587</data>
+      <data key="d7">24331ba4-3f59-4a85-b791-bfff4b733587</data>
     </edge>
-    <edge source="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
-      <data key="d4">56b4d997-bbd7-45b0-b330-f5f7c9cbabb5</data>
+    <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
+      <data key="d7">8ae2e181-2a4c-4711-98ec-3722faa3f7af</data>
     </edge>
+    <data key="d0">bash -c '</data>
+    <data key="d1">'</data>
   </graph>
 </graphml>

@@ -49,7 +49,7 @@ def main():
     run_p.add_argument("--suffix", default="")
     run_p.set_defaults(
         func=lambda args: run_main(
-            resolve_target(args.url_or_path),
+            resolve_target(args.url_or_path),   # ALWAYS returns a URL
             prefix=args.prefix,
             suffix=args.suffix,
         )
