@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d4" for="node" attr.name="y" attr.type="double"/>
+<key id="d3" for="node" attr.name="x" attr.type="double"/>
+<key id="d2" for="node" attr.name="label" attr.type="string"/>
+<key id="d1" for="graph" attr.name="suffix" attr.type="string"/>
+<key id="d0" for="graph" attr.name="prefix" attr.type="string"/>
+<graph edgedefault="directed"><data key="d0"></data>
+<data key="d1"></data>
+<node id="5c1b6c40-de69-4b37-aa73-3960c1c8a24b">
+  <data key="d2">Reproducibility
+- The scientific method
+- P-values</data>
+  <data key="d3">56.0</data>
+  <data key="d4">226.0</data>
+</node>
+<node id="5b7d43c1-5656-46a0-a88d-5b786057b594">
+  <data key="d2">Reproducible code
+- Data collection
+- Analysis</data>
+  <data key="d3">394.0</data>
+  <data key="d4">228.0</data>
+</node>
+<node id="844759e9-e314-4389-a7ab-93a6fff3e0ac">
+  <data key="d2">Pipelines
+- Make
+- Snakemake
+- Nextflow</data>
+  <data key="d3">712.0</data>
+  <data key="d4">229.0</data>
+</node>
+<node id="fcbb390b-6d77-416a-8abd-ab37a27409bb">
+  <data key="d2">Downstream Analysis
+figure1.py, analysis.sh, all.R
+- Why no nextflow?</data>
+  <data key="d3">1008.0</data>
+  <data key="d4">241.0</data>
+</node>
+<node id="03d7d2ab-282d-4506-8a35-705146918faf">
+  <data key="d2">Current attempts
+- codeocean</data>
+  <data key="d3">1363.0</data>
+  <data key="d4">258.0</data>
+</node>
+<node id="12f893dd-ac70-46e9-9bf4-89bd752d1be1">
+  <data key="d2">Workforce
+├── edit.py
+├── gui.py
+├── __init__.py
+├── __main__.py
+├── run.py
+├── server.py
+└── utils.py</data>
+  <data key="d3">1648.0</data>
+  <data key="d4">196.0</data>
+</node>
+<node id="ee90834a-e9f2-468b-9c07-2f8f9eae2f1b">
+  <data key="d2">graphml</data>
+  <data key="d3">1992.0</data>
+  <data key="d4">84.81818181818184</data>
+</node>
+<node id="a9ef5ade-3fa5-423a-8362-df4e5dcab396">
+  <data key="d2">edit.py</data>
+  <data key="d3">2353.818181818182</data>
+  <data key="d4">55.45454545454547</data>
+</node>
+<node id="4541a18b-5ba2-481b-8837-9e70ad1981d4">
+  <data key="d2">run.py</data>
+  <data key="d3">2347.818181818182</data>
+  <data key="d4">166.45454545454547</data>
+</node>
+<node id="3485dcdf-989d-4453-9a23-2a4f4b057374">
+  <data key="d2">Interfaces</data>
+  <data key="d3">1986.0</data>
+  <data key="d4">372.0</data>
+</node>
+<node id="4f19a514-07fa-4500-aeca-f78e7e6036d5">
+  <data key="d2">__main__.py (cli)</data>
+  <data key="d3">2324.0</data>
+  <data key="d4">345.0</data>
+</node>
+<node id="7fb8a0df-43d2-44ea-8f0c-0a3d10468602">
+  <data key="d2">server.py (sockets)
+- like chat app
+- multi user
+- host online (port forwarding)</data>
+  <data key="d3">2297.0</data>
+  <data key="d4">482.0</data>
+</node>
+<node id="f2e8f184-7ae0-40cc-a918-6d4d05a832ed">
+  <data key="d2">gui.py (you're looking at it)</data>
+  <data key="d3">2310.0</data>
+  <data key="d4">688.0</data>
+</node>
+<node id="97d6dfb1-92d9-4723-ac46-17f01bbd2665">
+  <data key="d2">Rollout
+- reddit
+- publication</data>
+  <data key="d3">2758.0</data>
+  <data key="d4">428.0</data>
+</node>
+<node id="16533472-b8c3-4a6a-b7c6-e49854f2df4a">
+  <data key="d2">prefix suffix</data>
+  <data key="d3">2577.272727272728</data>
+  <data key="d4">168.18181818181816</data>
+</node>
+<edge source="5c1b6c40-de69-4b37-aa73-3960c1c8a24b" target="5b7d43c1-5656-46a0-a88d-5b786057b594"/>
+<edge source="5b7d43c1-5656-46a0-a88d-5b786057b594" target="844759e9-e314-4389-a7ab-93a6fff3e0ac"/>
+<edge source="844759e9-e314-4389-a7ab-93a6fff3e0ac" target="fcbb390b-6d77-416a-8abd-ab37a27409bb"/>
+<edge source="fcbb390b-6d77-416a-8abd-ab37a27409bb" target="03d7d2ab-282d-4506-8a35-705146918faf"/>
+<edge source="03d7d2ab-282d-4506-8a35-705146918faf" target="12f893dd-ac70-46e9-9bf4-89bd752d1be1"/>
+<edge source="12f893dd-ac70-46e9-9bf4-89bd752d1be1" target="ee90834a-e9f2-468b-9c07-2f8f9eae2f1b"/>
+<edge source="12f893dd-ac70-46e9-9bf4-89bd752d1be1" target="a9ef5ade-3fa5-423a-8362-df4e5dcab396"/>
+<edge source="12f893dd-ac70-46e9-9bf4-89bd752d1be1" target="4541a18b-5ba2-481b-8837-9e70ad1981d4"/>
+<edge source="12f893dd-ac70-46e9-9bf4-89bd752d1be1" target="3485dcdf-989d-4453-9a23-2a4f4b057374"/>
+<edge source="4541a18b-5ba2-481b-8837-9e70ad1981d4" target="16533472-b8c3-4a6a-b7c6-e49854f2df4a"/>
+<edge source="3485dcdf-989d-4453-9a23-2a4f4b057374" target="4f19a514-07fa-4500-aeca-f78e7e6036d5"/>
+<edge source="3485dcdf-989d-4453-9a23-2a4f4b057374" target="7fb8a0df-43d2-44ea-8f0c-0a3d10468602"/>
+<edge source="3485dcdf-989d-4453-9a23-2a4f4b057374" target="f2e8f184-7ae0-40cc-a918-6d4d05a832ed"/>
+<edge source="f2e8f184-7ae0-40cc-a918-6d4d05a832ed" target="97d6dfb1-92d9-4723-ac46-17f01bbd2665"/>
+</graph></graphml>

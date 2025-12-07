@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import queue
 import platform
 import signal
 import subprocess
-import sys
 import threading
 import queue
+import json
 import time
+import uuid
+import sys
 
 import networkx as nx
 from flask import Flask, request, current_app
 from flask_socketio import SocketIO
 
+import platformdirs
 from workforce import utils
-from workforce import run
 from workforce import edit
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+
+log = logging.getLogger(__name__)
 
 # ============================================================
 # Server Lifecycle
@@ -30,7 +40,7 @@ def stop_server(filename: str | None):
     registry = utils.clean_registry()
 
     if abs_path not in registry:
-        print(f"No active server for '{filename}'")
+        log.warning(f"No active server found for '{filename}'")
         return
 
     entry = registry.pop(abs_path)
@@ -45,9 +55,9 @@ def stop_server(filename: str | None):
         else:
             os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
-        print("Process already stopped")
+        log.info("Server process %s already stopped.", pid)
 
-    print(f"Stopped server for '{filename}' (PID {pid}) port {port}")
+    log.info(f"Stopped server for '{filename}' (PID {pid}) on port {port}")
 
 
 def list_servers():
@@ -70,7 +80,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     registry = utils.clean_registry()
 
     if abs_path in registry:
-        print(f"Server already running: http://127.0.0.1:{registry[abs_path]['port']}")
+        log.info(f"Server for '{abs_path}' already running on port {registry[abs_path]['port']}")
         return
 
     if port is None:
@@ -79,7 +89,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     # ---------------------------------------------------------
     # BACKGROUND MODE
     # ---------------------------------------------------------
-    if background:
+    if background and sys.platform != "emscripten":
         cmd = [
             sys.executable,
             "-m", "workforce",
@@ -99,7 +109,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0}
         utils.save_registry(registry)
 
-        print(f"Server started for '{abs_path}' on port {port}")
+        log.info(f"Server started for '{abs_path}' on port {port} with PID {process.pid}")
         return
 
     # ============================================================
@@ -107,6 +117,12 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     # ============================================================
 
     app = Flask(__name__)
+
+    # Create a cache directory for this server instance's requests
+    cache_dir = platformdirs.user_cache_dir("workforce")
+    server_cache_dir = os.path.join(cache_dir, str(os.getpid()))
+    os.makedirs(server_cache_dir, exist_ok=True)
+    log.info(f"Caching requests to {server_cache_dir}")
     socketio = SocketIO(
         app,
         cors_allowed_origins="*",
@@ -121,31 +137,32 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     # GRAPH WORKER — simplified, no diffing, always emits lifecycle
     # ------------------------------------------------------------
     def graph_worker():
-        print("Graph worker thread started.")
+        log.info("Graph worker thread started.")
         while True:
             func, args, kwargs = MODIFICATION_QUEUE.get()
             try:
                 result = func(*args, **kwargs)
 
                 # Broadcast graph update
-                print(f"[DEBUG] Emitting graph_update for {abs_path}")
+                log.debug(f"Emitting graph_update for {abs_path}")
                 socketio.emit("graph_update", result, namespace="/")
 
                 # Emit lifecycle messages for every node
                 for node in result.get("nodes", []):
                     nid = node["id"]
                     stat = node.get("status", "")
+                    label = node.get("label", "")
 
                     if stat == "run":
-                        print(f"[DEBUG] node_ready: {nid}")
-                        socketio.emit("node_ready", {"node_id": nid}, namespace="/")
+                        log.debug(f"Emitting node_ready for {nid} with label.")
+                        socketio.emit("node_ready", {"node_id": nid, "label": label}, namespace="/")
 
                     elif stat == "ran":
-                        print(f"[DEBUG] node_done: {nid}")
+                        log.debug(f"Emitting node_done for {nid}")
                         socketio.emit("node_done", {"node_id": nid}, namespace="/")
 
             except Exception as e:
-                print(f"[ERROR] Graph worker: {e}")
+                log.error(f"Graph worker error: {e}", exc_info=True)
 
             finally:
                 MODIFICATION_QUEUE.task_done()
@@ -156,19 +173,34 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     registry[abs_path] = {"port": port, "pid": os.getpid(), "clients": 0}
     utils.save_registry(registry)
 
-    print(f"Serving '{abs_path}' on port {port}")
-    print(f"http://127.0.0.1:{port}\n")
+    log.info(f"Serving '{abs_path}' on http://127.0.0.1:{port}")
 
-    client_count = {"count": 0}
+    client_state = {"count": 0, "lock": threading.Lock()}
 
     def update_registry_clients():
-        reg = utils.load_registry()
-        if abs_path in reg:
-            reg[abs_path]["clients"] = client_count["count"]
-            utils.save_registry(reg)
+        with client_state["lock"]:
+            reg = utils.load_registry()
+            if abs_path in reg:
+                reg[abs_path]["clients"] = client_state["count"]
+                utils.save_registry(reg)
 
     # Helper to enqueue graph modifications
     def enqueue(func, *args, **kwargs):
+        # Save request for undo/redo
+        try:
+            request_id = str(uuid.uuid4())
+            request_file = os.path.join(server_cache_dir, f"{request_id}.json")
+            # The first arg is always the path, which we don't need to store
+            payload = {
+                "operation": func.__name__,
+                "args": args[1:],
+                "kwargs": kwargs,
+            }
+            with open(request_file, "w") as f:
+                json.dump(payload, f)
+        except Exception as e:
+            log.error(f"Failed to cache request: {e}", exc_info=True)
+
         MODIFICATION_QUEUE.put((func, args, kwargs))
         return current_app.json.response({"status": "queued"}), 202
 
@@ -177,11 +209,11 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     # ------------------------------------------------------------
     @socketio.on("connect")
     def on_connect():
-        print("[SocketIO] Client connected.")
+        log.info("SocketIO client connected: %s", request.sid)
 
     @socketio.on("disconnect")
     def on_disconnect():
-        print("[SocketIO] Client disconnected.")
+        log.info("SocketIO client disconnected: %s", request.sid)
 
     # ------------------------------------------------------------
     # HTTP ROUTES
@@ -189,27 +221,31 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
     @app.route("/client-connect", methods=["POST"])
     def client_connect():
-        client_count["count"] += 1
+        with client_state["lock"]:
+            client_state["count"] += 1
+            count = client_state["count"]
         update_registry_clients()
-        return current_app.json.response({"clients": client_count["count"]})
+        return current_app.json.response({"clients": count})
 
     @app.route("/client-disconnect", methods=["POST"])
     def client_disconnect():
-        client_count["count"] = max(0, client_count["count"] - 1)
+        with client_state["lock"]:
+            client_state["count"] = max(0, client_state["count"] - 1)
+            count = client_state["count"]
+
+            if count == 0:
+                log.info("Last client disconnected. Scheduling shutdown in 1 second.")
+
+                def shutdown():
+                    time.sleep(1)
+                    os.kill(os.getpid(), signal.SIGTERM)
+
+                threading.Thread(target=shutdown, daemon=True).start()
+
         update_registry_clients()
-
-        if client_count["count"] == 0:
-            print("[Server] Last client disconnected. Scheduling shutdown in 1 second.")
-
-            def shutdown():
-                time.sleep(1)
-                os.kill(os.getpid(), signal.SIGTERM)
-
-            threading.Thread(target=shutdown, daemon=True).start()
-
         response = {
-            "clients": client_count["count"],
-            "status": "disconnecting" if client_count["count"] == 0 else "ok"
+            "clients": count,
+            "status": "disconnecting" if count == 0 else "ok"
         }
         return current_app.json.response(response)
 
@@ -271,14 +307,13 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             data["y"]
         )
 
-    @app.route("/edit-prefix-suffix", methods=["POST"])
-    def edit_prefix_suffix():
+    @app.route("/edit-wrapper", methods=["POST"])
+    def edit_wrapper():
         data = request.get_json(force=True)
         return enqueue(
-            edit.edit_prefix_suffix_in_graph,
+            edit.edit_wrapper_in_graph,
             abs_path,
-            data.get("prefix"),
-            data.get("suffix")
+            data.get("wrapper")
         )
 
     @app.route("/edit-node-label", methods=["POST"])
@@ -304,13 +339,39 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     @app.route("/run", methods=["POST"])
     def run_pipeline():
         data = request.get_json(force=True) if request.data else {}
-        prefix = data.get("prefix", "")
-        suffix = data.get("suffix", "")
-        threading.Thread(
-            target=lambda: run.run_full_pipeline(f"http://127.0.0.1:{port}/get-graph", prefix, suffix),
-            daemon=True
-        ).start()
+        start_nodes = data.get("nodes")
+        
+        # This endpoint now simply kicks off the process by marking nodes to 'run'.
+        # The standalone run.py client will listen for 'node_ready' events and execute them.
+        
+        G = edit.load_graph(abs_path)
+        
+        nodes_to_start = []
+        if start_nodes:
+            # If specific nodes are provided, start them.
+            nodes_to_start = start_nodes
+        else:
+            # Otherwise, start all root nodes (nodes with no parents).
+            nodes_to_start = [n for n, d in G.in_degree() if d == 0]
+            
+        if not nodes_to_start:
+            return current_app.json.response({"status": "no nodes to start"}), 200
+            
+        log.info(f"Queuing initial nodes for run: {nodes_to_start}")
+        for node_id in nodes_to_start:
+            # Enqueue the status change. The graph_worker will process this,
+            # save the change, and emit the 'node_ready' event.
+            MODIFICATION_QUEUE.put((
+                edit.edit_status_in_graph,
+                (abs_path, "node", node_id, "run"),
+                {}
+            ))
+            
         return current_app.json.response({"status": "started"}), 202
+
+    # ============================================================
+    #  PIPELINE EXECUTION LOGIC (MOVED FROM RUN.PY)
+    # ============================================================
 
     # ------------------------------------------------------------
     # RUN SERVER
@@ -321,7 +382,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         reg = utils.load_registry()
         reg.pop(abs_path, None)
         utils.save_registry(reg)
-        print("Clean shutdown; registry updated")
+        log.info("Server shut down cleanly; registry updated.")
 
 
 # ============================================================

@@ -17,10 +17,11 @@ import requests
 import socketio
 import atexit
 
-# Add this right after your imports
-logging.basicConfig(level=logging.DEBUG)
+from workforce import utils
 
-from workforce.utils import load_registry
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log = logging.getLogger(__name__)
+
 
 class WorkflowApp:
     def __init__(self, master, url: str):
@@ -62,9 +63,8 @@ class WorkflowApp:
         self.zoom_slider.set(1.0)
         self.zoom_slider.grid(row=1, column=1, sticky="ns")
 
-        # Prefix/suffix state
-        self.prefix = ""
-        self.suffix = ""
+        # Wrapper state
+        self.wrapper = "{}"
 
         # Bindings
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
@@ -74,7 +74,6 @@ class WorkflowApp:
         self.canvas.bind("<ButtonPress-3>", self.on_right_press)
         self.canvas.bind("<B3-Motion>", self.on_right_motion)
         self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
-        self.master.bind('<Control-s>', lambda e: self.save_to_current_file())
         self.master.bind('r', lambda e: self.run_selected())
         self.master.bind('<Shift-R>', lambda e: self.run_pipeline())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
@@ -82,7 +81,7 @@ class WorkflowApp:
         self.master.bind('c', lambda e: self.clear_selected_status())
         self.master.bind('e', lambda e: self.connect_nodes())
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
-        self.master.bind('p', lambda e: self.prefix_suffix_popup())
+        self.master.bind('p', lambda e: self.wrapper_popup())
         self.master.bind('q', lambda e: self.save_and_exit())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
@@ -128,7 +127,7 @@ class WorkflowApp:
 
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup, accelerator="P")
+        tools_menu.add_command(label="Wrapper", command=self.wrapper_popup, accelerator="P")
         menubar.add_cascade(label="Tools", menu=tools_menu)
 
         self.master.config(menu=menubar)
@@ -163,25 +162,25 @@ class WorkflowApp:
                 # --- Define Event Handlers ---
                 @self.sio.event
                 def connect():
-                    print(f"[SocketIO] Successfully connected to {self.base_url}")
+                    log.info(f"Successfully connected to {self.base_url}")
 
                 @self.sio.event
                 def connect_error(data):
-                    print(f"[SocketIO] Connection failed: {data}")
+                    log.warning(f"SocketIO connection failed: {data}")
 
                 @self.sio.event
                 def disconnect():
-                    print("[SocketIO] Disconnected")
+                    log.info("SocketIO disconnected")
 
                 # Register the specific graph update handler
                 self.sio.on('graph_update', self.on_graph_update)
 
                 # Attempt connection
-                print(f"[DEBUG] Attempting background connection to {self.base_url}...")
+                log.debug(f"Attempting background SocketIO connection to {self.base_url}...")
                 self.sio.connect(self.base_url, wait_timeout=5)
                 
             except Exception as e:
-                print(f"[Warning] SocketIO setup failed: {e}")
+                log.warning(f"SocketIO setup failed: {e}")
                 self.sio = None
 
         # Start the thread
@@ -189,7 +188,7 @@ class WorkflowApp:
         t.start()
 
     def on_graph_update(self, data=None):
-        print(f"[SocketIO] Graph update received! Payload: {data}")
+        log.debug(f"Graph update received via SocketIO. Payload: {data}")
         # Schedule the visual update on the main GUI thread
         self.master.after(0, self._reload_graph)
 
@@ -197,9 +196,8 @@ class WorkflowApp:
         if self.client_connected or not self.base_url:
             return
         try:
-            r = requests.post(self._url("/client-connect"), timeout=1.0)
-            if r.status_code == 200:
-                self.client_connected = True
+            utils._post(self.base_url, "/client-connect")
+            self.client_connected = True
         except Exception:
             pass
 
@@ -207,7 +205,7 @@ class WorkflowApp:
         if not self.client_connected or not self.base_url:
             return
         try:
-            requests.post(self._url("/client-disconnect"), timeout=1.0)
+            utils._post(self.base_url, "/client-disconnect")
         except Exception:
             pass
         self.client_connected = False
@@ -241,15 +239,13 @@ class WorkflowApp:
                 r = requests.get(self._url("/get-graph"), timeout=1.0)
                 if r.status_code == 200:
                     self.graph = r.json()
-                    # Update local prefix/suffix from the loaded graph data
                     graph_attrs = self.graph.get('graph', {})
-                    self.prefix = graph_attrs.get('prefix', '')
-                    self.suffix = graph_attrs.get('suffix', '')
+                    self.wrapper = graph_attrs.get('wrapper', '{}')
 
                     # Schedule the drawing on the main thread
                     self.master.after(0, self._redraw_graph)
             except Exception as e:
-                print(f"Background fetch failed: {e}")
+                log.warning(f"Background graph fetch failed: {e}")
 
         # Run the network request in a separate thread to avoid freezing GUI
         threading.Thread(target=_fetch, daemon=True).start()
@@ -277,7 +273,7 @@ class WorkflowApp:
         if not self.base_url:
             return
         try:
-            requests.post(self._url("/save-graph"), timeout=1.0)
+            utils._post(self.base_url, "/save-graph")
         except Exception:
             # non-fatal; GUI should continue to operate even if server/save is unavailable
             pass
@@ -291,7 +287,7 @@ class WorkflowApp:
                 return
             payload = {"label": lbl, "x": x / self.scale, "y": y / self.scale}
             try:
-                requests.post(self._url("/add-node"), json=payload, timeout=2.0).raise_for_status()
+                utils._post(self.base_url, "/add-node", payload)
                 # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Add node failed", str(e))
@@ -301,15 +297,14 @@ class WorkflowApp:
             self.node_label_popup("", on_save)
 
     def update_node_position(self, node_id: str, x: float, y: float):
-        url = self._url("/edit-node-position")
         try:
-            requests.post(url, json={
+            utils._post(self.base_url, "/edit-node-position", {
                 "node_id": node_id,
                 "x": x,
                 "y": y
-            }, timeout=2.0)
+            })
         except Exception as e:
-            print(f"Failed to update node position for {node_id}: {e}")
+            log.error(f"Failed to update node position for {node_id}: {e}")
 
     def add_node(self):
         def on_save(label):
@@ -319,7 +314,7 @@ class WorkflowApp:
             x = 100 + count * 50
             y = 100
             try:
-                requests.post(self._url("/add-node"), json={"label": label, "x": x, "y": y}, timeout=2.0).raise_for_status()
+                utils._post(self.base_url, "/add-node", {"label": label, "x": x, "y": y})
                 # self._reload_graph() # Wait for graph_update event
             except Exception as e:
                 messagebox.showerror("Add node error", str(e))
@@ -328,9 +323,9 @@ class WorkflowApp:
     def remove_node(self):
         for nid in list(self.selected_nodes):
             try:
-                requests.post(self._url("/remove-node"), json={"node_id": nid}, timeout=2.0)
+                utils._post(self.base_url, "/remove-node", {"node_id": nid})
             except Exception as e:
-                print(f"remove_node error: {e}")
+                log.error(f"remove_node failed for {nid}: {e}")
         self.selected_nodes.clear()
         # self._reload_graph() # Wait for graph_update event
 
@@ -341,9 +336,9 @@ class WorkflowApp:
             src = self.selected_nodes[i]
             tgt = self.selected_nodes[i + 1]
             try:
-                requests.post(self._url("/add-edge"), json={"source": src, "target": tgt}, timeout=2.0)
+                utils._post(self.base_url, "/add-edge", {"source": src, "target": tgt})
             except Exception as e:
-                print(f"add-edge error: {e}")
+                log.error(f"add-edge failed for {src}->{tgt}: {e}")
         # self._reload_graph() # Wait for graph_update event
 
     def delete_edges_from_selected(self):
@@ -351,9 +346,9 @@ class WorkflowApp:
         for l in links:
             if l.get("source") in self.selected_nodes or l.get("target") in self.selected_nodes:
                 try:
-                    requests.post(self._url("/remove-edge"), json={"source": l.get("source"), "target": l.get("target")}, timeout=2.0)
+                    utils._post(self.base_url, "/remove-edge", {"source": l.get("source"), "target": l.get("target")})
                 except Exception as e:
-                    print(f"remove-edge error: {e}")
+                    log.error(f"remove-edge failed for {l.get('source')}->{l.get('target')}: {e}")
         # self._reload_graph() # Wait for graph_update event
 
     def on_node_double_click(self, event, node_id):
@@ -366,11 +361,7 @@ class WorkflowApp:
 
         def on_save(new_label):
             try:
-                requests.post(
-                    self._url("/edit-node-label"),
-                    json={"node_id": node_id, "label": new_label},
-                    timeout=2.0
-                )
+                utils._post(self.base_url, "/edit-node-label", {"node_id": node_id, "label": new_label})
             except Exception as e:
                 messagebox.showerror("Update error", str(e))
 
@@ -389,29 +380,29 @@ class WorkflowApp:
         if self.base_url:
             payload = {
                 "nodes": self.selected_nodes,
-                "prefix": self.prefix,
-                "suffix": self.suffix
+                "wrapper": self.wrapper,
+                "subset_only": True
             }
             try:
-                requests.post(self._url("/run"), json=payload, timeout=2.0)
+                utils._post(self.base_url, "/run", payload)
             except Exception as e:
                 messagebox.showerror("Run Error", f"Failed to start node(s): {e}")
     
     def run_pipeline(self): # Renamed from run_pipeline to match CLI
         if self.base_url:
             payload = {
-                "prefix": self.prefix,
-                "suffix": self.suffix
+                "nodes": self.selected_nodes if self.selected_nodes else None,
+                "wrapper": self.wrapper
             }
             try:
-                requests.post(self._url("/run"), json=payload, timeout=2.0)
+                utils._post(self.base_url, "/run", payload)
             except Exception as e:
                 messagebox.showerror("Run Error", f"Failed to start pipeline: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):
             try:
-                requests.post(self._url("/edit-status"), json={"element_type": "node", "element_id": nid, "value": ""}, timeout=2.0)
+                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": nid, "value": ""})
             except Exception:
                 pass
         # self._reload_graph() # Wait for graph_update event
@@ -419,79 +410,67 @@ class WorkflowApp:
     def clear_all(self):
         for n in self.graph.get("nodes", []):
             try:
-                requests.post(self._url("/edit-status"), json={"element_type": "node", "element_id": n.get("id"), "value": ""}, timeout=2.0)
+                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": n.get("id"), "value": ""})
             except Exception:
                 pass
         for l in self.graph.get("links", []):
             eid = l.get("id")
             if eid:
                 try:
-                    requests.post(self._url("/edit-status"), json={"element_type": "edge", "element_id": eid, "value": ""}, timeout=2.0)
+                    utils._post(self.base_url, "/edit-status", {"element_type": "edge", "element_id": eid, "value": ""})
                 except Exception:
                     pass
         # self._reload_graph() # Wait for graph_update event
 
-    def prefix_suffix_popup(self): # Restore this method
+    def wrapper_popup(self):
         editor = tk.Toplevel(self.master)
-        editor.title("Prefix/Suffix")
-        editor.geometry("800x300")
-        editor.minsize(800, 380)
+        editor.title("Command Wrapper")
+        editor.geometry("600x150")
+        editor.minsize(400, 150)
 
         frame = tk.Frame(editor)
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Prefix
-        prefix_label = tk.Label(frame, text="Prefix:")
-        prefix_label.grid(row=0, column=0, sticky="w")
-        prefix_text = tk.Text(frame, wrap='word', font=("TkDefaultFont", 10), height=4)
-        prefix_text.grid(row=1, column=0, sticky="nsew", padx=(0,10))
-        prefix_text.insert("1.0", self.prefix)
+        label = tk.Label(frame, text="Enter the command wrapper. Use {} as a placeholder for the node's command.")
+        label.pack(pady=(0, 5), anchor="w")
 
-        # Suffix
-        suffix_label = tk.Label(frame, text="Suffix:")
-        suffix_label.grid(row=0, column=1, sticky="w")
-        suffix_text = tk.Text(frame, wrap='word', font=("TkDefaultFont", 10), height=4)
-        suffix_text.grid(row=1, column=1, sticky="nsew")
-        suffix_text.insert("1.0", self.suffix)
+        wrapper_entry = tk.Entry(frame, font=("TkDefaultFont", 10))
+        wrapper_entry.pack(fill=tk.X, expand=True)
+        wrapper_entry.insert(0, self.wrapper)
 
-        # Allow the text areas to expand
         frame.columnconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
-        frame.rowconfigure(1, weight=1)
 
         def save_and_close(event=None):
-            self.prefix = prefix_text.get("1.0", "end-1c")
-            self.suffix = suffix_text.get("1.0", "end-1c")
-            self.save_prefix_suffix() # Save to server
+            self.wrapper = wrapper_entry.get()
+            self.save_wrapper() # Save to server
             editor.destroy()
 
         def cancel_and_close(event=None):
             editor.destroy()
 
         btn_frame = tk.Frame(editor)
-        btn_frame.pack(fill=tk.X, padx=10, pady=(0,10))
+        btn_frame.pack(fill=tk.X, padx=10, pady=(5,10))
         save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
-        save_btn.pack(side=tk.LEFT, padx=5)
+        save_btn.pack(side=tk.RIGHT, padx=5)
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
-        cancel_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn.pack(side=tk.RIGHT, padx=5)
 
         # Keyboard shortcuts
         editor.bind('<Escape>', cancel_and_close)
-        editor.bind('<Control-Return>', save_and_close)
-        editor.bind('<Control-KP_Enter>', save_and_close)
+        wrapper_entry.bind('<Return>', save_and_close)
 
         editor.transient(self.master)
         editor.grab_set()
-        prefix_text.focus_set()
+        wrapper_entry.focus_set()
 
-    def save_prefix_suffix(self):
-        """Sends the current prefix and suffix to the server to be saved."""
+    def save_wrapper(self):
+        """Sends the current wrapper to the server to be saved."""
         if not self.base_url:
             return
         try:
-            requests.post(self._url("/edit-prefix-suffix"), json={"prefix": self.prefix, "suffix": self.suffix}, timeout=2.0)
+            utils._post(self.base_url, "/edit-wrapper", {"wrapper": self.wrapper})
         except Exception as e:
-            messagebox.showerror("Save Error", f"Failed to save prefix/suffix: {e}")
+            messagebox.showerror("Save Error", f"Failed to save wrapper: {e}")
 
     # ----------------------
     # Drawing and UI helpers
@@ -510,7 +489,7 @@ class WorkflowApp:
         status = data.get("status", "").lower()
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
         fill = status_colors.get(status, "lightgray")
-
+        
         font_size = font_size or max(1, int(self.base_font_size * self.scale))
         temp = self.canvas.create_text(0, 0, text=label, anchor="nw", font=("TkDefaultFont", font_size))
         bbox = self.canvas.bbox(temp) or (0, 0, 60, 20)
@@ -738,9 +717,9 @@ class WorkflowApp:
         if self._edge_start and target and target != self._edge_start:
             # instruct server to add edge
             try:
-                requests.post(self._url("/add-edge"), json={"source": self._edge_start, "target": target}, timeout=2.0)
+                utils._post(self.base_url, "/add-edge", {"source": self._edge_start, "target": target})
             except Exception as e:
-                print(f"add-edge error: {e}")
+                log.error(f"add-edge error: {e}")
 
     # node dragging (move positions locally, then send /update-node on release)
     def on_node_press(self, event, node_id):
@@ -786,24 +765,6 @@ class WorkflowApp:
         for link in self.graph.get("links", []):
             self.draw_edge(link.get("source"), link.get("target"))
 
-    # node dragging (move positions locally, then send /update-node on release)
-    def on_node_press(self, event, node_id):
-        self.dragging_node = node_id
-        x1, y1, x2, y2 = self._get_node_bounds(node_id)
-        self.drag_offset = (event.x - x1, event.y - y1)
-        # Store initial positions for all selected nodes (virtual coordinates)
-        self._multi_drag_initial = {}
-        for n in self.selected_nodes:
-            # find node dict from node-link graph
-            nd = next((it for it in self.graph.get("nodes", []) if it.get("id") == n), None)
-            if nd:
-                try:
-                    self._multi_drag_initial[n] = (float(nd.get("x", 100)), float(nd.get("y", 100)))
-                except Exception:
-                    self._multi_drag_initial[n] = (100.0, 100.0)
-            else:
-                self._multi_drag_initial[n] = (100.0, 100.0)
-
     # ----------------------
     # SocketIO handler
     # ----------------------
@@ -834,7 +795,7 @@ class WorkflowApp:
 
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="Prefix/Suffix", command=self.prefix_suffix_popup, accelerator="P")
+        tools_menu.add_command(label="Wrapper", command=self.wrapper_popup, accelerator="P")
         menubar.add_cascade(label="Tools", menu=tools_menu)
 
         self.master.config(menu=menubar)

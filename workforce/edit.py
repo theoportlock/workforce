@@ -9,9 +9,12 @@ All operations send HTTP requests to the server corresponding to the given Workf
 import networkx as nx
 import os
 import tempfile
+import logging
 import uuid
 
 from workforce.utils import _post
+
+log = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
 # Graph-manipulation helpers (leave unchanged)
@@ -37,7 +40,7 @@ def add_node_to_graph(path, label, x=0.0, y=0.0, status=""):
     node_id = str(uuid.uuid4())
     G.add_node(node_id, label=label, x=str(x), y=str(y), status=status)
     save_graph(G, path)
-    print(f"[GRAPH] Add node {node_id}")
+    log.info(f"Added node {node_id} to graph: {path}")
     return {"node_id": node_id}
 
 def remove_node_from_graph(path, node_id):
@@ -45,7 +48,7 @@ def remove_node_from_graph(path, node_id):
     if node_id in G:
         G.remove_node(node_id)
         save_graph(G, path)
-        print(f"[GRAPH] Remove node {node_id}")
+        log.info(f"Removed node {node_id} from graph: {path}")
         return {"status": "removed"}
     return {"error": "Node not found"}
 
@@ -55,8 +58,8 @@ def add_edge_to_graph(path, source, target):
         return {"error": "Both source and target must exist"}
     edge_id = str(uuid.uuid4())
     G.add_edge(source, target, id=edge_id)
-    save_graph(G, path)
-    print(f"[GRAPH] Add edge {edge_id}")
+    save_graph(G, path)    
+    log.info(f"Added edge {edge_id} ({source} -> {target}) to graph: {path}")
     return nx.node_link_data(G)
 
 def remove_edge_from_graph(path, source, target):
@@ -64,7 +67,7 @@ def remove_edge_from_graph(path, source, target):
     if G.has_edge(source, target):
         G.remove_edge(source, target)
         save_graph(G, path)
-        print(f"[GRAPH] Remove edge {source}->{target}")
+        log.info(f"Removed edge ({source} -> {target}) from graph: {path}")
         return {"status": "removed"}
     return {"error": "Edge not found"}
 
@@ -75,7 +78,7 @@ def edit_status_in_graph(path, element_type, element_id, value):
         if element_id in G:
             G.nodes[element_id]["status"] = value
             save_graph(G, path)
-            print(f"[GRAPH] Node {element_id} status={value}")
+            log.info(f"Set node {element_id} status to '{value}' in graph: {path}")
             return {"status": "updated"}
         return {"error": "Node not found"}
 
@@ -84,7 +87,7 @@ def edit_status_in_graph(path, element_type, element_id, value):
             if str(data.get("id")) == str(element_id):
                 data["status"] = value
                 save_graph(G, path)
-                print(f"[GRAPH] Edge {element_id} status={value}")
+                log.info(f"Set edge {element_id} status to '{value}' in graph: {path}")
                 return {"status": "updated"}
         return {"error": "Edge not found"}
 
@@ -97,18 +100,14 @@ def edit_node_position_in_graph(path, node_id, x, y):
     G.nodes[node_id]["x"] = str(x)
     G.nodes[node_id]["y"] = str(y)
     save_graph(G, path)
-    print(f"[GRAPH] Node {node_id} position=({x}, {y})")
     return {"status": "updated"}
 
-def edit_prefix_suffix_in_graph(path, prefix, suffix):
+def edit_wrapper_in_graph(path, wrapper):
     G = load_graph(path)
-    if prefix is not None:
-        G.graph['prefix'] = prefix
-    if suffix is not None:
-        G.graph['suffix'] = suffix
+    if wrapper is not None:
+        G.graph['wrapper'] = wrapper
     save_graph(G, path)
-    print(f"[GRAPH] Graph prefix='{prefix}', suffix='{suffix}'")
-    return nx.node_link_data(G)
+    return {"status": "updated"}
 
 def edit_node_label_in_graph(path, node_id, label):
     G = load_graph(path)
@@ -116,7 +115,6 @@ def edit_node_label_in_graph(path, node_id, label):
         return {"error": "Node not found"}
     G.nodes[node_id]["label"] = label
     save_graph(G, path)
-    print(f"[GRAPH] Node {node_id} label updated.")
     return {"status": "updated"}
 
 def save_node_log_in_graph(path, node_id, log):
@@ -125,7 +123,6 @@ def save_node_log_in_graph(path, node_id, log):
         return {"error": "Node not found"}
     G.nodes[node_id]["log"] = log
     save_graph(G, path)
-    print(f"[GRAPH] Log saved for node {node_id}.")
     return {"status": "updated"}
 
 
@@ -133,7 +130,7 @@ def save_node_log_in_graph(path, node_id, log):
 #  Remote Command Implementations (NOW TAKING port ARGUMENT)
 # ============================================================
 
-def cmd_add_node(args, port):
+def cmd_add_node(args, base_url):
     payload = {
         "label": args.label,
         "x": args.x,
@@ -141,62 +138,62 @@ def cmd_add_node(args, port):
         "status": args.status,
     }
     print(f"[CLIENT] POST /add-node {payload}")
-    resp = _post(port, "/add-node", payload)
+    resp = _post(base_url, "/add-node", payload)
     print(resp)
 
 
-def cmd_remove_node(args, port):
+def cmd_remove_node(args, base_url):
     payload = {"node_id": args.node_id}
     print(f"[CLIENT] POST /remove-node {payload}")
-    resp = _post(port, "/remove-node", payload)
+    resp = _post(base_url, "/remove-node", payload)
     print(resp)
 
 
-def cmd_add_edge(args, port):
+def cmd_add_edge(args, base_url):
     payload = {"source": args.source, "target": args.target}
     print(f"[CLIENT] POST /add-edge {payload}")
-    resp = _post(port, "/add-edge", payload)
+    resp = _post(base_url, "/add-edge", payload)
     print(resp)
 
 
-def cmd_remove_edge(args, port):
+def cmd_remove_edge(args, base_url):
     payload = {"source": args.source, "target": args.target}
     print(f"[CLIENT] POST /remove-edge {payload}")
-    resp = _post(port, "/remove-edge", payload)
+    resp = _post(base_url, "/remove-edge", payload)
     print(resp)
 
 
-def cmd_edit_status(args, port):
+def cmd_edit_status(args, base_url):
     payload = {
         "element_type": args.element_type,
         "element_id": args.element_id,
         "value": args.value,
     }
     print(f"[CLIENT] POST /edit-status {payload}")
-    resp = _post(port, "/edit-status", payload)
+    resp = _post(base_url, "/edit-status", payload)
     print(resp)
 
 
-def cmd_edit_position(args, port):
+def cmd_edit_position(args, base_url):
     payload = {"node_id": args.node_id, "x": args.x, "y": args.y}
     print(f"[CLIENT] POST /edit-node-position {payload}")
-    resp = _post(port, "/edit-node-position", payload)
+    resp = _post(base_url, "/edit-node-position", payload)
     print(resp)
 
-def cmd_edit_prefix_suffix(args, port):
-    payload = {"prefix": args.prefix, "suffix": args.suffix}
-    print(f"[CLIENT] POST /edit-prefix-suffix {payload}")
-    resp = _post(port, "/edit-prefix-suffix", payload)
+def cmd_edit_wrapper(args, base_url):
+    payload = {"wrapper": args.wrapper}
+    print(f"[CLIENT] POST /edit-wrapper {payload}")
+    resp = _post(base_url, "/edit-wrapper", payload)
     print(resp)
 
-def cmd_edit_node_label(args, port):
+def cmd_edit_node_label(args, base_url):
     payload = {"node_id": args.node_id, "label": args.label}
     print(f"[CLIENT] POST /edit-node-label {payload}")
-    resp = _post(port, "/edit-node-label", payload)
+    resp = _post(base_url, "/edit-node-label", payload)
     print(resp)
 
-def cmd_save_node_log(args, port):
+def cmd_save_node_log(args, base_url):
     payload = {"node_id": args.node_id, "log": args.log}
     print(f"[CLIENT] POST /save-node-log {payload}")
-    resp = _post(port, "/save-node-log", payload)
+    resp = _post(base_url, "/save-node-log", payload)
     print(resp)

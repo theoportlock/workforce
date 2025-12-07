@@ -9,6 +9,7 @@ an active server URL automatically using utils.resolve_target().
 
 import argparse
 import sys
+
 from workforce.utils import default_workfile, resolve_target
 from workforce.gui import main as gui_main
 from workforce.run import main as run_main
@@ -23,7 +24,10 @@ from workforce.edit import (
     cmd_remove_node,
     cmd_remove_edge,
     cmd_edit_status,
+    cmd_edit_wrapper
 )
+from workforce.gui import main as gui_main
+from workforce.utils import _post
 
 # -----------------------------------------------------------------------------
 
@@ -45,15 +49,13 @@ def main():
     # ---------------- RUN ----------------
     run_p = subparsers.add_parser("run", help="Execute workflow")
     run_p.add_argument("url_or_path", nargs="?", default=default_workfile())
-    run_p.add_argument("--prefix", default="")
-    run_p.add_argument("--suffix", default="")
-    run_p.set_defaults(
-        func=lambda args: run_main(
-            resolve_target(args.url_or_path),   # ALWAYS returns a URL
-            prefix=args.prefix,
-            suffix=args.suffix,
-        )
-    )
+    run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
+    run_p.add_argument("--subset-only", action="store_true", help="Only run specified nodes, not their descendants.")
+    run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
+    run_p.set_defaults(func=lambda args: run_main(
+        args.url_or_path,
+        wrapper=args.wrapper
+    ))
 
     # ---------------- SERVER ----------------
     server_p = subparsers.add_parser("server", help="Manage servers")
@@ -88,8 +90,8 @@ def main():
     en.add_argument("--y", type=float, default=0)
     en.add_argument("--status", default="")
     def _add_node(args):
-        path, port = resolve_port(args.filename)
-        cmd_add_node(args, port)
+        url = resolve_target(args.filename)
+        cmd_add_node(args, url)
     en.set_defaults(func=_add_node)
 
 
@@ -98,8 +100,8 @@ def main():
     ern.add_argument("filename")
     ern.add_argument("node_id")
     def _remove_node(args):
-        path, port = resolve_port(args.filename)
-        cmd_remove_node(args, port)
+        url = resolve_target(args.filename)
+        cmd_remove_node(args, url)
     ern.set_defaults(func=_remove_node)
 
 
@@ -109,8 +111,8 @@ def main():
     ee.add_argument("source")
     ee.add_argument("target")
     def _add_edge(args):
-        path, port = resolve_port(args.filename)
-        cmd_add_edge(args, port)
+        url = resolve_target(args.filename)
+        cmd_add_edge(args, url)
     ee.set_defaults(func=_add_edge)
 
 
@@ -120,8 +122,8 @@ def main():
     ere.add_argument("source")
     ere.add_argument("target")
     def _remove_edge(args):
-        path, port = resolve_port(args.filename)
-        cmd_remove_edge(args, port)
+        url = resolve_target(args.filename)
+        cmd_remove_edge(args, url)
     ere.set_defaults(func=_remove_edge)
 
 
@@ -132,9 +134,19 @@ def main():
     es.add_argument("element_id")
     es.add_argument("value")
     def _edit_status(args):
-        path, port = resolve_port(args.filename)
-        cmd_edit_status(args, port)
+        url = resolve_target(args.filename)
+        cmd_edit_status(args, url)
     es.set_defaults(func=_edit_status)
+
+
+    # --- edit-wrapper ---
+    ew = edit_sub.add_parser("edit-wrapper")
+    ew.add_argument("filename")
+    ew.add_argument("wrapper")
+    def _edit_wrapper(args):
+        url = resolve_target(args.filename)
+        cmd_edit_wrapper(args, url)
+    ew.set_defaults(func=_edit_wrapper)
 
     # Parse arguments and execute the corresponding function
     args = parser.parse_args()

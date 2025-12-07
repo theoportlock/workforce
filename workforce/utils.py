@@ -15,7 +15,6 @@ import urllib.error
 import urllib.request
 import subprocess
 import time
-import shlex
 
 REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
 
@@ -23,11 +22,11 @@ REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
 # HTTP POST helper
 # -----------------------------------------------------------------------------
 
-def _post(port: int, endpoint: str, payload: dict | None = None) -> dict:
+def _post(base_url: str, endpoint: str, payload: dict | None = None) -> dict:
     if not endpoint.startswith("/"):
         endpoint = "/" + endpoint
 
-    url = f"http://127.0.0.1:{port}{endpoint}"
+    url = f"{base_url.rstrip('/')}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
 
     req = urllib.request.Request(
@@ -50,6 +49,9 @@ def _post(port: int, endpoint: str, payload: dict | None = None) -> dict:
 
     except Exception as e:
         raise RuntimeError(f"Unexpected error POSTing to {url}: {e}")
+
+def shell_quote_multiline(script: str) -> str:
+    return script.replace("'", "'\\''")
 
 # -----------------------------------------------------------------------------
 # Registry utilities

@@ -6,3 +6,4 @@ pandas
 pytest
 requests
 websocket-client
+platformdirs

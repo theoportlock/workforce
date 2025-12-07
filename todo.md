@@ -29,6 +29,7 @@ wf --version -v?
 wf browser?
 
 
+Fix edit to load the url in the same way as the other functions with requests
 Add delete key or backspace for delete node(s)
 Fix the focus bug
 wf runner stop - figure out
