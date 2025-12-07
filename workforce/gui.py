@@ -16,6 +16,7 @@ from tkinter.scrolledtext import ScrolledText
 import requests
 import socketio
 import atexit
+import subprocess
 
 from workforce import utils
 
@@ -43,7 +44,6 @@ class WorkflowApp:
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=0)
 
-        self.create_toolbar()
         self.canvas = tk.Canvas(master, width=1000, height=600, bg="white")
         self.canvas.grid(row=1, column=0, sticky="nsew")
 
@@ -81,6 +81,7 @@ class WorkflowApp:
         self.master.bind('c', lambda e: self.clear_selected_status())
         self.master.bind('e', lambda e: self.connect_nodes())
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
+        self.master.bind('l', lambda e: self.show_node_log())
         self.master.bind('p', lambda e: self.wrapper_popup())
         self.master.bind('q', lambda e: self.save_and_exit())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
@@ -123,6 +124,10 @@ class WorkflowApp:
         run_menu = tk.Menu(menubar, tearoff=0)
         run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
         run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
+        run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
+        run_menu.add_separator()
+        self.run_remotely_var = tk.BooleanVar(value=False)
+        run_menu.add_checkbutton(label="Run Remotely", variable=self.run_remotely_var, onvalue=True, offvalue=False)
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu
@@ -157,7 +162,7 @@ class WorkflowApp:
         def connect_worker():
             try:
                 # Create the client with logging enabled
-                self.sio = socketio.Client(logger=True, engineio_logger=True)
+                self.sio = socketio.Client(logger=False, engineio_logger=False)
 
                 # --- Define Event Handlers ---
                 @self.sio.event
@@ -378,26 +383,47 @@ class WorkflowApp:
     
     def run_selected(self):
         if self.base_url:
-            payload = {
-                "nodes": self.selected_nodes,
-                "wrapper": self.wrapper,
-                "subset_only": True
-            }
-            try:
-                utils._post(self.base_url, "/run", payload)
-            except Exception as e:
-                messagebox.showerror("Run Error", f"Failed to start node(s): {e}")
+            if self.run_remotely_var.get():
+                # Remote run: just POST to /run
+                payload = {"nodes": self.selected_nodes, "subset_only": True, "run_on_server": True}
+                try:
+                    utils._post(self.base_url, "/run", payload)
+                    messagebox.showinfo("Run Triggered", "Remote run triggered for selected nodes.")
+                except Exception as e:
+                    messagebox.showerror("Run Error", f"Failed to trigger remote run: {e}")
+            else:
+                # Local run: spawn a subprocess
+                try:
+                    cmd = [sys.executable, "-m", "workforce", "run", self.base_url, "--subset-only"]
+                    if self.selected_nodes:
+                        cmd.extend(["--nodes", *self.selected_nodes])
+                    log.info(f"Spawning local runner for subset: {' '.join(cmd)}")
+                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    messagebox.showinfo("Run Started", "A local background runner has been started for the selected nodes.")
+                except Exception as e:
+                    messagebox.showerror("Run Error", f"Failed to start local runner: {e}")
     
     def run_pipeline(self): # Renamed from run_pipeline to match CLI
         if self.base_url:
-            payload = {
-                "nodes": self.selected_nodes if self.selected_nodes else None,
-                "wrapper": self.wrapper
-            }
-            try:
-                utils._post(self.base_url, "/run", payload)
-            except Exception as e:
-                messagebox.showerror("Run Error", f"Failed to start pipeline: {e}")
+            if self.run_remotely_var.get():
+                # Remote run: just POST to /run
+                payload = {"nodes": self.selected_nodes if self.selected_nodes else None, "run_on_server": True}
+                try:
+                    utils._post(self.base_url, "/run", payload)
+                    messagebox.showinfo("Run Triggered", "Remote pipeline run triggered.")
+                except Exception as e:
+                    messagebox.showerror("Run Error", f"Failed to trigger remote run: {e}")
+            else:
+                # Local run: spawn a subprocess
+                try:
+                    cmd = [sys.executable, "-m", "workforce", "run", self.base_url]
+                    if self.selected_nodes:
+                        cmd.extend(["--nodes", *self.selected_nodes])
+                    log.info(f"Spawning local runner for pipeline: {' '.join(cmd)}")
+                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    messagebox.showinfo("Run Started", "A local background runner has been started for the pipeline.")
+                except Exception as e:
+                    messagebox.showerror("Run Error", f"Failed to start local runner: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):
@@ -471,6 +497,51 @@ class WorkflowApp:
             utils._post(self.base_url, "/edit-wrapper", {"wrapper": self.wrapper})
         except Exception as e:
             messagebox.showerror("Save Error", f"Failed to save wrapper: {e}")
+
+    def show_node_log(self):
+        if len(self.selected_nodes) != 1:
+            messagebox.showinfo("Show Log", "Please select exactly one node to view its log.")
+            return
+
+        node_id = self.selected_nodes[0]
+        node_data = next((n for n in self.graph.get("nodes", []) if n.get("id") == node_id), None)
+
+        if not node_data:
+            return
+
+        node_label = node_data.get("label", node_id)
+
+        # Create the popup window
+        log_window = tk.Toplevel(self.master)
+        log_window.title(f"Log for: {node_label}")
+        log_window.geometry("800x600")
+        log_window.minsize(400, 200)
+
+        # Add Escape key binding to close the window
+        log_window.bind('<Escape>', lambda e: log_window.destroy())
+
+        log_display = ScrolledText(log_window, wrap='word', font=("TkFixedFont", 10))
+        log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        log_display.insert(tk.END, "Loading log...")
+        log_display.config(state=tk.DISABLED)  # Make it read-only
+
+        def fetch_log_worker():
+            try:
+                r = requests.get(self._url(f"/get-node-log/{node_id}"), timeout=3.0)
+                r.raise_for_status()
+                log_text = r.json().get("log", "[Failed to parse log from server]")
+            except Exception as e:
+                log_text = f"[Failed to fetch log from server]\n\n{e}"
+
+            def update_ui():
+                log_display.config(state=tk.NORMAL)
+                log_display.delete("1.0", tk.END)
+                log_display.insert(tk.END, log_text)
+                log_display.config(state=tk.DISABLED)
+
+            self.master.after(0, update_ui)
+
+        threading.Thread(target=fetch_log_worker, daemon=True).start()
 
     # ----------------------
     # Drawing and UI helpers
@@ -768,37 +839,6 @@ class WorkflowApp:
     # ----------------------
     # SocketIO handler
     # ----------------------
-    # Toolbar / menus / small helpers
-    # ----------------------
-    def create_toolbar(self):
-        menubar = tk.Menu(self.master)
-
-        # File menu
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Exit", command=self._on_close, accelerator="Q")
-        menubar.add_cascade(label="File", menu=file_menu)
-
-        # Edit menu
-        edit_menu = tk.Menu(menubar, tearoff=0)
-        edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
-        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D")
-        edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
-        edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
-        edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
-        menubar.add_cascade(label="Edit", menu=edit_menu)
-
-        # Run menu
-        run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
-        menubar.add_cascade(label="Run", menu=run_menu)
-
-        # Tools menu
-        tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="Wrapper", command=self.wrapper_popup, accelerator="P")
-        menubar.add_cascade(label="Tools", menu=tools_menu)
-
-        self.master.config(menu=menubar)
 
     def on_shift_left_press(self, event):
         # Start selection rectangle

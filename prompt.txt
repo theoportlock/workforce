@@ -1,6 +1,8 @@
 Workforce is an app that creates and runs bash commands in the order of a graph.
 It is like a desktop for terminals.
 Similar to Galaxy workflow, Qiime plugin workflows, AnADMA2, Snakemake, Nextflow, Make
-A Latticework on which to hang your ideas
 Supports multiuser
+
+run.py 
+An execution can be performed on either the full graph or a subgraph; if a subset is provided, the subgraph is built from those nodes, and if no subset is given but specific nodes are selected (as specified as a selected argument which is loaded from the gui also), the full graph run starts (changes status to 'run') from those selected nodes instead of from nodes with in-degree 0. If neither applies, start nodes default to those with in-degree 0 in the relevant graph. This 'run' status change request is emitted which triggers the execution of that node with the status change to 'running'. When a node runs, its stdout and stderr are captured as node attributes, and on successful completion an event of changing status to 'ran' is emitted only to that specific run task using its client/run ID (as with the other emissions). The scheduler then marks all outgoing edges from the completed node as 'ready', and each such status change triggers and emit that triggers a check on the target node; when all its incoming edges are 'ready', those edge flags are cleared, the node’s status becomes 'run', and execution continues recursively following the same cycle.
 

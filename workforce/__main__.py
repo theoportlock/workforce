@@ -54,6 +54,7 @@ def main():
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
     run_p.set_defaults(func=lambda args: run_main(
         args.url_or_path,
+        nodes=args.nodes,
         wrapper=args.wrapper
     ))
 

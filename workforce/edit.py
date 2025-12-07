@@ -72,6 +72,7 @@ def remove_edge_from_graph(path, source, target):
     return {"error": "Edge not found"}
 
 def edit_status_in_graph(path, element_type, element_id, value):
+    log.info(f"Updating status of {element_id} to {value}")
     G = load_graph(path)
 
     if element_type == "node":
