@@ -26,7 +26,6 @@ from workforce.edit import (
     cmd_edit_status,
     cmd_edit_wrapper
 )
-from workforce.gui import main as gui_main
 
 # -----------------------------------------------------------------------------
 
