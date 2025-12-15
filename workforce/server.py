@@ -133,6 +133,21 @@ def start_server(filename: str, port: int | None = None, background: bool = True
 
     MODIFICATION_QUEUE = queue.Queue()
 
+    # Track active runs and node->run mapping in-process
+    ACTIVE_RUNS: dict = {}        # run_id -> {"nodes": set(...), "subset_only": bool}
+    ACTIVE_NODE_RUN: dict = {}    # node_id -> run_id
+
+    def enqueue_status(path, element_type, element_id, value, run_id=None):
+        """
+        Wrapper around edit.edit_status_in_graph that preserves run_id context for node 'run' events.
+        It records node->run associations so the scheduler can track run completion and propagate events.
+        """
+        # Record the node's association to a run when it's queued to 'run'
+        if run_id and element_type == "node" and value == "run":
+            ACTIVE_NODE_RUN[element_id] = run_id
+            ACTIVE_RUNS.setdefault(run_id, {"nodes": set(), "subset_only": False})["nodes"].add(element_id)
+        return edit.edit_status_in_graph(path, element_type, element_id, value)
+
     def _check_and_trigger_successors(path, G, completed_node_id):
         """
         After a node completes, check its successors to see if they are ready to run.
@@ -210,26 +225,73 @@ def start_server(filename: str, port: int | None = None, background: bool = True
                 
                 # After any modification, reload the graph to get the latest state
                 G = edit.load_graph(args[0])  # args[0] is the path
-                data = nx.node_link_data(G, link="links")
+                data = nx.node_link_data(G, edges="links")
                 data["graph"] = G.graph
 
                 # Always broadcast the new graph state to all clients
                 log.debug(f"Emitting graph_update for {args[0]}")
                 socketio.emit("graph_update", data, namespace="/")
 
-                # If the modification was a status change, check for lifecycle events
-                if func.__name__ == 'edit_status_in_graph':
-                    _, el_type, el_id, status = args
+                # Lifecycle handling: consider status changes (either from edit_status_in_graph or enqueue_status)
+                if func.__name__ in ('edit_status_in_graph', 'enqueue_status'):
+                    # Unpack args. enqueue_status signature: (path, element_type, element_id, value, run_id)
+                    if func.__name__ == 'enqueue_status':
+                        _, el_type, el_id, status, run_id = args
+                    else:
+                        _, el_type, el_id, status = args
+                        run_id = ACTIVE_NODE_RUN.get(el_id)
+
+                    # Node becomes ready-to-run (status == 'run')
                     if el_type == 'node' and status == 'run':
-                        # If this run was initiated on the server, execute it here.
-                        # Otherwise, emit to a runner client.
+                        # If running on server, execute here; otherwise tell runner clients.
                         if G.graph.get('run_on_server', False):
                             label = G.nodes[el_id].get('label', '')
                             threading.Thread(target=execute_node_on_server, args=(el_id, label), daemon=True).start()
                         else:
-                            socketio.emit("node_ready", {"node_id": el_id, "label": G.nodes[el_id].get('label', '')})
+                            socketio.emit("node_ready", {"node_id": el_id, "label": G.nodes[el_id].get('label', ''), "run_id": run_id})
+                    # Node finished
                     elif el_type == 'node' and status == 'ran':
-                        _check_and_trigger_successors(args[0], G, el_id)
+                        # When a node completes, mark outgoing edges as 'ready' for this run
+                        for _, tgt, edata in G.out_edges(el_id, data=True):
+                            eid = edata.get('id')
+                            if eid and edata.get('status') != 'ready':
+                                # Tag the edge ready. pass run_id through as well (for later propagation)
+                                MODIFICATION_QUEUE.put((enqueue_status, (args[0], "edge", eid, "ready", run_id), {}))
+
+                        # Remove node from active-run tracking
+                        if run_id:
+                            ACTIVE_RUNS.get(run_id, {"nodes": set()})["nodes"].discard(el_id)
+                            ACTIVE_NODE_RUN.pop(el_id, None)
+
+                    # Edge became 'ready' — check its target node to see if all inputs are ready
+                    elif el_type == 'edge' and status == 'ready':
+                        # Find the edge endpoints by id
+                        edge_end = None
+                        for u, v, ed in G.edges(data=True):
+                            if ed.get('id') == el_id:
+                                edge_end = (u, v)
+                                break
+                        if edge_end:
+                            u, v = edge_end
+                            # Check all incoming edges for v
+                            in_edges = list(G.in_edges(v, data=True))
+                            all_ready = all(ed.get('status') == 'ready' for _, _, ed in in_edges)
+                            if all_ready:
+                                # Determine run_id for this triggering (prefer existing mapping from predecessors)
+                                candidate_run_id = None
+                                for uu, _, _ in in_edges:
+                                    candidate_run_id = ACTIVE_NODE_RUN.get(uu)
+                                    if candidate_run_id:
+                                        break
+                                # Clear incoming edges statuses
+                                for _, _, ed in in_edges:
+                                    eid2 = ed.get('id')
+                                    if eid2 and ed.get('status') != "":
+                                        MODIFICATION_QUEUE.put((enqueue_status, (args[0], "edge", eid2, "", candidate_run_id), {}))
+                                # Only start target node if it's not already running/ran
+                                node_status = G.nodes[v].get('status', '')
+                                if node_status not in ("run", "running", "ran"):
+                                    MODIFICATION_QUEUE.put((enqueue_status, (args[0], "node", v, "run", candidate_run_id), {}))
 
             except Exception as e:
                 log.error(f"Graph worker error: {e}", exc_info=True)
@@ -238,21 +300,41 @@ def start_server(filename: str, port: int | None = None, background: bool = True
                 MODIFICATION_QUEUE.task_done()
 
                 # After a task is done, if the queue is empty, check for run completion.
-                # This needs a small delay to prevent race conditions where a client is
-                # about to post a status update.
                 if MODIFICATION_QUEUE.empty():
                     def check_completion_task():
                         socketio.sleep(1.0)  # Wait a moment to see if new tasks arrive
-                        if MODIFICATION_QUEUE.empty():
-                            G = edit.load_graph(abs_path)
-                            running_nodes = [n for n, data in G.nodes(data=True) if data.get("status") in ("run", "running")]
-                            if not running_nodes and G.graph.get('run_id'): # Only signal completion for active runs
-                                log.info("Run complete. No nodes are in 'run' or 'running' state.")
-                                socketio.emit("run_complete")
+                        if not MODIFICATION_QUEUE.empty():
+                            return
+                        # Inspect active runs: if none of their tracked nodes are still 'run'/'running', mark run complete
+                        try:
+                            G_local = edit.load_graph(abs_path)
+                        except Exception:
+                            return
+                        for run_id in list(ACTIVE_RUNS.keys()):
+                            nodes_set = set(ACTIVE_RUNS.get(run_id, {}).get("nodes", set()))
+                            if not nodes_set:
+                                # No nodes tracked anymore => complete
+                                log.info("Run complete (no tracked nodes). Emitting run_complete for %s", run_id)
+                                socketio.emit("run_complete", {"run_id": run_id})
+                                ACTIVE_RUNS.pop(run_id, None)
+                                # clean any residual mapping entries
+                                for n, rid in list(ACTIVE_NODE_RUN.items()):
+                                    if rid == run_id:
+                                        ACTIVE_NODE_RUN.pop(n, None)
+                                continue
+                            # check current status for nodes in this run
+                            still_running = any(
+                                G_local.nodes[n].get("status") in ("run", "running")
+                                for n in nodes_set if n in G_local.nodes
+                            )
+                            if not still_running:
+                                log.info("Run complete (no running nodes) for %s. Emitting run_complete.", run_id)
+                                socketio.emit("run_complete", {"run_id": run_id})
+                                ACTIVE_RUNS.pop(run_id, None)
+                                for n in list(nodes_set):
+                                    ACTIVE_NODE_RUN.pop(n, None)
 
-                    # Run the check in a background task so it doesn't block the worker
                     socketio.start_background_task(check_completion_task)
-
 
     socketio.start_background_task(target=graph_worker)
 
@@ -297,12 +379,10 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     @socketio.on("connect")
     def on_connect(auth=None):
         log.info("SocketIO client connected: %s", request.sid)
-        # When a runner connects, it passes the initial nodes in the auth payload.
-        # We emit an event back to *only that client* to tell it to trigger the /run POST.
-        if auth and "initial_nodes" in auth:
-            log.info(f"Runner client connected. Triggering its run for sid={request.sid}")
-            # The runner will now POST to /run with this payload.
-            socketio.emit("start_run", {"nodes": auth["initial_nodes"]}, to=request.sid)
+        # Previously: auto-trigger runs if client passed initial_nodes in auth.
+        # That behavior caused runs to start on connect. Do NOT auto-start runs here.
+        # Keep the handler minimal and let clients explicitly POST /run to start execution.
+        # Optionally record client info in future if needed.
 
     @socketio.on("disconnect")
     def on_disconnect():
@@ -345,7 +425,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     @app.route("/get-graph")
     def get_graph():
         G = edit.load_graph(abs_path)
-        data = nx.node_link_data(G, link="links")
+        data = nx.node_link_data(G, edges="links")
         data["graph"] = G.graph
         data["graph"].setdefault("prefix", "")
         data["graph"].setdefault("suffix", "")
@@ -444,17 +524,21 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         selected_nodes = data.get("nodes")
         run_on_server = data.get("run_on_server", False)
         subset_only = data.get("subset_only", False)
+        start_failed = data.get("start_failed", False)
 
         G = edit.load_graph(abs_path)
 
-        # Tag the graph with a run ID and execution mode
-        G.graph['run_id'] = str(uuid.uuid4())
+        # Create run id and register the run
+        run_id = str(uuid.uuid4())
+        ACTIVE_RUNS[run_id] = {"nodes": set(), "subset_only": subset_only}
+
         G.graph['run_on_server'] = run_on_server
 
-        graph_to_run = G
+        graph_to_run = G.copy()
 
         if subset_only and selected_nodes:
             # Build a subgraph from the selected nodes
+            log.info(f"Running on a subset of nodes: {selected_nodes}")
             graph_to_run = G.subgraph(selected_nodes).copy()
 
         nodes_to_start = []
@@ -465,26 +549,33 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             # Start all root nodes (in-degree 0) in the relevant graph (full or subgraph)
             nodes_to_start = [n for n, d in graph_to_run.in_degree() if d == 0]
 
+        # If asked to start_failed, prefer failed nodes when no selection was provided
+        if start_failed and (not selected_nodes):
+            failed_nodes = [n for n, d in G.nodes(data=True) if d.get("status") == "fail"]
+            if failed_nodes:
+                nodes_to_start = failed_nodes
+                log.info("Starting run from failed nodes: %s", failed_nodes)
+
         if not nodes_to_start:
             # This can happen if a cycle is selected or if all nodes have parents
-            if selected_nodes and not subset_only:
+            if selected_nodes:
                 log.warning("Run requested for selected nodes, but none are root nodes in the selection. Starting them anyway.")
                 nodes_to_start = selected_nodes
             else:
                 log.warning("No root nodes found to start the run.")
-            return current_app.json.response({"status": "no nodes to start"}), 200
+                return current_app.json.response({"status": "no nodes to start"}), 200
             
-        log.info(f"Queuing initial nodes for run: {nodes_to_start}")
+        log.info(f"Queuing initial nodes for run {run_id}: {nodes_to_start}")
         for node_id in nodes_to_start:
-            # Enqueue the status change. The graph_worker will process this,
-            # save the change, and emit the 'node_ready' event.
+            # Use enqueue_status so the association to run_id is recorded
             MODIFICATION_QUEUE.put((
-                edit.edit_status_in_graph,
-                (abs_path, "node", node_id, "run"),
+                enqueue_status,
+                (abs_path, "node", node_id, "run", run_id),
                 {}
             ))
             
-        return current_app.json.response({"status": "started"}), 202
+        # Return run_id so clients (runners) can filter events for this run
+        return current_app.json.response({"status": "started", "run_id": run_id}), 202
 
     # ============================================================
     #  PIPELINE EXECUTION LOGIC (MOVED FROM RUN.PY)

@@ -6,17 +6,13 @@
 
 import logging
 
-import os
-import sys
-import time
 import threading
 import tkinter as tk
-from tkinter import filedialog, simpledialog, messagebox
+from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
 import socketio
 import atexit
-import subprocess
 
 from workforce import utils
 
@@ -149,6 +145,17 @@ class WorkflowApp:
         atexit.register(self._atexit_disconnect)
         self.master.protocol("WM_DELETE_WINDOW", self._on_close)
 
+        # interaction state initializations (fix AttributeError on first events)
+        self.dragging_node = None
+        self._edge_line = None
+        self._edge_start = None
+        self._select_rect_active = False
+        self._select_rect_id = None
+        self._select_rect_start = None
+        self._potential_deselect = False
+        self._panning = False
+        self._multi_drag_initial = {}
+
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
             path = "/" + path
@@ -182,7 +189,7 @@ class WorkflowApp:
 
                 # Attempt connection
                 log.debug(f"Attempting background SocketIO connection to {self.base_url}...")
-                self.sio.connect(self.base_url, wait_timeout=5)
+                self.sio.connect(self.base_url, wait_timeout=5, auth=None)
                 
             except Exception as e:
                 log.warning(f"SocketIO setup failed: {e}")
@@ -382,48 +389,29 @@ class WorkflowApp:
         pass
     
     def run_selected(self):
-        if self.base_url:
-            if self.run_remotely_var.get():
-                # Remote run: just POST to /run
-                payload = {"nodes": self.selected_nodes, "subset_only": True, "run_on_server": True}
-                try:
-                    utils._post(self.base_url, "/run", payload)
-                    messagebox.showinfo("Run Triggered", "Remote run triggered for selected nodes.")
-                except Exception as e:
-                    messagebox.showerror("Run Error", f"Failed to trigger remote run: {e}")
-            else:
-                # Local run: spawn a subprocess
-                try:
-                    cmd = [sys.executable, "-m", "workforce", "run", self.base_url, "--subset-only"]
-                    if self.selected_nodes:
-                        cmd.extend(["--nodes", *self.selected_nodes])
-                    log.info(f"Spawning local runner for subset: {' '.join(cmd)}")
-                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    messagebox.showinfo("Run Started", "A local background runner has been started for the selected nodes.")
-                except Exception as e:
-                    messagebox.showerror("Run Error", f"Failed to start local runner: {e}")
-    
-    def run_pipeline(self): # Renamed from run_pipeline to match CLI
-        if self.base_url:
-            if self.run_remotely_var.get():
-                # Remote run: just POST to /run
-                payload = {"nodes": self.selected_nodes if self.selected_nodes else None, "run_on_server": True}
-                try:
-                    utils._post(self.base_url, "/run", payload)
-                    messagebox.showinfo("Run Triggered", "Remote pipeline run triggered.")
-                except Exception as e:
-                    messagebox.showerror("Run Error", f"Failed to trigger remote run: {e}")
-            else:
-                # Local run: spawn a subprocess
-                try:
-                    cmd = [sys.executable, "-m", "workforce", "run", self.base_url]
-                    if self.selected_nodes:
-                        cmd.extend(["--nodes", *self.selected_nodes])
-                    log.info(f"Spawning local runner for pipeline: {' '.join(cmd)}")
-                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    messagebox.showinfo("Run Started", "A local background runner has been started for the pipeline.")
-                except Exception as e:
-                    messagebox.showerror("Run Error", f"Failed to start local runner: {e}")
+        # Lowercase 'r' — only run a subset if nodes are selected
+        if not self.selected_nodes:
+            messagebox.showinfo("Run", "No nodes selected for subset run.")
+            return
+        payload = {"nodes": self.selected_nodes, "subset_only": True, "run_on_server": self.run_remotely_var.get()}
+        try:
+            resp = utils._post(self.base_url, "/run", payload)
+            run_id = (resp or {}).get("run_id")
+            messagebox.showinfo("Run Triggered", f"Server run triggered for selected nodes. run_id={run_id}")
+        except Exception as e:
+            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+
+    def run_pipeline(self): # Uppercase R — start pipeline from selected nodes or failed/root nodes when none selected
+        payload = {"nodes": self.selected_nodes if self.selected_nodes else None, "run_on_server": self.run_remotely_var.get()}
+        if not self.selected_nodes:
+            # signal server to prefer failed nodes; server will fallback to roots if none failed
+            payload["start_failed"] = True
+        try:
+            resp = utils._post(self.base_url, "/run", payload)
+            run_id = (resp or {}).get("run_id")
+            messagebox.showinfo("Run Triggered", f"Server pipeline run triggered. run_id={run_id}")
+        except Exception as e:
+            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):
@@ -580,6 +568,8 @@ class WorkflowApp:
             self.canvas.tag_bind(item, "<B1-Motion>", lambda e, nid=node_id: self.on_node_drag(e, nid))
             self.canvas.tag_bind(item, "<ButtonRelease-1>", lambda e: self.on_node_release(e))
             self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: self.on_node_double_click(e, nid))
+            self.canvas.tag_bind(item, "<Button-3>", lambda e, nid=node_id: self.on_node_right_click(e, nid))
+            self.canvas.tag_bind(item, "<Double-Button-3>", lambda e, nid=node_id: self.on_node_double_right_click(e, nid))
 
 
     def draw_edge(self, src, tgt):
@@ -953,6 +943,33 @@ class WorkflowApp:
             if nd:
                 self.draw_node(nid, node_data=nd)
 
+    def on_node_double_right_click(self, event, node_id):
+        """
+        Handle double right-click on a node to show its log.
+        """
+        self.clear_selection()
+        self.selected_nodes = [node_id]
+        self.show_node_log()
+        return "break"  # Prevent edge-drag handlers from firing
+
+    def on_node_right_click(self, event, node_id):
+        """
+        Single right-click on a node: select that node (without preventing right-drag).
+        Returning None allows the canvas right-drag (edge creation) to still proceed.
+        """
+        # Select only this node
+        self.clear_selection()
+        self.selected_nodes = [node_id]
+        # Redraw selected node
+        nd = next((n for n in self.graph.get("nodes", []) if n.get("id") == node_id), None)
+        if nd:
+            # remove any stale widgets and redraw the node in selected state
+            if node_id in self.node_widgets:
+                for item in self.node_widgets[node_id]:
+                    self.canvas.delete(item)
+                del self.node_widgets[node_id]
+            self.draw_node(node_id, node_data=nd, selected=True)
+        # Do NOT return "break" so right-drag still starts edge creation
 class Gui:
     def __init__(self, url: str):
         self.root = tk.Tk()

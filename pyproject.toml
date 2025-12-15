@@ -41,3 +41,15 @@ wf = "workforce.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"] # Style, Errors, Import sorting
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true

@@ -12,6 +12,7 @@ class Runner:
     def __init__(self, base_url, wrapper="{}"):
         self.base_url = base_url
         self.wrapper = wrapper
+        self.run_id = None
         self.sio = socketio.Client(logger=log.isEnabledFor(logging.DEBUG), engineio_logger=log.isEnabledFor(logging.DEBUG))
         self._setup_events()
 
@@ -24,20 +25,26 @@ class Runner:
         def disconnect():
             log.info("Runner disconnected.")
 
-        @self.sio.on('start_run')
-        def on_start_run(data):
-            log.info("Server acknowledged connection. Sending start signal to /run endpoint...")
-            utils._post(self.base_url, "/run", data)
-
         @self.sio.on('run_complete')
-        def on_run_complete():
+        def on_run_complete(data=None):
+            # data may contain run_id
+            run_id = None
+            if isinstance(data, dict):
+                run_id = data.get("run_id")
+            if run_id and self.run_id and run_id != self.run_id:
+                log.debug("Ignoring run_complete for other run_id %s", run_id)
+                return
             log.info("Server signaled run completion. Disconnecting.")
             self.sio.disconnect()
 
         @self.sio.on('node_ready')
         def on_node_ready(data):
             node_id = data.get('node_id')
-            label = data.get('label')  # Server should provide the command
+            label = data.get('label')
+            run_id = data.get('run_id')
+            if self.run_id and run_id and run_id != self.run_id:
+                log.debug("Ignoring node_ready for other run %s", run_id)
+                return
             if node_id and label is not None:
                 log.info(f"Received node_ready for {node_id}")
                 thread = threading.Thread(target=self.execute_node, args=(node_id, label), daemon=True)
@@ -108,13 +115,24 @@ class Runner:
             log.error(f"!! Error executing {node_id}: {e}", exc_info=True)
             self.set_node_status(node_id, "fail")
 
-    def start(self, initial_nodes=None):
+    def start(self, initial_nodes=None, subset_only=False):
         """Connect to the server and start the run process."""
         log.info(f"Runner client starting for {self.base_url}")
         try:
+            # Initiate run explicitly and capture run_id
+            payload = {"nodes": initial_nodes or [], "subset_only": subset_only, "run_on_server": False}
+            run_response = None
+            try:
+                log.info("Posting /run to server to initiate run...")
+                run_response = utils._post(self.base_url, "/run", payload) or {}
+                self.run_id = run_response.get("run_id")
+                if self.run_id:
+                    log.info(f"Runner associated with run_id={self.run_id}")
+            except Exception as e:
+                log.warning(f"Failed to POST /run before connecting: {e}")
+
             log.info("Connecting to server via Socket.IO...")
-            # Connect first, then the server will emit 'start_run' to trigger the POST request.
-            self.sio.connect(self.base_url, transports=['websocket'], wait_timeout=10, auth={"initial_nodes": initial_nodes or []})
+            self.sio.connect(self.base_url, transports=['websocket'], wait_timeout=10)
             self.sio.wait()
         except socketio.exceptions.ConnectionError as e:
             log.error(f"Connection error: {e}")
@@ -123,13 +141,12 @@ class Runner:
         except KeyboardInterrupt:
             log.info("\nStopping runner.")
         finally:
-            if self.sio.connected:
+            if getattr(self.sio, "connected", False):
                 self.sio.disconnect()
 
-def main(url_or_path, nodes=None, wrapper="{}"):
+def main(url: str, nodes=None, wrapper="{}", subset_only=False):
     """
     The main entry point for the runner client.
     """
-    base_url = utils.resolve_target(url_or_path)
-    runner = Runner(base_url, wrapper)
-    runner.start(initial_nodes=nodes)
+    runner = Runner(url, wrapper)
+    runner.start(initial_nodes=nodes, subset_only=subset_only)

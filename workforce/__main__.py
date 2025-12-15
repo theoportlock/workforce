@@ -27,15 +27,13 @@ from workforce.edit import (
     cmd_edit_wrapper
 )
 from workforce.gui import main as gui_main
-from workforce.utils import _post
 
 # -----------------------------------------------------------------------------
 
 def main():
     # Default behaviour: GUI with default workfile
     if len(sys.argv) == 1:
-        url = resolve_target(default_workfile())
-        gui_main(url)
+        gui_main(resolve_target(default_workfile()))
         return
 
     parser = argparse.ArgumentParser(prog="workforce", description="Workforce CLI")
@@ -53,9 +51,10 @@ def main():
     run_p.add_argument("--subset-only", action="store_true", help="Only run specified nodes, not their descendants.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
     run_p.set_defaults(func=lambda args: run_main(
-        args.url_or_path,
+        resolve_target(args.url_or_path),
         nodes=args.nodes,
-        wrapper=args.wrapper
+        wrapper=args.wrapper,
+        subset_only=args.subset_only
     ))
 
     # ---------------- SERVER ----------------
