@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from . import WorkflowApp
+from .core import WorkflowApp
 
 def launch(url: str):
     root = tk.Tk()

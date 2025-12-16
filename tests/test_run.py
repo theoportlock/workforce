@@ -64,7 +64,7 @@ def test_save_graph(mock_requests, mock_socketio, nx_graph):
 
 def test_run_tasks_starts_node(mock_requests, mock_subprocess, nx_graph):
     mock_requests[0].return_value.json.return_value = {
-        "graph": {"prefix": "", "suffix": ""},
+        "graph": {"wrapper": "{}"},
         "nodes": [{"id": "A", "status": "run"}],
         "links": [],
     }
@@ -131,4 +131,3 @@ def test_end_to_end_run(tmp_path, mock_requests, mock_subprocess, nx_graph):
     assert mock_popen.called or mock_run.called
     _, post_mock = mock_requests
     assert post_mock.called
-

@@ -11,8 +11,7 @@ def register_routes(app, ctx):
         G = edit.load_graph(ctx.path)
         data = __import__("networkx").node_link_data(G, link="links")
         data["graph"] = G.graph
-        data["graph"].setdefault("prefix", "")
-        data["graph"].setdefault("suffix", "")
+        data["graph"].setdefault("wrapper", "{}")
         return current_app.json.response(data)
 
     @app.route("/get-node-log/<node_id>")

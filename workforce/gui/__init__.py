@@ -11,8 +11,12 @@ import atexit
 from .state import GUIState
 from .client import ServerClient
 from .canvas import GraphCanvas
-from .app import launch as main  # package-level entrypoint
-from workforce import utils
+from .core import WorkflowApp  # WorkflowApp moved to core to avoid circular imports
+
+# Lazy main launcher to avoid importing .app at module import time (prevents circular import)
+def main(url: str):
+    from .app import launch
+    return launch(url)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
@@ -196,4 +200,4 @@ class WorkflowApp:
 
 
 # Keep __all__ explicit for clarity
-__all__ = ["WorkflowApp", "GUIState", "ServerClient", "main"]
+__all__ = ["WorkflowApp", "GUIState", "ServerClient", "GraphCanvas", "main"]
