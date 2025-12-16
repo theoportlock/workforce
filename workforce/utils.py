@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 import subprocess
 import time
+import requests  # Add requests import
 
 REGISTRY_PATH = os.path.join(tempfile.gettempdir(), "workforce_servers.json")
 
@@ -145,35 +146,28 @@ def launch_server_for_file(filename: str) -> str:
     return f"http://127.0.0.1:{port}"
 
 
-def resolve_target(url_or_path: str | None) -> str:
-    """
-    Resolve a filename or URL to a server URL.
-    - If input is URL → return it
-    - If input is filename → connect existing server OR start one
-    """
-    if url_or_path is None:
-        wf = default_workfile()
-        if wf is None:
-            print("No Workfile found in current directory.", file=sys.stderr)
-            sys.exit(1)
-        url_or_path = wf
+def resolve_target(path_or_url):
+    if is_url(path_or_url):
+        return path_or_url
 
-    # Case 1: Direct URL
-    if is_url(url_or_path):
-        return url_or_path
-
-    # Case 2: Local file → ensure server is running
-    filename = os.path.abspath(url_or_path)
-
+    abs_path = os.path.abspath(path_or_url)
     registry = clean_registry()
-    info = registry.get(filename)
 
-    if info and "port" in info and is_port_in_use(info["port"]):
+    if abs_path in registry:
+        info = registry[abs_path]
         return f"http://127.0.0.1:{info['port']}"
 
-    # Need a fresh server
-    return launch_server_for_file(filename)
+    # Start server in background
+    from workforce.server import start_server
+    start_server(path_or_url, background=True)
 
+    # Check registry again
+    registry = clean_registry()
+    if abs_path in registry:
+        info = registry[abs_path]
+        return f"http://127.0.0.1:{info['port']}"
+
+    raise RuntimeError(f"Failed to start server for {path_or_url}")
 
 
 def resolve_port(filename: str | None = None) -> tuple[str, int]:

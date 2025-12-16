@@ -5,6 +5,7 @@ from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
 import atexit
+import time  # Add this import at the top
 
 from workforce import utils
 from .state import GUIState
@@ -96,7 +97,8 @@ class WorkflowApp:
 
         # Try connect socketio and notify server
         self._client_connect()
-        self._reload_graph()
+        # Don't fetch graph immediately; let SocketIO deliver it or use fallback
+        self.master.after(2000, self._try_load_graph_via_http)
 
         # cleanup on exit
         atexit.register(self._atexit_disconnect)
@@ -119,6 +121,38 @@ class WorkflowApp:
         }
         self.canvas_view = GraphCanvas(self.canvas, self.state, callbacks)
 
+        # After setting up menus and canvas, add logging for bindings
+        log.info("Binding shortcuts: q for quit, r for run_selected, etc.")
+        self.master.bind('q', lambda e: self.save_and_exit())
+        self.master.bind('r', lambda e: self.run_selected())
+        self.master.bind('<Shift-R>', lambda e: self.run_pipeline())
+        self.master.bind('<Shift-C>', lambda e: self.clear_all())
+        self.master.bind('d', lambda e: self.remove_node())
+        self.master.bind('c', lambda e: self.clear_selected_status())
+        self.master.bind('e', lambda e: self.connect_nodes())
+        self.master.bind('E', lambda e: self.delete_edges_from_selected())
+        self.master.bind('p', lambda e: self.wrapper_popup())
+        self.master.bind('l', lambda e: self.show_node_log())
+        self.master.bind('o', lambda e: self.load_workfile())
+        self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
+        self.master.bind('<Control-Up>', lambda e: self.zoom_in())
+        self.master.bind('<Control-Down>', lambda e: self.zoom_out())
+
+        # Canvas bindings for interaction
+        self.canvas.bind("<MouseWheel>", self.on_zoom)
+        self.canvas.bind("<Button-4>", self.on_zoom)
+        self.canvas.bind("<Button-5>", self.on_zoom)
+        self.canvas.bind("<ButtonPress-3>", self.on_right_press)
+        self.canvas.bind("<B3-Motion>", self.on_right_motion)
+        self.canvas.bind("<ButtonRelease-3>", self.on_right_release)
+        self.canvas.bind("<ButtonPress-1>", self.on_left_press)
+        self.canvas.bind("<B1-Motion>", self.on_left_motion)
+        self.canvas.bind("<ButtonRelease-1>", self.on_left_release)
+        self.canvas.bind("<Shift-ButtonPress-1>", self.on_shift_left_press)
+        self.canvas.bind("<Shift-B1-Motion>", self.on_shift_left_motion)
+        self.canvas.bind("<Shift-ButtonRelease-1>", self.on_shift_left_release)
+        self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
+
     # --- Network helpers ---
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
@@ -129,6 +163,9 @@ class WorkflowApp:
         if self.client_connected or not self.base_url:
             return
         try:
+            # Establish SocketIO connection for live updates
+            self.server.connect()
+            # Also notify server via REST API
             self.server.client_connect()
             self.client_connected = True
         except Exception:
@@ -149,8 +186,9 @@ class WorkflowApp:
     def _reload_graph(self):
         # Fetch authoritative node-link dict from server if possible
         def _fetch():
+            # Try once with a longer timeout, don't retry multiple times
             try:
-                data = self.server.get_graph(timeout=1.0)
+                data = self.server.get_graph(timeout=10.0)
                 if data:
                     self.state.graph = data
                     # keep legacy alias in sync
@@ -158,9 +196,16 @@ class WorkflowApp:
                     graph_attrs = self.state.graph.get('graph', {})
                     self.state.wrapper = graph_attrs.get('wrapper', '{}')
                     self.master.after(0, self._redraw_graph)
+                return
             except Exception as e:
-                log.warning("Background graph fetch failed: %s", e)
+                log.debug(f"Graph fetch failed (this is OK if using SocketIO): {e}")
         threading.Thread(target=_fetch, daemon=True).start()
+
+    def _try_load_graph_via_http(self):
+        """Try to load graph via HTTP as fallback if SocketIO hasn't delivered it yet."""
+        # Only try if we don't have a graph yet
+        if not self.state.graph.get("nodes"):
+            self._reload_graph()
 
     def _redraw_graph(self):
         for node in self.state.graph.get("nodes", []):
@@ -180,6 +225,10 @@ class WorkflowApp:
             utils._post(self.base_url, "/save-graph")
         except Exception:
             pass
+
+    def load_workfile(self):
+        """Reload the graph from server."""
+        self._reload_graph()
 
     # ----------------------
     # Node / edge operations (server-mediated)
@@ -262,7 +311,6 @@ class WorkflowApp:
         self.node_label_popup(current_label, on_save)
         return "break"
 
-    # ...helper methods: node_label_popup, wrapper_popup, save_wrapper, show_node_log...
     def node_label_popup(self, initial_value, on_save):
         editor = tk.Toplevel(self.master)
         editor.title("Node Label")
@@ -369,6 +417,49 @@ class WorkflowApp:
         threading.Thread(target=fetch_log_worker, daemon=True).start()
 
     # ----------------------
+    # Run operations
+    # ----------------------
+    def run_selected(self):
+        if not self.state.selected_nodes:
+            messagebox.showinfo("Run", "No nodes selected for subset run.")
+            return
+        try:
+            resp = self.server.run(nodes=self.state.selected_nodes, subset_only=True, run_on_server=self.run_remotely_var.get())
+            run_id = (resp or {}).get("run_id")
+        except Exception as e:
+            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+
+    def run_pipeline(self):
+        try:
+            resp = self.server.run(nodes=self.state.selected_nodes if self.state.selected_nodes else None, run_on_server=self.run_remotely_var.get(), start_failed=(not self.state.selected_nodes))
+            run_id = (resp or {}).get("run_id")
+            messagebox.showinfo("Run Triggered", f"Server pipeline run triggered. run_id={run_id}")
+        except Exception as e:
+            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+
+    def clear_selected_status(self):
+        for nid in list(self.selected_nodes):
+            try:
+                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": nid, "value": ""})
+            except Exception:
+                pass
+
+    def clear_all(self):
+        for n in self.state.graph.get("nodes", []):
+            try:
+                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": n.get("id"), "value": ""})
+            except Exception:
+                pass
+        for l in self.state.graph.get("links", []):
+            eid = l.get("id")
+            if eid:
+                try:
+                    utils._post(self.base_url, "/edit-status", {"element_type": "edge", "element_id": eid, "value": ""})
+                except Exception:
+                    pass
+        # Server will emit graph_update via SocketIO, no need to fetch here
+
+    # ----------------------
     # Geometry helpers (delegate to canvas_view)
     # ----------------------
     def _get_node_bounds(self, node_id):
@@ -450,7 +541,7 @@ class WorkflowApp:
                 self.state._potential_deselect = False
             self.canvas.scan_dragto(event.x, event.y, gain=1)
 
-    def on_canvas_release(self, event):
+    def on_node_release(self, event):  # Renamed from on_canvas_release to match callback
         if getattr(self.state, "dragging_node", None):
             self.state.dragging_node = None
             for n in list(self.state.selected_nodes):
@@ -461,6 +552,10 @@ class WorkflowApp:
             self.clear_selection()
         self.state._potential_deselect = False
         self.state._panning = False
+
+    def on_left_release(self, event):
+        """Handle left button release - delegates to on_node_release."""
+        self.on_node_release(event)
 
     def handle_node_click(self, event, node_id):
         if node_id in self.state.selected_nodes:
@@ -498,4 +593,173 @@ class WorkflowApp:
         y = self.canvas.canvasy(event.y)
         target = None
         for nid, (rect, txt) in self.canvas_view.node_widgets.items():
-            r
+            rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
+            if rx1 <= x <= rx2 and ry1 <= y <= ry2:
+                target = nid
+                break
+        self.canvas.delete(self._edge_line)
+        self._edge_line = None
+        if self.state.edge_start and target and target != self.state.edge_start:
+            try:
+                self.server.add_edge(self.state.edge_start, target)
+            except Exception as e:
+                log.error(f"add-edge error: {e}")
+
+    def on_node_press(self, event, node_id):
+        self.state.dragging_node = node_id
+        x1, y1, x2, y2 = self._get_node_bounds(node_id)
+        self.drag_offset = (event.x - x1, event.y - y1)
+        self.state._multi_drag_initial = {}
+        for n in self.state.selected_nodes:
+            nd = next((it for it in self.state.graph.get("nodes", []) if it.get("id") == n), None)
+            if nd:
+                try:
+                    self.state._multi_drag_initial[n] = (float(nd.get("x", 100)), float(nd.get("y", 100)))
+                except Exception:
+                    self.state._multi_drag_initial[n] = (100.0, 100.0)
+            else:
+                self.state._multi_drag_initial[n] = (100.0, 100.0)
+
+    def on_node_drag(self, event, node_id):
+        if not getattr(self.state, "dragging_node", None):
+            return
+        dx, dy = self.drag_offset
+        new_x = (event.x - dx) / self.state.scale
+        new_y = (event.y - dy) / self.state.scale
+        x0, y0 = self.state._multi_drag_initial.get(node_id, (new_x, new_y))
+        delta_x = new_x - x0
+        delta_y = new_y - y0
+        for n in list(self.state.selected_nodes):
+            ix, iy = self.state._multi_drag_initial.get(n, (new_x, new_y))
+            nx_ = ix + delta_x
+            ny_ = iy + delta_y
+            node = next((it for it in self.state.graph.get("nodes", []) if it.get("id") == n), None)
+            if node:
+                node['x'], node['y'] = nx_, ny_
+        self.canvas_view.redraw(self.state.graph)
+
+    # selection rectangle handlers
+    def on_shift_left_press(self, event):
+        self.state._select_rect_active = True
+        self.state._select_rect_start = (self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+        self.state._select_rect_id = self.canvas.create_rectangle(self.state._select_rect_start[0], self.state._select_rect_start[1], self.state._select_rect_start[0], self.state._select_rect_start[1], outline="gray", dash=(2,2), width=1, tags="select_rect")
+
+    def on_shift_left_motion(self, event):
+        if not self.state._select_rect_active or self.state._select_rect_id is None or self.state._select_rect_start is None:
+            return
+        x0, y0 = self.state._select_rect_start
+        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.canvas.coords(self.state._select_rect_id, x0, y0, x1, y1)
+
+    def on_shift_left_release(self, event):
+        if not self.state._select_rect_active or self.state._select_rect_id is None or self.state._select_rect_start is None:
+            return
+        x0, y0 = self.state._select_rect_start
+        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        x_min, x_max = min(x0, x1), max(x0, x1)
+        y_min, y_max = min(y0, y1), max(y0, y1)
+        for node_id, (rect, text) in self.canvas_view.node_widgets.items():
+            rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
+            if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
+                if node_id not in self.state.selected_nodes:
+                    self.state.selected_nodes.append(node_id)
+                    self.canvas.itemconfig(rect, outline="black", width=1)
+        self.canvas.delete(self.state._select_rect_id)
+        self.state._select_rect_id = None
+        self.state._select_rect_start = None
+        self.state._select_rect_active = False
+
+    # ----------------------
+    # Zoom helpers (wheel + slider)
+    # ----------------------
+    def on_zoom(self, event):
+        factor = 1.1 if getattr(event, "delta", 0) > 0 or getattr(event, "num", 0) == 4 else 1 / 1.1
+        try:
+            mouse_pos = (event.x, event.y)
+        except Exception:
+            mouse_pos = (self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2)
+        self.zoom(factor, mouse_pos=mouse_pos)
+
+    def on_zoom_scroll(self, value):
+        try:
+            new_scale = float(value)
+        except Exception:
+            return
+        if abs(new_scale - self.state.scale) > 1e-9:
+            factor = new_scale / self.state.scale
+            self.zoom(factor, from_scroll=True, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+
+    def zoom_in(self):
+        self.zoom(1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+
+    def zoom_out(self):
+        self.zoom(1 / 1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+
+    def zoom(self, factor, from_scroll=False, mouse_pos=None):
+        old_scale = self.state.scale
+        new_scale = self.state.scale * factor
+        new_scale = max(0.1, min(new_scale, 3.0))
+        if abs(new_scale - old_scale) < 1e-9:
+            return
+        self.state.scale = new_scale
+        self.scale = self.state.scale  # keep legacy alias
+        if not from_scroll:
+            try:
+                self.zoom_slider.set(self.state.scale)
+            except Exception:
+                pass
+        self.current_font_size = max(1, int(self.state.base_font_size * self.state.scale))
+        self.canvas_view.redraw(self.state.graph)
+
+    # Selection helper
+    def clear_selection(self):
+        to_redraw = list(self.state.selected_nodes)
+        self.state.selected_nodes.clear()
+        for nid in to_redraw:
+            if nid in self.canvas_view.node_widgets:
+                for item in self.canvas_view.node_widgets[nid]:
+                    self.canvas.delete(item)
+                del self.canvas_view.node_widgets[nid]
+            nd = next((n for n in self.state.graph.get("nodes", []) if n.get("id") == nid), None)
+            if nd:
+                self.canvas_view.draw_node(nid, node_data=nd)
+
+    def on_node_double_right_click(self, event, node_id):
+        self.clear_selection()
+        self.state.selected_nodes.append(node_id)
+        self.show_node_log()
+        return "break"
+
+    def on_node_right_click(self, event, node_id):
+        self.clear_selection()
+        self.state.selected_nodes.append(node_id)
+        nd = next((n for n in self.state.graph.get("nodes", []) if n.get("id") == node_id), None)
+        if nd:
+            if node_id in self.canvas_view.node_widgets:
+                for item in self.canvas_view.node_widgets[node_id]:
+                    self.canvas.delete(item)
+                del self.canvas_view.node_widgets[node_id]
+            self.canvas_view.draw_node(node_id, node_data=nd, selected=True)
+
+    def save_and_exit(self, event=None):
+        self._on_close()
+
+    def _atexit_disconnect(self):
+        try:
+            self._client_disconnect()
+        except Exception:
+            pass
+
+    def _on_close(self):
+        try:
+            self._client_disconnect()
+        except Exception:
+            pass
+        try:
+            self.master.destroy()
+        except Exception:
+            self.master.quit()
+
+    def on_graph_update(self, data=None):
+        log.debug(f"Graph update received via SocketIO. Payload: {data}")
+        self.master.after(0, self._reload_graph)

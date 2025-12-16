@@ -65,9 +65,9 @@ class GraphCanvas:
             if "on_node_double_click" in cb:
                 self.canvas.tag_bind(item, "<Double-Button-1>", lambda e, nid=node_id: cb["on_node_double_click"](e, nid))
             if "on_node_right_click" in cb:
-                self.canvas.tag_bind(item, "<Button-3>", lambda e, nid=node_id: cb["on_node_right_click"](e, nid))
+                self.canvas.tag_bind(item, "<Button-2>", lambda e, nid=node_id: cb["on_node_right_click"](e, nid))
             if "on_node_double_right_click" in cb:
-                self.canvas.tag_bind(item, "<Double-Button-3>", lambda e, nid=node_id: cb["on_node_double_right_click"](e, nid))
+                self.canvas.tag_bind(item, "<Double-Button-2>", lambda e, nid=node_id: cb["on_node_double_right_click"](e, nid))
 
     def draw_edge(self, src, tgt):
         x1, y1 = self.get_node_center(src)

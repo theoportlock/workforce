@@ -2,7 +2,7 @@ import os
 import platform
 import signal
 import subprocess
-import queue
+import time
 import uuid
 import sys
 import logging
@@ -11,9 +11,12 @@ import platformdirs
 from flask_socketio import SocketIO
 from workforce import utils
 
+# Rename to avoid conflict with local queue.py
+import queue as std_queue
+
 # Relative imports to the server package modules
 from .context import ServerContext
-from . import queue as server_queue
+from .queue import start_graph_worker
 from . import routes as server_routes
 from . import sockets as server_sockets
 
@@ -88,17 +91,20 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             "--foreground",
             "--port", str(port)
         ]
-
+        log.info(f"Starting background server with cmd: {' '.join(cmd)}")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=os.getcwd(),
         )
-
+        # Wait a bit to see if it starts
+        time.sleep(1)
+        if process.poll() is not None:
+            log.error(f"Server subprocess exited immediately with code {process.returncode}")
+            raise RuntimeError("Server failed to start")
         registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0}
         utils.save_registry(registry)
-
         log.info(f"Server started for '{abs_path}' on port {port} with PID {process.pid}")
         return
 
@@ -112,7 +118,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         path=abs_path,
         port=port,
         server_cache_dir=server_cache_dir,
-        mod_queue=queue.Queue(),
+        mod_queue=std_queue.Queue(),
         socketio=None,
     )
 
@@ -126,8 +132,8 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     server_routes.register_routes(app, ctx)
     server_sockets.register_socket_handlers(socketio, ctx)
 
-    # Start the background graph worker
-    server_queue.start_graph_worker(ctx)
+    # Start the graph worker
+    start_graph_worker(ctx)
 
     # Update registry
     registry[abs_path] = {"port": port, "pid": os.getpid(), "clients": 0}
