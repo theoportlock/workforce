@@ -24,27 +24,28 @@ def determine_start_nodes(G, selected_nodes, subset_only, start_failed=False):
 
 # Lifecycle handlers
 def handle_node_run(ctx: ServerContext, G, node_id, run_id):
-	# Map node->run and enqueue server execution or node_ready emit
+	# Map node->run and enqueue node_ready emit
 	if run_id:
 		ctx.active_node_run[node_id] = run_id
 		ctx.active_runs.setdefault(run_id, {"nodes": set()})["nodes"].add(node_id)
 
-	if G.graph.get("run_on_server", False):
-		# execute on server
-		from workforce.server.execution import execute_node_on_server
-		# start a background thread from queue.py by enqueuing the execution func
-		ctx.enqueue(execute_node_on_server, node_id)
-	else:
-		# Notify runner clients
-		ctx.socketio.emit("node_ready", {"node_id": node_id, "label": G.nodes[node_id].get("label",""), "run_id": run_id})
+	# Notify runner clients
+	ctx.socketio.emit("node_ready", {"node_id": node_id, "label": G.nodes[node_id].get("label",""), "run_id": run_id})
 
 def handle_node_ran(ctx: ServerContext, G, node_id, run_id):
 	# mark outgoing edges ready for this run
+	run_meta = ctx.active_runs.get(run_id, {})
+	subset_only = run_meta.get("subset_only", False)
+	subset_nodes = run_meta.get("subset_nodes", set())
+	
 	for _, tgt, edata in G.out_edges(node_id, data=True):
+		# if subset_only, only mark edges ready if target is in subset
+		if subset_only and tgt not in subset_nodes:
+			continue
 		eid = edata.get("id")
 		if eid and edata.get("status") != "ready":
 			# enqueue an edge status change that keeps run_id
-			ctx.enqueue(edit.edit_status_in_graph, ctx.path, "edge", eid, "ready")
+			ctx.enqueue(__import__("workforce.edit", fromlist=["edit_status_in_graph"]).edit_status_in_graph, ctx.path, "edge", eid, "ready")
 
 	# cleanup mapping for this node
 	if run_id:

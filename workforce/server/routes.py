@@ -72,13 +72,16 @@ def register_routes(app, ctx):
     def run_pipeline():
         data = request.get_json(force=True) if request.data else {}
         selected_nodes = data.get("nodes")
-        run_on_server = data.get("run_on_server", False)
         subset_only = data.get("subset_only", False)
         start_failed = data.get("start_failed", False)
 
         # create run id and register
         run_id = str(uuid.uuid4())
-        ctx.active_runs[run_id] = {"nodes": set(), "subset_only": subset_only, "run_on_server": run_on_server}
+        ctx.active_runs[run_id] = {
+            "nodes": set(),
+            "subset_only": subset_only,
+            "subset_nodes": set(selected_nodes) if subset_only and selected_nodes else set()
+        }
 
         G = edit.load_graph(ctx.path)
         graph_to_run = G.copy()

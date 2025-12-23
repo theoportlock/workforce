@@ -45,16 +45,11 @@ def start_graph_worker(ctx):
                     _, el_type, el_id, status = args
                     run_id = ctx.active_node_run.get(el_id)
                     if el_type == "node" and status == "run":
-                        # decide execution: server-side or runner client
-                        run_on_server = ctx.active_runs.get(run_id, {}).get("run_on_server", False)
-                        if run_on_server:
-                            label = G.nodes[el_id].get("label", "")
-                            threading.Thread(target=__import__("workforce.server.execution", fromlist=["execute_node_on_server"]).execute_node_on_server, args=(ctx, el_id, label), daemon=True).start()
-                        else:
-                            try:
-                                ctx.socketio.emit("node_ready", {"node_id": el_id, "label": G.nodes[el_id].get("label", ""), "run_id": run_id})
-                            except Exception:
-                                log.exception("Failed to emit node_ready")
+                        # emit node_ready for runner clients
+                        try:
+                            ctx.socketio.emit("node_ready", {"node_id": el_id, "label": G.nodes[el_id].get("label", ""), "run_id": run_id})
+                        except Exception:
+                            log.exception("Failed to emit node_ready")
                     elif el_type == "node" and status == "ran":
                         _check_and_trigger_successors(args[0], G, el_id)
                     elif el_type == "edge" and status == "ready":
