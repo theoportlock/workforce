@@ -14,7 +14,7 @@ class ServerContext:
     socketio: Any = None
 
     # per-run tracking
-    active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool, "run_on_server": bool}
+    active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool, "subset_nodes": set()}
     active_node_run: Dict[str, str] = field(default_factory=dict)    # node_id -> run_id
 
     def enqueue(self, func: Callable, *args, **kwargs):
@@ -38,5 +38,5 @@ class ServerContext:
         """
         if run_id and element_type == "node" and value == "run":
             self.active_node_run[element_id] = run_id
-            self.active_runs.setdefault(run_id, {"nodes": set(), "subset_only": False, "run_on_server": False})["nodes"].add(element_id)
+            self.active_runs.setdefault(run_id, {"nodes": set(), "subset_only": False, "subset_nodes": set()})["nodes"].add(element_id)
         return self.enqueue(__import__("workforce.edit", fromlist=["edit_status_in_graph"]).edit_status_in_graph, path, element_type, element_id, value)

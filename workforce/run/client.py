@@ -118,7 +118,7 @@ class Runner:
 		log.info(f"Runner client starting for {self.base_url}")
 		try:
 			# Initiate run explicitly and capture run_id
-			payload = {"nodes": initial_nodes or [], "subset_only": subset_only, "run_on_server": False}
+			payload = {"nodes": initial_nodes or [], "subset_only": subset_only}
 			try:
 				log.info("Posting /run to server to initiate run...")
 				run_response = utils._post(self.base_url, "/run", payload) or {}

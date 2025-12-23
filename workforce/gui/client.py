@@ -95,8 +95,8 @@ class ServerClient:
     def save_node_log(self, node_id, log_text):
         return utils._post(self.base_url, "/save-node-log", {"node_id": node_id, "log": log_text})
 
-    def run(self, nodes=None, subset_only=False, run_on_server=False, start_failed=False):
-        payload = {"nodes": nodes, "subset_only": subset_only, "run_on_server": run_on_server, "start_failed": start_failed}
+    def run(self, nodes=None, subset_only=False, start_failed=False):
+        payload = {"nodes": nodes, "subset_only": subset_only, "start_failed": start_failed}
         return utils._post(self.base_url, "/run", payload)
 
     def client_connect(self):

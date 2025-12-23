@@ -86,12 +86,9 @@ class WorkflowApp:
 
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
+        run_menu.add_command(label="Run Subset", command=self.run_selected, accelerator="r")
+        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="R")
         run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
-        run_menu.add_separator()
-        self.run_remotely_var = tk.BooleanVar(value=False)
-        run_menu.add_checkbutton(label="Run Remotely", variable=self.run_remotely_var, onvalue=True, offvalue=False)
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu

@@ -77,12 +77,9 @@ class WorkflowApp:
 
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
+        run_menu.add_command(label="Run Subset", command=self.run_selected, accelerator="r")
+        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="R")
         run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
-        run_menu.add_separator()
-        self.run_remotely_var = tk.BooleanVar(value=False)
-        run_menu.add_checkbutton(label="Run Remotely", variable=self.run_remotely_var, onvalue=True, offvalue=False)
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu
@@ -122,10 +119,10 @@ class WorkflowApp:
         self.canvas_view = GraphCanvas(self.canvas, self.state, callbacks)
 
         # After setting up menus and canvas, add logging for bindings
-        log.info("Binding shortcuts: q for quit, r for run_selected, etc.")
+        log.info("Binding shortcuts: q for quit, r for subset run, R for pipeline run")
         self.master.bind('q', lambda e: self.save_and_exit())
         self.master.bind('r', lambda e: self.run_selected())
-        self.master.bind('<Shift-R>', lambda e: self.run_pipeline())
+        self.master.bind('R', lambda e: self.run_pipeline())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
         self.master.bind('d', lambda e: self.remove_node())
         self.master.bind('c', lambda e: self.clear_selected_status())
@@ -420,22 +417,22 @@ class WorkflowApp:
     # Run operations
     # ----------------------
     def run_selected(self):
+        """Run a subset of selected nodes. Lowercase 'r' key."""
         if not self.state.selected_nodes:
-            messagebox.showinfo("Run", "No nodes selected for subset run.")
             return
         try:
-            resp = self.server.run(nodes=self.state.selected_nodes, subset_only=True, run_on_server=self.run_remotely_var.get())
+            resp = self.server.run(nodes=self.state.selected_nodes, subset_only=True)
             run_id = (resp or {}).get("run_id")
         except Exception as e:
-            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+            messagebox.showerror("Run Error", f"Failed to trigger subset run: {e}")
 
     def run_pipeline(self):
+        """Run pipeline from selected nodes or from in-degree 0. Uppercase 'R' key."""
         try:
-            resp = self.server.run(nodes=self.state.selected_nodes if self.state.selected_nodes else None, run_on_server=self.run_remotely_var.get(), start_failed=(not self.state.selected_nodes))
+            resp = self.server.run(nodes=self.state.selected_nodes if self.state.selected_nodes else None, start_failed=(not self.state.selected_nodes))
             run_id = (resp or {}).get("run_id")
-            messagebox.showinfo("Run Triggered", f"Server pipeline run triggered. run_id={run_id}")
         except Exception as e:
-            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+            messagebox.showerror("Run Error", f"Failed to trigger pipeline run: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):

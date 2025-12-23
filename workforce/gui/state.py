@@ -11,7 +11,6 @@ class GUIState:
     base_edge_width: int = 2
 
     wrapper: str = "{}"
-    run_remotely: bool = False
 
     # interaction state
     dragging_node: Optional[str] = None
