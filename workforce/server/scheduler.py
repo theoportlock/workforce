@@ -24,6 +24,10 @@ def determine_start_nodes(G, selected_nodes, subset_only, start_failed=False):
 
 # Lifecycle handlers
 def handle_node_run(ctx: ServerContext, G, node_id, run_id):
+	# Atomically claim the node by synchronously updating status to 'running'
+	edit.edit_status_in_graph(ctx.path, "node", node_id, "running")
+	G = edit.load_graph(ctx.path)  # Reload graph to get the updated state
+
 	# Map node->run and enqueue server execution or node_ready emit
 	if run_id:
 		ctx.active_node_run[node_id] = run_id
@@ -40,7 +44,10 @@ def handle_node_run(ctx: ServerContext, G, node_id, run_id):
 
 def handle_node_ran(ctx: ServerContext, G, node_id, run_id):
 	# mark outgoing edges ready for this run
+	subset = ctx.active_runs.get(run_id, {}).get("subset_nodes", set()) if run_id else set()
 	for _, tgt, edata in G.out_edges(node_id, data=True):
+		if tgt not in subset:
+			continue
 		eid = edata.get("id")
 		if eid and edata.get("status") != "ready":
 			# enqueue an edge status change that keeps run_id
@@ -62,10 +69,6 @@ def handle_edge_ready(ctx: ServerContext, G, edge_id, run_id):
 		return
 	_, v = edge_end
 	in_edges = list(G.in_edges(v, data=True))
-	all_ready = all(ed.get("status") == "ready" for _, _, ed in in_edges)
-	if not all_ready:
-		return
-
 	# choose run_id from predecessors if not supplied
 	candidate_run_id = run_id
 	if not candidate_run_id:
@@ -74,17 +77,25 @@ def handle_edge_ready(ctx: ServerContext, G, edge_id, run_id):
 			if r:
 				candidate_run_id = r
 				break
+	if candidate_run_id:
+		subset = ctx.active_runs.get(candidate_run_id, {}).get("subset_nodes", set())
+		if v not in subset:
+			return
+		scoped_in_edges = [(u, v, ed) for u, v, ed in in_edges if u in subset]
+		all_ready = all(ed.get("status") == "ready" for _, _, ed in scoped_in_edges)
+		if not all_ready:
+			return
 
-	# clear incoming edges statuses
-	for _, _, ed in in_edges:
-		eid2 = ed.get("id")
-		if eid2 and ed.get("status") != "":
-			ctx.enqueue(edit.edit_status_in_graph, ctx.path, "edge", eid2, "")
+		# clear incoming edges statuses
+		for _, _, ed in scoped_in_edges:
+			eid2 = ed.get("id")
+			if eid2 and ed.get("status") != "":
+				ctx.enqueue(edit.edit_status_in_graph, ctx.path, "edge", eid2, "")
 
-	# start node if not already running/ran
-	node_status = G.nodes[v].get("status", "")
-	if node_status not in ("run", "running", "ran"):
-		ctx.enqueue(edit.edit_status_in_graph, ctx.path, "node", v, "run")
+		# start node if not already running/ran
+		node_status = G.nodes[v].get("status", "")
+		if node_status not in ("run", "running", "ran"):
+			ctx.enqueue_status(ctx.path, "node", v, "run", candidate_run_id)
 
 
 STATUS_HANDLERS = {

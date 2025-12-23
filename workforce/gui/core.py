@@ -5,7 +5,8 @@ from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
 import atexit
-import time  # Add this import at the top
+import time
+import uuid
 
 from workforce import utils
 from .state import GUIState
@@ -20,6 +21,8 @@ class WorkflowApp:
         # Single source of truth for UI state
         self.state = GUIState()
         self.base_url = url
+        self.state.run_id = None
+        self.client_id = str(uuid.uuid4())
 
         # Legacy aliases for compatibility
         self.graph = self.state.graph
@@ -56,7 +59,7 @@ class WorkflowApp:
         self.zoom_slider.grid(row=1, column=1, sticky="ns")
 
         # Server client abstracts REST + SocketIO
-        self.server = ServerClient(self.base_url, on_graph_update=self.on_graph_update)
+        self.server = ServerClient(self.base_url, on_graph_update=self.on_graph_update, client_id=self.client_id)
         self.client_connected = False
 
         menubar = tk.Menu(self.master)
@@ -77,8 +80,8 @@ class WorkflowApp:
 
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Node", command=self.run_selected, accelerator="R")
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="Shift+R")
+        run_menu.add_command(label="Run", command=self.run_nodes, accelerator="R")
+        run_menu.add_command(label="Resume", command=self.resume_run, accelerator="Shift+R")
         run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
         run_menu.add_separator()
         self.run_remotely_var = tk.BooleanVar(value=False)
@@ -122,10 +125,9 @@ class WorkflowApp:
         self.canvas_view = GraphCanvas(self.canvas, self.state, callbacks)
 
         # After setting up menus and canvas, add logging for bindings
-        log.info("Binding shortcuts: q for quit, r for run_selected, etc.")
         self.master.bind('q', lambda e: self.save_and_exit())
-        self.master.bind('r', lambda e: self.run_selected())
-        self.master.bind('<Shift-R>', lambda e: self.run_pipeline())
+        self.master.bind('r', lambda e: self.run_nodes())
+        self.master.bind('<Shift-R>', lambda e: self.resume_run())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
         self.master.bind('d', lambda e: self.remove_node())
         self.master.bind('c', lambda e: self.clear_selected_status())
@@ -137,6 +139,8 @@ class WorkflowApp:
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
+        self.master.bind('s', lambda e: self.stop_nodes(all_running=False))
+        self.master.bind('<Shift-S>', lambda e: self.stop_nodes(all_running=True))
 
         # Canvas bindings for interaction
         self.canvas.bind("<MouseWheel>", self.on_zoom)
@@ -419,23 +423,79 @@ class WorkflowApp:
     # ----------------------
     # Run operations
     # ----------------------
-    def run_selected(self):
-        if not self.state.selected_nodes:
-            messagebox.showinfo("Run", "No nodes selected for subset run.")
-            return
+    def run_nodes(self):
+        """
+        Run the selected nodes. If no nodes are selected, run the entire
+        workfile by passing no nodes to the server.
+        """
+        nodes = self.state.selected_nodes or None
+        if nodes:
+            log.info(f"Requesting run for subset: {nodes}")
+        else:
+            log.info("Requesting run for all nodes")
+
         try:
-            resp = self.server.run(nodes=self.state.selected_nodes, subset_only=True, run_on_server=self.run_remotely_var.get())
+            resp = self.server.run(nodes=nodes, run_on_server=self.run_remotely_var.get())
             run_id = (resp or {}).get("run_id")
+            if run_id:
+                self.state.run_id = run_id
+            log.info(f"Run triggered with run_id={run_id}")
+            messagebox.showinfo("Run Triggered", f"Pipeline run triggered. run_id={run_id}")
         except Exception as e:
             messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
 
-    def run_pipeline(self):
+    def resume_run(self):
+        """Resume a run from the last failed state."""
+        if not self.state.run_id:
+            messagebox.showinfo("Resume", "No run to resume.")
+            return
+
+        nodes = self.state.selected_nodes or None
+        log.info(f"Requesting resume for run_id={self.state.run_id} with subset: {nodes}")
         try:
-            resp = self.server.run(nodes=self.state.selected_nodes if self.state.selected_nodes else None, run_on_server=self.run_remotely_var.get(), start_failed=(not self.state.selected_nodes))
-            run_id = (resp or {}).get("run_id")
-            messagebox.showinfo("Run Triggered", f"Server pipeline run triggered. run_id={run_id}")
+            self.server.resume(nodes=nodes, run_id=self.state.run_id)
+            messagebox.showinfo("Resume Triggered", f"Pipeline resume triggered for run_id={self.state.run_id}.")
         except Exception as e:
-            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+            messagebox.showerror("Resume Error", f"Failed to trigger resume: {e}")
+
+    def stop_nodes(self, all_running=False):
+        """
+        Stop running nodes by setting their status to 'fail'.
+        If all_running is True, stops all nodes with 'running' status.
+        Otherwise, stops the currently selected nodes.
+        """
+        def _stop_worker():
+            nodes_to_stop = []
+            if all_running:
+                log.info("Stopping all 'running' nodes.")
+                try:
+                    graph_data = self.server.get_graph()
+                    if graph_data:
+                        for node in graph_data.get("nodes", []):
+                            if node.get("status") == "running":
+                                nodes_to_stop.append(node["id"])
+                except Exception as e:
+                    log.error(f"Could not get graph to stop running nodes: {e}")
+                    self.master.after(0, lambda: messagebox.showerror("Error", f"Could not get graph: {e}"))
+                    return
+            else:
+                log.info(f"Stopping selected nodes: {self.state.selected_nodes}")
+                nodes_to_stop = list(self.state.selected_nodes)
+
+            if not nodes_to_stop:
+                log.info("No nodes to stop.")
+                return
+
+            for node_id in nodes_to_stop:
+                try:
+                    log.info(f"Stopping node {node_id} by setting status to 'fail'.")
+                    self.server.edit_status("node", node_id, "fail", run_id=self.state.run_id)
+                except Exception as e:
+                    log.error(f"Failed to stop node {node_id}: {e}")
+            
+            self.master.after(0, lambda: messagebox.showinfo("Stop Command", f"{len(nodes_to_stop)} node(s) were stopped."))
+
+        threading.Thread(target=_stop_worker, daemon=True).start()
 
     def clear_selected_status(self):
         for nid in list(self.selected_nodes):

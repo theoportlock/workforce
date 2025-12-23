@@ -76,28 +76,27 @@ def register_routes(app, ctx):
         subset_only = data.get("subset_only", False)
         start_failed = data.get("start_failed", False)
 
+        G = edit.load_graph(ctx.path)
+        # Unified: every run is a subset run
+        selected_nodes = selected_nodes or list(G.nodes())
+        subset_nodes = set(selected_nodes)
+
         # create run id and register
         run_id = str(uuid.uuid4())
-        ctx.active_runs[run_id] = {"nodes": set(), "subset_only": subset_only, "run_on_server": run_on_server}
+        ctx.active_runs[run_id] = {"nodes": set(), "subset_only": True, "run_on_server": run_on_server, "subset_nodes": subset_nodes}
 
-        G = edit.load_graph(ctx.path)
-        graph_to_run = G.copy()
-
-        if subset_only and selected_nodes:
-            log.info("Running subset: %s", selected_nodes)
-            graph_to_run = G.subgraph(selected_nodes).copy()
+        graph_to_run = G.subgraph(selected_nodes).copy()
 
         nodes_to_start = []
-        if not subset_only and selected_nodes:
-            nodes_to_start = selected_nodes
-        else:
-            nodes_to_start = [n for n, d in graph_to_run.in_degree() if d == 0]
-
-        if start_failed and (not selected_nodes):
-            failed_nodes = [n for n, d in G.nodes(data=True) if d.get("status") == "fail"]
+        if start_failed:
+            failed_nodes = [n for n in selected_nodes if G.nodes[n].get("status") == "fail"]
             if failed_nodes:
                 nodes_to_start = failed_nodes
                 log.info("Starting from failed nodes: %s", failed_nodes)
+            else:
+                nodes_to_start = [n for n, d in graph_to_run.in_degree() if d == 0]
+        else:
+            nodes_to_start = [n for n, d in graph_to_run.in_degree() if d == 0]
 
         if not nodes_to_start:
             if selected_nodes:

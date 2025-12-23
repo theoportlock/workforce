@@ -8,11 +8,12 @@ from workforce import utils
 log = logging.getLogger(__name__)
 
 class ServerClient:
-    def __init__(self, base_url: str, on_graph_update=None):
+    def __init__(self, base_url: str, on_graph_update=None, client_id=None):
         self.base_url = base_url.rstrip("/")
         self.on_graph_update = on_graph_update
         self.sio = None
         self.connected = False
+        self.client_id = client_id
 
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
@@ -43,6 +44,10 @@ class ServerClient:
 
                 @self.sio.on('graph_update')
                 def _on_graph_update(data):
+                    # Filter to this client unless no client_id is provided in broadcast
+                    client_id = (data or {}).get("client_id")
+                    if client_id and self.client_id and client_id != self.client_id:
+                        return
                     if callable(self.on_graph_update):
                         self.on_graph_update(data)
 
@@ -80,8 +85,8 @@ class ServerClient:
     def remove_edge(self, source, target):
         return utils._post(self.base_url, "/remove-edge", {"source": source, "target": target})
 
-    def edit_status(self, element_type, element_id, value):
-        return utils._post(self.base_url, "/edit-status", {"element_type": element_type, "element_id": element_id, "value": value})
+    def edit_status(self, element_type, element_id, value, run_id=None):
+        return utils._post(self.base_url, "/edit-status", {"run_id": run_id, "element_type": element_type, "element_id": element_id, "value": value})
 
     def edit_node_position(self, node_id, x, y):
         return utils._post(self.base_url, "/edit-node-position", {"node_id": node_id, "x": x, "y": y})
@@ -95,18 +100,22 @@ class ServerClient:
     def save_node_log(self, node_id, log_text):
         return utils._post(self.base_url, "/save-node-log", {"node_id": node_id, "log": log_text})
 
-    def run(self, nodes=None, subset_only=False, run_on_server=False, start_failed=False):
-        payload = {"nodes": nodes, "subset_only": subset_only, "run_on_server": run_on_server, "start_failed": start_failed}
+    def run(self, nodes=None, run_on_server=False):
+        payload = {"nodes": nodes, "run_on_server": run_on_server, "client_id": self.client_id}
         return utils._post(self.base_url, "/run", payload)
+
+    def resume(self, nodes=None, run_id=None):
+        payload = {"nodes": nodes, "run_id": run_id, "client_id": self.client_id}
+        return utils._post(self.base_url, "/resume", payload)
 
     def client_connect(self):
         try:
-            return utils._post(self.base_url, "/client-connect")
+            return utils._post(self.base_url, "/client-connect", {"client_id": self.client_id})
         except Exception:
             return None
 
     def client_disconnect(self):
         try:
-            return utils._post(self.base_url, "/client-disconnect")
+            return utils._post(self.base_url, "/client-disconnect", {"client_id": self.client_id})
         except Exception:
             return None

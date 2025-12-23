@@ -51,6 +51,24 @@ def _post(base_url: str, endpoint: str, payload: dict | None = None) -> dict:
     except Exception as e:
         raise RuntimeError(f"Unexpected error POSTing to {url}: {e}")
 
+
+def _get(base_url: str, endpoint: str) -> dict:
+    if not endpoint.startswith("/"):
+        endpoint = "/" + endpoint
+
+    url = f"{base_url.rstrip('/')}{endpoint}"
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Failed to GET from {url}: {e}")
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Server returned non-JSON response: {response.text}")
+
+
+
 def shell_quote_multiline(script: str) -> str:
     return script.replace("'", "'\\''")
 
@@ -147,6 +165,13 @@ def launch_server_for_file(filename: str) -> str:
 
 
 def resolve_target(path_or_url):
+    if not path_or_url:
+        registry = clean_registry()
+        if len(registry) == 1:
+            path, info = next(iter(registry.items()))
+            return f"http://127.0.0.1:{info['port']}"
+        raise RuntimeError("No workfile specified and no single active server found.")
+
     if is_url(path_or_url):
         return path_or_url
 
