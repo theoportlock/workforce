@@ -63,7 +63,7 @@ If a `Workfile` is in the current directory:
 
 Running workforce plan
 ----------------------
-To run a sample plan from workforce github project from the GUI, click run_all or shift r. Run from cli with:
+To run a plan from the GUI, click the 'Run' button or press 'r'. If nodes are selected, execution starts from those nodes. Otherwise, the full pipeline is executed. Run from cli with:
 
 .. code-block:: bash
 
@@ -113,6 +113,6 @@ Adding the following prefix and suffixes to the wf run command (or within gui) w
 | -p "powershell.exe"           | Executes commands in Windows PowerShell.                                        |
 +-------------------------------+---------------------------------------------------------------------------------+
 
-To run individual process(es) from the editor, select the process(es) in the order that you wish them to be excecuted and click the 'Run' button (or shortcut with r key). Opening the terminal with shortcut t (or on the toolbar), you can see the output of the commands
+To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run. Opening the terminal with shortcut 't' (or on the toolbar), you can see the output of the commands.
 
 This is tested on mac, linux, and windows powershell and wsl2.

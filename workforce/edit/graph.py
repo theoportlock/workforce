@@ -46,7 +46,8 @@ def add_edge_to_graph(path, source, target):
     G.add_edge(source, target, id=edge_id)
     save_graph(G, path)
     log.info(f"Added edge {edge_id} ({source} -> {target}) to graph: {path}")
-    return nx.node_link_data(G)
+    return {"edge_id": edge_id}
+
 
 def remove_edge_from_graph(path, source, target):
     G = load_graph(path)

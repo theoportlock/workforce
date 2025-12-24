@@ -47,13 +47,11 @@ def main():
     run_p = subparsers.add_parser("run", help="Execute workflow")
     run_p.add_argument("url_or_path", nargs="?", default=default_workfile())
     run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
-    run_p.add_argument("--subset-only", action="store_true", help="Only run specified nodes, not their descendants.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
     run_p.set_defaults(func=lambda args: run_main(
         resolve_target(args.url_or_path),
         nodes=args.nodes,
         wrapper=args.wrapper,
-        subset_only=args.subset_only
     ))
 
     # ---------------- SERVER ----------------

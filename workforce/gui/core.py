@@ -5,7 +5,6 @@ from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
 import atexit
-import time  # Add this import at the top
 
 from workforce import utils
 from .state import GUIState
@@ -21,12 +20,7 @@ class WorkflowApp:
         self.state = GUIState()
         self.base_url = url
 
-        # Legacy aliases for compatibility
-        self.graph = self.state.graph
-        self.selected_nodes = self.state.selected_nodes
-        self.scale = self.state.scale
-        self.base_font_size = self.state.base_font_size
-        self.base_edge_width = self.state.base_edge_width
+
 
         # UI layout
         self.master.title("Workforce")
@@ -77,8 +71,7 @@ class WorkflowApp:
 
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
-        run_menu.add_command(label="Run Subset", command=self.run_selected, accelerator="r")
-        run_menu.add_command(label="Run Pipeline", command=self.run_pipeline, accelerator="R")
+        run_menu.add_command(label="Run", command=self.run, accelerator="r")
         run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
         menubar.add_cascade(label="Run", menu=run_menu)
 
@@ -119,10 +112,9 @@ class WorkflowApp:
         self.canvas_view = GraphCanvas(self.canvas, self.state, callbacks)
 
         # After setting up menus and canvas, add logging for bindings
-        log.info("Binding shortcuts: q for quit, r for subset run, R for pipeline run")
+        log.info("Binding shortcuts: q for quit, r for run")
         self.master.bind('q', lambda e: self.save_and_exit())
-        self.master.bind('r', lambda e: self.run_selected())
-        self.master.bind('R', lambda e: self.run_pipeline())
+        self.master.bind('r', lambda e: self.run())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
         self.master.bind('d', lambda e: self.remove_node())
         self.master.bind('c', lambda e: self.clear_selected_status())
@@ -188,8 +180,6 @@ class WorkflowApp:
                 data = self.server.get_graph(timeout=10.0)
                 if data:
                     self.state.graph = data
-                    # keep legacy alias in sync
-                    self.graph = self.state.graph
                     graph_attrs = self.state.graph.get('graph', {})
                     self.state.wrapper = graph_attrs.get('wrapper', '{}')
                     self.master.after(0, self._redraw_graph)
@@ -211,8 +201,6 @@ class WorkflowApp:
                 node['y'] = float(node.get('y', 100))
             except Exception:
                 node['x'], node['y'] = 100.0, 100.0
-        # keep legacy alias in sync
-        self.graph = self.state.graph
         self.canvas_view.redraw(self.state.graph)
 
     def _save_graph_on_server(self):
@@ -254,7 +242,7 @@ class WorkflowApp:
         def on_save(label):
             if not label.strip():
                 return
-            count = len(self.graph.get("nodes", []))
+            count = len(self.state.graph.get("nodes", []))
             x = 100 + count * 50
             y = 100
             try:
@@ -264,20 +252,19 @@ class WorkflowApp:
         self.node_label_popup("", on_save)
 
     def remove_node(self):
-        for nid in list(self.selected_nodes):
+        for nid in list(self.state.selected_nodes):
             try:
                 self.server.remove_node(nid)
             except Exception as e:
                 log.error(f"remove_node failed for {nid}: {e}")
-        # clear selection via state alias
-        self.selected_nodes.clear()
+        self.state.selected_nodes.clear()
 
     def connect_nodes(self):
-        if len(self.selected_nodes) < 2:
+        if len(self.state.selected_nodes) < 2:
             return
-        for i in range(len(self.selected_nodes) - 1):
-            src = self.selected_nodes[i]
-            tgt = self.selected_nodes[i + 1]
+        for i in range(len(self.state.selected_nodes) - 1):
+            src = self.state.selected_nodes[i]
+            tgt = self.state.selected_nodes[i + 1]
             try:
                 self.server.add_edge(src, tgt)
             except Exception as e:
@@ -381,10 +368,10 @@ class WorkflowApp:
             messagebox.showerror("Save Error", f"Failed to save wrapper: {e}")
 
     def show_node_log(self):
-        if len(self.selected_nodes) != 1:
+        if len(self.state.selected_nodes) != 1:
             messagebox.showinfo("Show Log", "Please select exactly one node to view its log.")
             return
-        node_id = self.selected_nodes[0]
+        node_id = self.state.selected_nodes[0]
         node_data = next((n for n in self.state.graph.get("nodes", []) if n.get("id") == node_id), None)
         if not node_data:
             return
@@ -416,26 +403,25 @@ class WorkflowApp:
     # ----------------------
     # Run operations
     # ----------------------
-    def run_selected(self):
-        """Run a subset of selected nodes. Lowercase 'r' key."""
-        if not self.state.selected_nodes:
-            return
+    def run(self):
+        """Run workflow from selected nodes or from roots if none selected."""
         try:
-            resp = self.server.run(nodes=self.state.selected_nodes, subset_only=True)
-            run_id = (resp or {}).get("run_id")
+            nodes = list(self.state.selected_nodes) if self.state.selected_nodes else None
+            
+            # Spawn a runner client in a background thread to execute nodes
+            def spawn_runner():
+                from workforce.run.client import Runner
+                wrapper = self.state.wrapper or "{}"
+                runner = Runner(self.base_url, wrapper)
+                runner.start(initial_nodes=nodes)
+            
+            threading.Thread(target=spawn_runner, daemon=True).start()
+            
         except Exception as e:
-            messagebox.showerror("Run Error", f"Failed to trigger subset run: {e}")
-
-    def run_pipeline(self):
-        """Run pipeline from selected nodes or from in-degree 0. Uppercase 'R' key."""
-        try:
-            resp = self.server.run(nodes=self.state.selected_nodes if self.state.selected_nodes else None, start_failed=(not self.state.selected_nodes))
-            run_id = (resp or {}).get("run_id")
-        except Exception as e:
-            messagebox.showerror("Run Error", f"Failed to trigger pipeline run: {e}")
+            messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
 
     def clear_selected_status(self):
-        for nid in list(self.selected_nodes):
+        for nid in list(self.state.selected_nodes):
             try:
                 utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": nid, "value": ""})
             except Exception:
@@ -758,5 +744,23 @@ class WorkflowApp:
             self.master.quit()
 
     def on_graph_update(self, data=None):
-        log.debug(f"Graph update received via SocketIO. Payload: {data}")
-        self.master.after(0, self._reload_graph)
+        if not data:
+            return
+        # Handle partial status_change events (lightweight update)
+        if "node_id" in data and "status" in data:
+            # Partial update: only update node status
+            node_id = data.get("node_id")
+            status = data.get("status")
+            log.debug(f"Status update: node_id={node_id}, status={status}")
+            for node in self.state.graph.get("nodes", []):
+                if node.get("id") == node_id:
+                    log.debug(f"Found node {node_id}, updating status from {node.get('status')} to {status}")
+                    node["status"] = status
+                    break
+            self.master.after(0, self._redraw_graph)
+        elif "nodes" in data or "links" in data:
+            # Full graph update from server
+            log.debug(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
+            self.state.graph = data
+            self.master.after(0, self._redraw_graph)
+

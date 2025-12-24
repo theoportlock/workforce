@@ -6,22 +6,88 @@ import networkx as nx
 log = logging.getLogger(__name__)
 
 def start_graph_worker(ctx):
-    def _check_and_trigger_successors(path, G, completed_node_id):
+    def _mark_outgoing_edges_ready(path, G, completed_node_id, run_id):
         """
-        After node completed, check successors and queue those whose predecessors are 'ran'.
+        When a node completes (ran), set all outgoing edges to 'to_run' status.
+        Only propagates to nodes that are part of the run.
         """
         if completed_node_id not in G:
             log.warning("Completed node %s not found in graph", completed_node_id)
             return
-        for successor in G.successors(completed_node_id):
-            predecessors = list(G.predecessors(successor))
-            all_deps_met = all(G.nodes[p].get("status") == "ran" for p in predecessors)
-            if all_deps_met:
-                # Only schedule if not already run/run
-                if G.nodes[successor].get("status") not in ("run", "running", "ran"):
-                    ctx.enqueue_status(path, "node", successor, "run", ctx.active_node_run.get(completed_node_id))
+        
+        out_edges = list(G.out_edges(completed_node_id, data=True))
+        log.info(f"Node {completed_node_id} completed, marking {len(out_edges)} outgoing edges as to_run")
+        
+        # Get the set of nodes in this run
+        run_nodes = ctx.active_runs.get(run_id, {}).get("nodes", set())
+        
+        for u, v, edge_data in out_edges:
+            # Only propagate if target is in the subset run
+            if run_nodes and v not in run_nodes:
+                log.info(f"Skipping edge to {v} - not in subset run")
+                continue
+            
+            edge_id = edge_data.get("id")
+            if edge_id:
+                log.info(f"Setting edge {edge_id} ({u}->{v}) to to_run")
+                ctx.enqueue_status(path, "edge", edge_id, "to_run", run_id)
+
+    def _check_target_node_ready(path, G, edge_id, run_id):
+        """
+        When an edge becomes 'to_run', check if target node's ALL incoming edges are 'to_run'.
+        If yes, clear those edges and set target node to 'run'.
+        """
+        # Find the edge by id
+        target_node = None
+        source_node = None
+        for u, v, ed in G.edges(data=True):
+            if ed.get("id") == edge_id:
+                source_node = u
+                target_node = v
+                break
+        
+        if not target_node:
+            log.warning(f"Could not find target node for edge {edge_id}")
+            return
+        
+        # Determine run_id from the source node if not provided
+        if not run_id:
+            run_id = ctx.active_node_run.get(source_node)
+        
+        # Get the set of nodes in this run
+        run_nodes = ctx.active_runs.get(run_id, {}).get("nodes", set())
+        
+        # If target is not in the subset run, don't queue it
+        if run_nodes and target_node not in run_nodes:
+            log.info(f"Target node {target_node} not in subset run, skipping")
+            return
+        
+        # Get all incoming edges to target
+        in_edges = list(G.in_edges(target_node, data=True))
+        log.info(f"Checking target node {target_node}: {len(in_edges)} incoming edges")
+        
+        # Check if all incoming edges are 'to_run'
+        all_ready = all(ed.get("status") == "to_run" for _, _, ed in in_edges)
+        
+        if all_ready:
+            log.info(f"All dependencies met for node {target_node}, clearing edges and queuing node")
+            
+            # Clear all incoming edge statuses
+            for _, _, ed in in_edges:
+                eid = ed.get("id")
+                if eid:
+                    ctx.enqueue(edit.edit_status_in_graph, path, "edge", eid, "")
+            
+            # Set target node to 'run' (only if not already running/ran)
+            current_status = G.nodes[target_node].get("status", "")
+            if current_status not in ("run", "running", "ran"):
+                log.info(f"Queuing node {target_node} for execution with run_id={run_id}")
+                ctx.enqueue_status(path, "node", target_node, "run", run_id)
             else:
-                log.debug("Dependencies not met for %s", successor)
+                log.debug(f"Node {target_node} already has status {current_status}, not queuing")
+        else:
+            ready_count = sum(1 for _, _, ed in in_edges if ed.get("status") == "to_run")
+            log.info(f"Node {target_node} not ready: {ready_count}/{len(in_edges)} edges ready")
 
     def worker():
         log.info("Graph worker thread started.")
@@ -32,10 +98,10 @@ def start_graph_worker(ctx):
 
                 # Broadcast latest graph
                 G = edit.load_graph(ctx.path)
-                data = nx.node_link_data(G, link="links")
+                data = nx.node_link_data(G, edges="links")
                 data["graph"] = G.graph
                 try:
-                    ctx.socketio.emit("graph_update", data, namespace="/")
+                    ctx.socketio.emit("graph_update", data, skip_sid=None)
                 except Exception:
                     log.exception("Failed to emit graph_update")
 
@@ -43,69 +109,86 @@ def start_graph_worker(ctx):
                 name = getattr(func, "__name__", "")
                 if name in ("edit_status_in_graph",):
                     _, el_type, el_id, status = args
-                    run_id = ctx.active_node_run.get(el_id)
-                    if el_type == "node" and status == "run":
-                        # emit node_ready for runner clients
-                        try:
-                            ctx.socketio.emit("node_ready", {"node_id": el_id, "label": G.nodes[el_id].get("label", ""), "run_id": run_id})
-                        except Exception:
-                            log.exception("Failed to emit node_ready")
-                    elif el_type == "node" and status == "ran":
-                        _check_and_trigger_successors(args[0], G, el_id)
-                    elif el_type == "edge" and status == "ready":
-                        # same logic as earlier: if all incoming edges ready -> clear them and run target
-                        edge_end = None
-                        for u, v, ed in G.edges(data=True):
-                            if ed.get("id") == el_id:
-                                edge_end = (u, v)
-                                break
-                        if edge_end:
-                            _, v = edge_end
-                            in_edges = list(G.in_edges(v, data=True))
-                            all_ready = all(ed.get("status") == "ready" for _, _, ed in in_edges)
-                            if all_ready:
-                                # determine candidate run_id from predecessors
-                                candidate_run_id = None
-                                for uu, _, _ in in_edges:
-                                    candidate_run_id = ctx.active_node_run.get(uu)
-                                    if candidate_run_id:
-                                        break
-                                # clear incoming edges
-                                for _, _, ed in in_edges:
-                                    eid2 = ed.get("id")
-                                    if eid2 and ed.get("status") != "":
-                                        ctx.enqueue(edit.edit_status_in_graph, ctx.path, "edge", eid2, "")
-                                # start target if not already
-                                node_status = G.nodes[v].get("status", "")
-                                if node_status not in ("run", "running", "ran"):
-                                    ctx.enqueue_status(ctx.path, "node", v, "run", candidate_run_id)
+                    
+                    if el_type == "node":
+                        run_id = ctx.active_node_run.get(el_id)
+                        
+                        if status == "run":
+                            # Node is ready to execute - emit to runner clients
+                            try:
+                                label = G.nodes[el_id].get("label", "")
+                                log.info(f"Emitting node_ready for {el_id} (run_id={run_id})")
+                                ctx.socketio.emit("node_ready", {"node_id": el_id, "label": label, "run_id": run_id}, skip_sid=None)
+                            except Exception:
+                                log.exception("Failed to emit node_ready")
+                        
+                        # Emit status_change for GUI updates
+                        if status in ("ran", "fail", "running"):
+                            try:
+                                log.debug(f"Emitting status_change: node_id={el_id}, status={status}")
+                                ctx.socketio.emit("status_change", {"node_id": el_id, "status": status, "run_id": run_id}, skip_sid=None)
+                            except Exception:
+                                log.exception("Failed to emit status_change")
+                        
+                        # When node completes, mark outgoing edges as to_run
+                        if status == "ran":
+                            log.info(f"Node {el_id} completed successfully, propagating to successors")
+                            _mark_outgoing_edges_ready(args[0], G, el_id, run_id)
+                    
+                    elif el_type == "edge":
+                        if status == "to_run":
+                            log.info(f"Edge {el_id} marked as to_run, checking target node")
+                            # Need to find run_id from source node
+                            source_node = None
+                            for u, v, ed in G.edges(data=True):
+                                if ed.get("id") == el_id:
+                                    source_node = u
+                                    break
+                            run_id = ctx.active_node_run.get(source_node) if source_node else None
+                            _check_target_node_ready(args[0], G, el_id, run_id)
+                        
             except Exception:
                 log.exception("Graph worker error")
             finally:
                 ctx.mod_queue.task_done()
 
-                # run completion check (simple)
+                # Run completion check
                 if ctx.mod_queue.empty():
                     def _check_complete():
                         try:
                             G_local = edit.load_graph(ctx.path)
                         except Exception:
                             return
-                        # check active runs
+                        
                         for run_id, meta in list(ctx.active_runs.items()):
                             nodes_set = set(meta.get("nodes", set()))
+                            # Don't mark complete if nodes haven't been tracked yet (empty set during init)
                             if not nodes_set:
-                                try:
-                                    ctx.socketio.emit("run_complete", {"run_id": run_id})
-                                except Exception:
-                                    log.exception("Failed to emit run_complete")
-                                ctx.active_runs.pop(run_id, None)
-                                for n, rid in list(ctx.active_node_run.items()):
-                                    if rid == run_id:
-                                        ctx.active_node_run.pop(n, None)
+                                # Check if any node with 'run' status has this run_id
+                                has_running_nodes = any(
+                                    n for n, rid in ctx.active_node_run.items()
+                                    if rid == run_id and G_local.nodes.get(n, {}).get("status") in ("run", "running")
+                                )
+                                if not has_running_nodes:
+                                    try:
+                                        log.info(f"Run {run_id} has no nodes and no running nodes, marking complete")
+                                        ctx.socketio.emit("run_complete", {"run_id": run_id})
+                                    except Exception:
+                                        log.exception("Failed to emit run_complete")
+                                    ctx.active_runs.pop(run_id, None)
+                                    for n, rid in list(ctx.active_node_run.items()):
+                                        if rid == run_id:
+                                            ctx.active_node_run.pop(n, None)
                                 continue
-                            still_running = any(G_local.nodes[n].get("status") in ("run", "running") for n in nodes_set if n in G_local.nodes)
+                            
+                            # Check if any nodes are still running
+                            still_running = any(
+                                G_local.nodes[n].get("status") in ("run", "running") 
+                                for n in nodes_set if n in G_local.nodes
+                            )
+                            
                             if not still_running:
+                                log.info(f"Run {run_id} complete (no nodes still running)")
                                 try:
                                     ctx.socketio.emit("run_complete", {"run_id": run_id})
                                 except Exception:
@@ -113,10 +196,10 @@ def start_graph_worker(ctx):
                                 ctx.active_runs.pop(run_id, None)
                                 for n in list(nodes_set):
                                     ctx.active_node_run.pop(n, None)
+                    
                     try:
                         ctx.socketio.start_background_task(_check_complete)
                     except Exception:
-                        # fallback to thread
                         threading.Thread(target=_check_complete, daemon=True).start()
 
     threading.Thread(target=worker, daemon=True).start()

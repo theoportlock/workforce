@@ -53,11 +53,14 @@ class Runner:
 	def set_node_status(self, node_id, status):
 		"""Sends update to server to be processed by the graph worker queue."""
 		try:
-			utils._post(self.base_url, "/edit-status", {
+			payload = {
 				"element_type": "node",
 				"element_id": node_id,
 				"value": status
-			})
+			}
+			if self.run_id:
+				payload["run_id"] = self.run_id
+			utils._post(self.base_url, "/edit-status", payload)
 		except RuntimeError as e:
 			log.error(f"Failed to set status {status} for {node_id}: {e}")
 
@@ -88,6 +91,7 @@ class Runner:
 				self.set_node_status(node_id, "ran")
 				return
 
+			log.debug(f"Executing command: {command}")
 			process = subprocess.Popen(
 				command,
 				shell=True,
@@ -97,14 +101,14 @@ class Runner:
 			)
 			stdout, stderr = process.communicate()
 
-			log_text = f"{stdout}\n{stderr}".strip()
+			log_text = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}".strip()
 			self.send_node_log(node_id, log_text)
 
 			if process.returncode == 0:
-				log.info(f"--> Finished execution for node: {label} ({node_id})")
+				log.info(f"--> Node {node_id} completed successfully")
 				self.set_node_status(node_id, "ran")
 			else:
-				log.warning(f"!! Failed: {label} ({node_id})")
+				log.warning(f"!! Node {node_id} failed with exit code {process.returncode}")
 				self.set_node_status(node_id, "fail")
 
 		except Exception as e:
@@ -113,12 +117,16 @@ class Runner:
 			log.error(f"!! Error executing {node_id}: {e}", exc_info=True)
 			self.set_node_status(node_id, "fail")
 
-	def start(self, initial_nodes=None, subset_only=False):
+	def start(self, initial_nodes=None):
 		"""Connect to the server and start the run process."""
 		log.info(f"Runner client starting for {self.base_url}")
 		try:
-			# Initiate run explicitly and capture run_id
-			payload = {"nodes": initial_nodes or [], "subset_only": subset_only}
+			# Connect FIRST, then trigger the run
+			log.info("Connecting to server via Socket.IO...")
+			self.sio.connect(self.base_url, transports=['websocket'], wait_timeout=10)
+			
+			# Now that we're connected, initiate the run
+			payload = {"nodes": initial_nodes or []}
 			try:
 				log.info("Posting /run to server to initiate run...")
 				run_response = utils._post(self.base_url, "/run", payload) or {}
@@ -126,10 +134,11 @@ class Runner:
 				if self.run_id:
 					log.info(f"Runner associated with run_id={self.run_id}")
 			except Exception as e:
-				log.warning(f"Failed to POST /run before connecting: {e}")
+				log.error(f"Failed to POST /run after connecting: {e}")
+				self.sio.disconnect()
+				return
 
-			log.info("Connecting to server via Socket.IO...")
-			self.sio.connect(self.base_url, transports=['websocket'], wait_timeout=10)
+			# Wait for node_ready events
 			self.sio.wait()
 		except socketio.exceptions.ConnectionError as e:
 			log.error(f"Connection error: {e}")

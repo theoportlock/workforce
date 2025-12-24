@@ -46,7 +46,7 @@ def register_routes(app, ctx):
     @app.route("/edit-status", methods=["POST"])
     def edit_status():
         data = request.get_json(force=True)
-        return current_app.json.response(ctx.enqueue(edit.edit_status_in_graph, ctx.path, data["element_type"], data["element_id"], data.get("value", ""))), 202
+        return current_app.json.response(ctx.enqueue_status(ctx.path, data["element_type"], data["element_id"], data.get("value", ""), data.get("run_id"))), 202
 
     @app.route("/edit-node-position", methods=["POST"])
     def edit_node_position():
@@ -68,74 +68,85 @@ def register_routes(app, ctx):
         data = request.get_json(force=True)
         return current_app.json.response(ctx.enqueue(edit.save_node_log_in_graph, ctx.path, data["node_id"], data["log"])), 202
 
+    @app.route("/client-connect", methods=["POST"])
+    def client_connect():
+        try:
+            return current_app.json.response({"status": "connected"}), 200
+        except Exception:
+            return "", 204
+
+    @app.route("/client-disconnect", methods=["POST"])
+    def client_disconnect():
+        try:
+            return current_app.json.response({"status": "disconnected"}), 200
+        except Exception:
+            return "", 204
+
     @app.route("/run", methods=["POST"])
     def run_pipeline():
-        data = request.get_json(force=True) if request.data else {}
-        selected_nodes = data.get("nodes")
-        subset_only = data.get("subset_only", False)
-        start_failed = data.get("start_failed", False)
+        try:
+            data = request.get_json(force=True) if request.data else {}
+            selected_nodes = data.get("nodes")
 
-        # create run id and register
-        run_id = str(uuid.uuid4())
-        ctx.active_runs[run_id] = {
-            "nodes": set(),
-            "subset_only": subset_only,
-            "subset_nodes": set(selected_nodes) if subset_only and selected_nodes else set()
-        }
+            # create run id and register
+            run_id = str(uuid.uuid4())
+            G = edit.load_graph(ctx.path)
 
-        G = edit.load_graph(ctx.path)
-        graph_to_run = G.copy()
-
-        if subset_only and selected_nodes:
-            log.info("Running subset: %s", selected_nodes)
-            graph_to_run = G.subgraph(selected_nodes).copy()
-
-        nodes_to_start = []
-        if not subset_only and selected_nodes:
-            nodes_to_start = selected_nodes
-        else:
-            nodes_to_start = [n for n, d in graph_to_run.in_degree() if d == 0]
-
-        if start_failed and (not selected_nodes):
-            failed_nodes = [n for n, d in G.nodes(data=True) if d.get("status") == "fail"]
-            if failed_nodes:
-                nodes_to_start = failed_nodes
-                log.info("Starting from failed nodes: %s", failed_nodes)
-
-        if not nodes_to_start:
+            # Determine which nodes to start and which are in scope for this run
             if selected_nodes:
-                log.warning("No root nodes found in selection; starting selected nodes anyway.")
-                nodes_to_start = selected_nodes
+                # Subset run: only run selected nodes in dependency order
+                selected_set = set(selected_nodes)
+                log.info("Starting subset run with selected nodes: %s", selected_nodes)
+                
+                # Create subgraph of only selected nodes
+                subgraph = G.subgraph(selected_nodes)
+                
+                # Debug: log subgraph structure
+                log.info(f"Subgraph has {subgraph.number_of_nodes()} nodes and {subgraph.number_of_edges()} edges")
+                in_degrees = dict(subgraph.in_degree())
+                log.info(f"In-degrees in subgraph: {in_degrees}")
+                
+                # Find root nodes: nodes with in-degree 0 in the subgraph
+                nodes_to_start = [n for n, d in subgraph.in_degree() if d == 0]
+                
+                if not nodes_to_start:
+                    log.warning("No root nodes found in subgraph, starting all selected nodes")
+                    nodes_to_start = list(selected_nodes)
+                
+                log.info("Starting from subset roots (0 in-degree in subgraph): %s", nodes_to_start)
+                # For subset runs, track exactly which nodes to execute
+                ctx.active_runs[run_id] = {"nodes": selected_set}
             else:
-                log.warning("No root nodes found to start the run.")
-                return current_app.json.response({"status": "no nodes to start"}), 200
+                # Full pipeline run: all nodes from roots onwards
+                # First try failed nodes
+                failed_nodes = [n for n, attr in G.nodes(data=True) if attr.get("status") == "fail"]
+                if failed_nodes:
+                    nodes_to_start = failed_nodes
+                    log.info("Resuming from failed nodes: %s", failed_nodes)
+                else:
+                    # Otherwise start from nodes with 0 in-degree AND no status (clean start)
+                    nodes_to_start = [n for n, d in G.in_degree() if d == 0 and not G.nodes[n].get("status")]
+                    if not nodes_to_start:
+                        # If all root nodes have status, clear them and start
+                        nodes_to_start = [n for n, d in G.in_degree() if d == 0]
+                        log.info("Clearing status on root nodes: %s", nodes_to_start)
+                        for node_id in nodes_to_start:
+                            ctx.enqueue(edit.edit_status_in_graph, ctx.path, "node", node_id, "")
+                    log.info("Starting from root nodes (0 in-degree): %s", nodes_to_start)
+                # For full pipeline, track all nodes
+                ctx.active_runs[run_id] = {"nodes": set(G.nodes())}
 
-        log.info("Queuing initial nodes for run %s: %s", run_id, nodes_to_start)
-        for node_id in nodes_to_start:
-            ctx.enqueue_status(ctx.path, "node", node_id, "run", run_id)
+            if not nodes_to_start:
+                log.warning("No nodes to start the run.")
+                return current_app.json.response({"status": "no nodes to start", "run_id": run_id}), 200
 
-        return current_app.json.response({"status": "started", "run_id": run_id}), 202
+            log.info("Queuing initial nodes for run %s: %s", run_id, nodes_to_start)
+            for node_id in nodes_to_start:
+                # Always clear status first, then set to 'run'
+                ctx.enqueue(edit.edit_status_in_graph, ctx.path, "node", node_id, "")
+                ctx.enqueue_status(ctx.path, "node", node_id, "run", run_id)
 
-# Provide a convenience test app (registered with a minimal ctx) so tests can import routes.app
-try:
-    from flask import Flask
-    class _TestCtx:
-        def __init__(self):
-            self.path = ":memory:"
-        def enqueue(self, func, *args, **kwargs):
-            # call the function directly for basic tests that post to endpoints
-            try:
-                return func(self.path, *args, **kwargs)
-            except Exception:
-                return {"status": "queued"}
-        def enqueue_status(self, *args, **kwargs):
-            return {"status": "queued"}
-
-    app = Flask(__name__)
-    try:
-        register_routes(app, _TestCtx())
-    except Exception:
-        # If registration fails in some environments, leave app present but unregistered
-        pass
-except Exception:
-    app = None
+            return current_app.json.response({"status": "started", "run_id": run_id}), 202
+        except Exception as e:
+            log.exception("Error in /run endpoint")
+            return current_app.json.response({"status": "error", "message": str(e)}), 500

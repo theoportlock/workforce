@@ -19,10 +19,12 @@ from .context import ServerContext
 from .queue import start_graph_worker
 from . import routes as server_routes
 from . import sockets as server_sockets
+from .sockets import socketio
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+logging.getLogger("werkzeug.serving").setLevel(logging.CRITICAL)  # Suppress werkzeug server errors
 log = logging.getLogger(__name__)
 
 
@@ -122,13 +124,13 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         socketio=None,
     )
 
-    # Create app and socketio, attach to context
+    # Create app and initialize the shared socketio
     from flask import Flask
     app = Flask(__name__)
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", ping_interval=30, ping_timeout=90)
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="threading", ping_interval=30, ping_timeout=90)
     ctx.socketio = socketio
 
-    # Register routes and sockets
+    # Register routes and sockets on the shared socketio
     server_routes.register_routes(app, ctx)
     server_sockets.register_socket_handlers(socketio, ctx)
 
@@ -148,6 +150,11 @@ def start_server(filename: str, port: int | None = None, background: bool = True
         reg.pop(abs_path, None)
         utils.save_registry(reg)
         log.info("Server shut down cleanly; registry updated.")
+
+
+def init_app(app):
+    # call this where you create the Flask app
+    socketio.init_app(app)
 
 
 # CLI shims
