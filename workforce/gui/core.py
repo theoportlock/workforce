@@ -63,7 +63,7 @@ class WorkflowApp:
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
-        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D")
+        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D/Del")
         edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
         edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
         edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
@@ -117,6 +117,8 @@ class WorkflowApp:
         self.master.bind('r', lambda e: self.run())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
         self.master.bind('d', lambda e: self.remove_node())
+        self.master.bind('<Delete>', lambda e: self.remove_node())
+        self.master.bind('<BackSpace>', lambda e: self.remove_node())
         self.master.bind('c', lambda e: self.clear_selected_status())
         self.master.bind('e', lambda e: self.connect_nodes())
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
