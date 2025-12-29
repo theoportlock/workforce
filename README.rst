@@ -22,9 +22,9 @@ workforce
     :align: center
     :width: 800px
 
-Workforce is an application that creates and runs bash commands in the order of a graph. It is like a desktop for terminals. Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
+Workforce is an application that creates and runs bash commands in the order of a graph. It serves as a desktop for terminals, allowing you to build and run pipelines of bash commands with python multiprocessing according to a graphml file.
 
-Similar to other workflow management systems like Galaxy workflow, Qiime plugin workflows, AnADMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
+Similar to other workflow management systems like Galaxy workflow, QIIME plugin workflows, AnADMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
 
 * Free software: MIT license
 * Documentation: https://workforce-documentation.readthedocs.io.
@@ -130,7 +130,8 @@ Resume Logic
 The resume functionality (Shift+R in GUI) handles failures or cancellations:
 
 - Replaces a node's ``failed`` status with ``run``
-- Re-triggers the event loop, allowing the remainder of the pipeline to proceed
+- Re-triggers the event loop, which causes the scheduler to re-check dependencies and queue the node for execution
+- Allows the remainder of the pipeline to proceed through the normal dependency checking process
 - Strictly bounded by the subset; resume never propagates to nodes outside the original selection
 - Ensures nodes do not remain in a running state indefinitely
 
