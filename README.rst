@@ -22,10 +22,119 @@ workforce
     :align: center
     :width: 800px
 
-Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
+Workforce is an application that creates and runs bash commands in the order of a graph. It is like a desktop for terminals. Build and run a pipeline of bash commands with python multiprocessing according to a graphml file.
+
+Similar to other workflow management systems like Galaxy workflow, Qiime plugin workflows, AnADMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
 
 * Free software: MIT license
 * Documentation: https://workforce-documentation.readthedocs.io.
+
+Features
+--------
+
+* **Graph-based workflow execution**: Define bash commands as nodes in a directed graph
+* **Multiuser support**: Multiple clients can interact with the same workflow simultaneously
+* **Server-based architecture**: Workflows are served via Flask API with unique URLs
+* **Event-driven execution**: Dependency-aware scheduling with real-time status updates
+* **Subset execution**: Run specific subgraphs or the entire workflow
+* **Resume capability**: Restart failed nodes and continue pipeline execution
+* **Interactive GUI**: Edit workflows visually with a Tkinter-based interface
+* **Flexible command wrapping**: Add prefixes/suffixes to commands (Docker, SSH, tmux, etc.)
+
+Architecture Overview
+---------------------
+
+Server
+~~~~~~
+
+The server component manages workflow execution through a registry-based system:
+
+**Server Startup**: When starting a server using the CLI (``python -m workforce server start``):
+
+1. Checks if the Workfile (absolute path) has been assigned a URL in the shared Registry file
+2. If not assigned, starts a Flask API server on a unique URL (or uses a URL provided via CLI if available)
+3. Registers the Workfile + URL mapping in the Registry with:
+   - Initial client count set to 1
+   - Process ID (PID) for server management
+   - Port number for connection
+
+**Server Operations**:
+
+- Accepts requests to modify the Workfile using the ``edit`` API
+- Accepts requests to run the Workfile using the ``run`` API with arguments:
+  - ``subgraph``: Specific nodes to include in execution
+  - ``selected``: Explicitly chosen nodes
+  - ``wrapper``: Command prefix/suffix wrapper
+
+**Server Shutdown**: On stop or failure:
+
+- Fails all running processes gracefully
+- Removes Workfile + URL mapping from Registry
+- Cleans up resources (heartbeat monitoring)
+
+Unified Execution Model
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The system employs a unified execution model where every run is treated as a subset run:
+
+**Node Selection**:
+
+- If nodes are selected (via CLI or GUI), those nodes form an induced subgraph
+- If no nodes are selected, the system checks for failed nodes and selects them
+- If there are no failed nodes, nodes with zero in-degree are selected
+- If no specific nodes are provided, the entire workflow is treated as the active subset
+
+**Execution Initialization**: Upon initialization, the scheduler:
+
+1. Identifies all nodes within the target subset that have an in-degree of zero relative only to that subset
+2. Transitions these nodes to a "run" state
+3. Ensures nodes start immediately if their dependencies in the master workfile are omitted from the current run scope
+
+**Subgraph Boundaries**: To prevent execution from bleeding into the rest of the workfile:
+
+- The scheduler strictly enforces subnetwork boundaries
+- Propagation is confined entirely to the active selection
+- When a node completes, only outgoing edges within the filtered subnetwork are evaluated
+- Edges leading to nodes outside the original subset are ignored, effectively "capping" the execution
+
+Execution Loop and Dependency Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Node Execution**:
+
+1. When a node runs, its stdout and stderr are captured as node attributes
+2. These outputs are viewable from the GUI (with the 'l' shortcut key)
+3. Upon successful completion, an event is emitted to the run request
+4. Each event is tagged with a client ID, allowing multiple concurrent runs and GUI clients to operate without interference
+
+**Scheduler Operations**:
+
+1. The emission triggers the scheduler to retrieve the filtered subnetwork map
+2. All valid outgoing edges (within the subnetwork) are updated to a ``to_run`` status
+3. An edge-status change event is broadcast
+
+**Dependency Checking**:
+
+1. The status change prompts the target node to perform a dependency check
+2. The node transitions to the ``run`` state only if ALL incoming edges (within the subnetwork context) are marked as ``to_run``
+3. Once this condition is satisfied:
+   - The node clears the statuses from those incoming edges
+   - Begins execution
+   - Loops back to the capture and emission phase
+
+This mechanism ensures the engine only advances when subset-specific dependencies are fully met.
+
+Resume Logic
+~~~~~~~~~~~~
+
+The resume functionality (Shift+R in GUI) handles failures or cancellations:
+
+- Replaces a node's ``failed`` status with ``run``
+- Re-triggers the event loop, allowing the remainder of the pipeline to proceed
+- Strictly bounded by the subset; resume never propagates to nodes outside the original selection
+- Ensures nodes do not remain in a running state indefinitely
+
+By ensuring clean status management and ignoring edges outside the active scope, the system guarantees a clean termination once the selected subgraph is exhausted.
 
 Installation
 ------------
