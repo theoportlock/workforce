@@ -24,7 +24,7 @@ workforce
 
 Workforce is an application that creates and runs bash commands in the order of a graph. It serves as a desktop for terminals, allowing you to build and run pipelines of bash commands with python multiprocessing according to a graphml file.
 
-Similar to other workflow management systems like Galaxy workflow, QIIME plugin workflows, AnADMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
+Similar to other workflow management systems like Galaxy workflow, QIIME plugin workflows, AnADAMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
 
 * Free software: MIT license
 * Documentation: https://workforce-documentation.readthedocs.io.
@@ -79,10 +79,11 @@ The system employs a unified execution model where every run is treated as a sub
 
 **Node Selection**:
 
-- If nodes are selected (via CLI or GUI), those nodes form an induced subgraph
-- If no nodes are selected, the system checks for failed nodes and selects them
-- If there are no failed nodes, nodes with zero in-degree are selected
-- If no specific nodes are provided, the entire workflow is treated as the active subset
+- If specific nodes are selected (via CLI or GUI), those nodes form an induced subgraph for execution
+- If no nodes are explicitly selected:
+  - The system first checks for failed nodes and selects them for re-execution
+  - If there are no failed nodes, nodes with zero in-degree in the full workflow are selected
+  - This means by default, the entire workflow is treated as the active subset
 
 **Execution Initialization**: Upon initialization, the scheduler:
 
