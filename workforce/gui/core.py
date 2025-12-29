@@ -13,14 +13,13 @@ from .canvas import GraphCanvas
 
 log = logging.getLogger(__name__)
 
+
 class WorkflowApp:
     def __init__(self, master, url: str):
         self.master = master
         # Single source of truth for UI state
         self.state = GUIState()
         self.base_url = url
-
-
 
         # UI layout
         self.master.title("Workforce")
@@ -63,7 +62,7 @@ class WorkflowApp:
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         edit_menu.add_command(label="Add Node", command=self.add_node, accelerator="dbl click canvas")
-        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D/Del")
+        edit_menu.add_command(label="Remove Node", command=self.remove_node, accelerator="D/Del/⌫")
         edit_menu.add_command(label="Connect Nodes", command=self.connect_nodes, accelerator="E")
         edit_menu.add_command(label="Clear Edges", command=self.delete_edges_from_selected, accelerator="Shift+E")
         edit_menu.add_command(label="Clear Status", command=self.clear_all, accelerator="Shift+C")
@@ -274,12 +273,13 @@ class WorkflowApp:
 
     def delete_edges_from_selected(self):
         links = list(self.state.graph.get("links", []))
-        for l in links:
-            if l.get("source") in self.state.selected_nodes or l.get("target") in self.state.selected_nodes:
+        for link in links:
+            if (link.get("source") in self.state.selected_nodes or
+                    link.get("target") in self.state.selected_nodes):
                 try:
-                    self.server.remove_edge(l.get("source"), l.get("target"))
+                    self.server.remove_edge(link.get("source"), link.get("target"))
                 except Exception as e:
-                    log.error(f"remove-edge failed for {l.get('source')}->{l.get('target')}: {e}")
+                    log.error(f"remove-edge failed for {link.get('source')}->{link.get('target')}: {e}")
 
     # ----------------------
     # Node Editing
@@ -289,11 +289,13 @@ class WorkflowApp:
         if not node_data:
             return "break"
         current_label = node_data.get("label", "")
+
         def on_save(new_label):
             try:
                 utils._post(self.base_url, "/edit-node-label", {"node_id": node_id, "label": new_label})
             except Exception as e:
                 messagebox.showerror("Update error", str(e))
+
         self.node_label_popup(current_label, on_save)
         return "break"
 
@@ -303,7 +305,7 @@ class WorkflowApp:
         editor.geometry("600x300")
         editor.minsize(600, 300)
         text_widget = tk.Text(editor, wrap='word', font=("TkDefaultFont", 10), height=6)
-        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10,0))
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 0))
         text_widget.insert("1.0", initial_value)
 
         def save_and_close(event=None):
@@ -315,7 +317,7 @@ class WorkflowApp:
             editor.destroy()
 
         btn_frame = tk.Frame(editor)
-        btn_frame.pack(fill=tk.X, padx=10, pady=(5,10))
+        btn_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
         save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
         save_btn.pack(side=tk.LEFT, padx=5)
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
@@ -343,14 +345,17 @@ class WorkflowApp:
         wrapper_entry.pack(fill=tk.X, expand=True)
         wrapper_entry.insert(0, self.state.wrapper)
         frame.columnconfigure(0, weight=1)
+
         def save_and_close(event=None):
             self.state.wrapper = wrapper_entry.get()
             self.save_wrapper()
             editor.destroy()
+
         def cancel_and_close(event=None):
             editor.destroy()
+
         btn_frame = tk.Frame(editor)
-        btn_frame.pack(fill=tk.X, padx=10, pady=(5,10))
+        btn_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
         save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
         save_btn.pack(side=tk.RIGHT, padx=5)
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
@@ -387,6 +392,7 @@ class WorkflowApp:
         log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         log_display.insert(tk.END, "Loading log...")
         log_display.config(state=tk.DISABLED)
+
         def fetch_log_worker():
             try:
                 r = requests.get(self._url(f"/get-node-log/{node_id}"), timeout=3.0)
@@ -394,6 +400,7 @@ class WorkflowApp:
                 log_text = r.json().get("log", "[Failed to parse log from server]")
             except Exception as e:
                 log_text = f"[Failed to fetch log from server]\n\n{e}"
+
             def update_ui():
                 log_display.config(state=tk.NORMAL)
                 log_display.delete("1.0", tk.END)
@@ -409,37 +416,49 @@ class WorkflowApp:
         """Run workflow from selected nodes or from roots if none selected."""
         try:
             nodes = list(self.state.selected_nodes) if self.state.selected_nodes else None
-            
+
             # Spawn a runner client in a background thread to execute nodes
             def spawn_runner():
                 from workforce.run.client import Runner
                 wrapper = self.state.wrapper or "{}"
                 runner = Runner(self.base_url, wrapper)
                 runner.start(initial_nodes=nodes)
-            
+
             threading.Thread(target=spawn_runner, daemon=True).start()
-            
+
         except Exception as e:
             messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
 
     def clear_selected_status(self):
         for nid in list(self.state.selected_nodes):
             try:
-                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": nid, "value": ""})
+                utils._post(
+                    self.base_url,
+                    "/edit-status",
+                    {"element_type": "node", "element_id": nid, "value": ""}
+                )
             except Exception:
                 pass
 
     def clear_all(self):
         for n in self.state.graph.get("nodes", []):
             try:
-                utils._post(self.base_url, "/edit-status", {"element_type": "node", "element_id": n.get("id"), "value": ""})
+                utils._post(
+                    self.base_url,
+                    "/edit-status",
+                    {"element_type": "node", "element_id": n.get("id"), "value": ""}
+                )
             except Exception:
                 pass
-        for l in self.state.graph.get("links", []):
-            eid = l.get("id")
+        for link in self.state.graph.get("links", []):
+            eid = link.get("id")
             if eid:
                 try:
-                    utils._post(self.base_url, "/edit-status", {"element_type": "edge", "element_id": eid, "value": ""})
+                    utils._post(
+                        self.base_url,
+                        "/edit-status",
+                        {"element_type": "edge", "element_id": eid, "value": ""}
+                    )
                 except Exception:
                     pass
         # Server will emit graph_update via SocketIO, no need to fetch here
@@ -505,7 +524,10 @@ class WorkflowApp:
                         for item2 in self.canvas_view.node_widgets[node_id]:
                             self.canvas.delete(item2)
                         del self.canvas_view.node_widgets[node_id]
-                    self.canvas_view.draw_node(node_id, node_data=next(n for n in self.state.graph["nodes"] if n.get("id")==node_id))
+                    node_data = next(
+                        n for n in self.state.graph["nodes"] if n.get("id") == node_id
+                    )
+                    self.canvas_view.draw_node(node_id, node_data=node_data)
                     self.on_node_press(event, node_id)
                 break
         if not node_clicked:
@@ -551,7 +573,12 @@ class WorkflowApp:
             for item in self.canvas_view.node_widgets[node_id]:
                 self.canvas.delete(item)
             del self.canvas_view.node_widgets[node_id]
-        self.canvas_view.draw_node(node_id, node_data=next((n for n in self.state.graph.get("nodes", []) if n.get("id")==node_id), {}), selected=(node_id in self.state.selected_nodes))
+        node_data = next(
+            (n for n in self.state.graph.get("nodes", []) if n.get("id") == node_id),
+            {}
+        )
+        selected = node_id in self.state.selected_nodes
+        self.canvas_view.draw_node(node_id, node_data=node_data, selected=selected)
 
     # right-click drag to create edge
     def on_right_press(self, event):
@@ -562,14 +589,22 @@ class WorkflowApp:
                 coords = self.canvas.coords(rect)
                 cx = (coords[0] + coords[2]) / 2
                 cy = (coords[1] + coords[3]) / 2
-                self._edge_line = self.canvas.create_line(cx, cy, cx, cy, dash=(3,2), fill="gray")
+                self._edge_line = self.canvas.create_line(
+                    cx, cy, cx, cy, dash=(3, 2), fill="gray"
+                )
                 return
         self.state.edge_start = None
 
     def on_right_motion(self, event):
         if getattr(self, "_edge_line", None):
             coords = self.canvas.coords(self._edge_line)
-            self.canvas.coords(self._edge_line, coords[0], coords[1], self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+            self.canvas.coords(
+                self._edge_line,
+                coords[0],
+                coords[1],
+                self.canvas.canvasx(event.x),
+                self.canvas.canvasy(event.y)
+            )
 
     def on_right_release(self, event):
         if not getattr(self, "_edge_line", None):
@@ -626,18 +661,34 @@ class WorkflowApp:
     # selection rectangle handlers
     def on_shift_left_press(self, event):
         self.state._select_rect_active = True
-        self.state._select_rect_start = (self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
-        self.state._select_rect_id = self.canvas.create_rectangle(self.state._select_rect_start[0], self.state._select_rect_start[1], self.state._select_rect_start[0], self.state._select_rect_start[1], outline="gray", dash=(2,2), width=1, tags="select_rect")
+        self.state._select_rect_start = (
+            self.canvas.canvasx(event.x),
+            self.canvas.canvasy(event.y)
+        )
+        self.state._select_rect_id = self.canvas.create_rectangle(
+            self.state._select_rect_start[0],
+            self.state._select_rect_start[1],
+            self.state._select_rect_start[0],
+            self.state._select_rect_start[1],
+            outline="gray",
+            dash=(2, 2),
+            width=1,
+            tags="select_rect"
+        )
 
     def on_shift_left_motion(self, event):
-        if not self.state._select_rect_active or self.state._select_rect_id is None or self.state._select_rect_start is None:
+        if (not self.state._select_rect_active or
+                self.state._select_rect_id is None or
+                self.state._select_rect_start is None):
             return
         x0, y0 = self.state._select_rect_start
         x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         self.canvas.coords(self.state._select_rect_id, x0, y0, x1, y1)
 
     def on_shift_left_release(self, event):
-        if not self.state._select_rect_active or self.state._select_rect_id is None or self.state._select_rect_start is None:
+        if (not self.state._select_rect_active or
+                self.state._select_rect_id is None or
+                self.state._select_rect_start is None):
             return
         x0, y0 = self.state._select_rect_start
         x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
@@ -658,11 +709,16 @@ class WorkflowApp:
     # Zoom helpers (wheel + slider)
     # ----------------------
     def on_zoom(self, event):
-        factor = 1.1 if getattr(event, "delta", 0) > 0 or getattr(event, "num", 0) == 4 else 1 / 1.1
+        delta = getattr(event, "delta", 0)
+        num = getattr(event, "num", 0)
+        factor = 1.1 if delta > 0 or num == 4 else 1 / 1.1
         try:
             mouse_pos = (event.x, event.y)
         except Exception:
-            mouse_pos = (self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2)
+            mouse_pos = (
+                self.canvas.winfo_width() / 2,
+                self.canvas.winfo_height() / 2
+            )
         self.zoom(factor, mouse_pos=mouse_pos)
 
     def on_zoom_scroll(self, value):
@@ -672,13 +728,25 @@ class WorkflowApp:
             return
         if abs(new_scale - self.state.scale) > 1e-9:
             factor = new_scale / self.state.scale
-            self.zoom(factor, from_scroll=True, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+            mouse_pos = (
+                self.canvas.winfo_width() / 2,
+                self.canvas.winfo_height() / 2
+            )
+            self.zoom(factor, from_scroll=True, mouse_pos=mouse_pos)
 
     def zoom_in(self):
-        self.zoom(1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+        mouse_pos = (
+            self.canvas.winfo_width() / 2,
+            self.canvas.winfo_height() / 2
+        )
+        self.zoom(1.1, mouse_pos=mouse_pos)
 
     def zoom_out(self):
-        self.zoom(1 / 1.1, mouse_pos=(self.canvas.winfo_width() / 2, self.canvas.winfo_height() / 2))
+        mouse_pos = (
+            self.canvas.winfo_width() / 2,
+            self.canvas.winfo_height() / 2
+        )
+        self.zoom(1 / 1.1, mouse_pos=mouse_pos)
 
     def zoom(self, factor, from_scroll=False, mouse_pos=None):
         old_scale = self.state.scale
@@ -765,4 +833,3 @@ class WorkflowApp:
             log.debug(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
             self.state.graph = data
             self.master.after(0, self._redraw_graph)
-
