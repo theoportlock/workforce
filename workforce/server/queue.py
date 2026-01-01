@@ -100,10 +100,10 @@ def start_graph_worker(ctx):
                 G = edit.load_graph(ctx.path)
                 data = nx.node_link_data(G, edges="links")
                 data["graph"] = G.graph
-                try:
-                    ctx.socketio.emit("graph_update", data, skip_sid=None)
-                except Exception:
-                    log.exception("Failed to emit graph_update")
+                
+                # Emit domain event
+                from workforce.server.events import Event
+                ctx.events.emit(Event(type="GRAPH_UPDATED", payload=data))
 
                 # Lifecycle handling for status changes
                 name = getattr(func, "__name__", "")
@@ -118,17 +118,28 @@ def start_graph_worker(ctx):
                             try:
                                 label = G.nodes[el_id].get("label", "")
                                 log.info(f"Emitting node_ready for {el_id} (run_id={run_id})")
-                                ctx.socketio.emit("node_ready", {"node_id": el_id, "label": label, "run_id": run_id}, skip_sid=None)
+                                
+                                # Emit domain event
+                                from workforce.server.events import Event
+                                ctx.events.emit(Event(type="NODE_READY", payload={"node_id": el_id, "label": label, "run_id": run_id}))
                             except Exception:
-                                log.exception("Failed to emit node_ready")
+                                log.exception("Failed to emit NODE_READY event")
                         
                         # Emit status_change for GUI updates
                         if status in ("ran", "fail", "running"):
                             try:
                                 log.debug(f"Emitting status_change: node_id={el_id}, status={status}")
-                                ctx.socketio.emit("status_change", {"node_id": el_id, "status": status, "run_id": run_id}, skip_sid=None)
+                                
+                                # Emit domain event
+                                from workforce.server.events import Event
+                                event_type = {
+                                    "running": "NODE_STARTED",
+                                    "ran": "NODE_FINISHED",
+                                    "fail": "NODE_FAILED"
+                                }[status]
+                                ctx.events.emit(Event(type=event_type, payload={"node_id": el_id, "status": status, "run_id": run_id}))
                             except Exception:
-                                log.exception("Failed to emit status_change")
+                                log.exception("Failed to emit node status event")
                         
                         # When node completes, mark outgoing edges as to_run
                         if status == "ran":
@@ -172,9 +183,12 @@ def start_graph_worker(ctx):
                                 if not has_running_nodes:
                                     try:
                                         log.info(f"Run {run_id} has no nodes and no running nodes, marking complete")
-                                        ctx.socketio.emit("run_complete", {"run_id": run_id})
+                                        
+                                        # Emit domain event
+                                        from workforce.server.events import Event
+                                        ctx.events.emit(Event(type="RUN_COMPLETE", payload={"run_id": run_id}))
                                     except Exception:
-                                        log.exception("Failed to emit run_complete")
+                                        log.exception("Failed to emit RUN_COMPLETE event")
                                     ctx.active_runs.pop(run_id, None)
                                     for n, rid in list(ctx.active_node_run.items()):
                                         if rid == run_id:
@@ -190,16 +204,16 @@ def start_graph_worker(ctx):
                             if not still_running:
                                 log.info(f"Run {run_id} complete (no nodes still running)")
                                 try:
-                                    ctx.socketio.emit("run_complete", {"run_id": run_id})
+                                    # Emit domain event
+                                    from workforce.server.events import Event
+                                    ctx.events.emit(Event(type="RUN_COMPLETE", payload={"run_id": run_id}))
                                 except Exception:
-                                    log.exception("Failed to emit run_complete")
+                                    log.exception("Failed to emit RUN_COMPLETE event")
                                 ctx.active_runs.pop(run_id, None)
                                 for n in list(nodes_set):
                                     ctx.active_node_run.pop(n, None)
                     
-                    try:
-                        ctx.socketio.start_background_task(_check_complete)
-                    except Exception:
-                        threading.Thread(target=_check_complete, daemon=True).start()
+                    # Run completion check in background thread
+                    threading.Thread(target=_check_complete, daemon=True).start()
 
     threading.Thread(target=worker, daemon=True).start()

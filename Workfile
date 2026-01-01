@@ -24,7 +24,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">570.0</data>
       <data key="d3">459.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
@@ -84,7 +84,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">486.0</data>
       <data key="d3">68.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
@@ -125,7 +125,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">314.0</data>
       <data key="d3">309.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -147,7 +147,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">497.0</data>
       <data key="d3">498.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -236,11 +236,11 @@ bash: line 1: sdlkfj: command not found</data>
     </edge>
     <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d6">84042702-2846-4077-8815-eb0ce8c318dc</data>
-      <data key="d7" />
+      <data key="d7">to_run</data>
     </edge>
     <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d6">8ae2e181-2a4c-4711-98ec-3722faa3f7af</data>
-      <data key="d7" />
+      <data key="d7">to_run</data>
     </edge>
     <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d6">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>

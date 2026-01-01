@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 from typing import Any, Callable, Dict
+from pathlib import Path
 
 @dataclass
 class ServerContext:
@@ -12,10 +13,21 @@ class ServerContext:
     server_cache_dir: str
     mod_queue: queue.Queue
     socketio: Any = None
+    events: Any = None  # EventBus, set in __post_init__
 
     # per-run tracking
     active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool, "subset_nodes": set()}
     active_node_run: Dict[str, str] = field(default_factory=dict)    # node_id -> run_id
+    
+    def __post_init__(self):
+        """Initialize event bus with file logging."""
+        from workforce.server.events import EventBus
+        
+        # Set up event log in ~/.workforce/events.log
+        event_log_dir = Path.home() / ".workforce"
+        event_log_path = event_log_dir / "events.log"
+        
+        self.events = EventBus(log_file=str(event_log_path))
 
     def enqueue(self, func: Callable, *args, **kwargs):
         """

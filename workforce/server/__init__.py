@@ -133,6 +133,9 @@ def start_server(filename: str, port: int | None = None, background: bool = True
     # Register routes and sockets on the shared socketio
     server_routes.register_routes(app, ctx)
     server_sockets.register_socket_handlers(socketio, ctx)
+    
+    # Register event handlers to translate domain events to SocketIO messages
+    server_sockets.register_event_handlers(ctx)
 
     # Start the graph worker
     start_graph_worker(ctx)
