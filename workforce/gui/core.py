@@ -143,6 +143,9 @@ class WorkflowApp:
         self.canvas.bind("<Shift-ButtonRelease-1>", self.on_shift_left_release)
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
 
+        # ephemeral pan-drag state
+        self._pan_start = (0.0, 0.0)
+
     # --- Network helpers ---
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
@@ -223,9 +226,9 @@ class WorkflowApp:
         def on_save(lbl):
             if not lbl.strip():
                 return
-            payload = {"label": lbl, "x": x / self.state.scale, "y": y / self.state.scale}
             try:
-                self.server.add_node(lbl, payload["x"], payload["y"])
+                # `x`/`y` are world coordinates.
+                self.server.add_node(lbl, x, y)
             except Exception as e:
                 messagebox.showerror("Add node failed", str(e))
         if label:
@@ -466,6 +469,20 @@ class WorkflowApp:
     # ----------------------
     # Geometry helpers (delegate to canvas_view)
     # ----------------------
+    def _screen_to_world(self, sx: float, sy: float) -> tuple[float, float]:
+        """Convert from screen/canvas coordinates to world coordinates.
+
+        We store `pan_x/pan_y` in screen-space units (pixels). With:
+            screen = world * scale + pan
+        the inverse is:
+            world = (screen - pan) / scale
+        """
+        return ((sx - self.state.pan_x) / self.state.scale, (sy - self.state.pan_y) / self.state.scale)
+
+    def _world_to_screen(self, wx: float, wy: float) -> tuple[float, float]:
+        """Convert from world coordinates to screen/canvas coordinates."""
+        return (wx * self.state.scale + self.state.pan_x, wy * self.state.scale + self.state.pan_y)
+
     def _get_node_bounds(self, node_id):
         rect, _ = self.canvas_view.node_widgets[node_id]
         return self.canvas.coords(rect)
@@ -501,9 +518,9 @@ class WorkflowApp:
     # Mouse/interaction handlers
     # ----------------------
     def on_canvas_double_click(self, event):
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
-        items = self.canvas.find_overlapping(x, y, x, y)
+        x, y = self._screen_to_world(event.x, event.y)
+        # Hit-test at the click location (screen/canvas coords).
+        items = self.canvas.find_overlapping(event.x, event.y, event.x, event.y)
         if items:
             return
         self.add_node_at(x, y)
@@ -534,19 +551,24 @@ class WorkflowApp:
             self.state._potential_deselect = True
             self.state._press_x = event.x
             self.state._press_y = event.y
-            self.canvas.scan_mark(event.x, event.y)
             self.state.dragging_node = None
             self.state._panning = True
+            self._pan_start = (float(self.state.pan_x), float(self.state.pan_y))
         else:
             self.state._panning = False
 
     def on_left_motion(self, event):
         if self.state.dragging_node:
             self.on_node_drag(event, self.state.dragging_node)
-        elif getattr(self.state, '_panning', False):
-            if abs(event.x - self.state._press_x) > 5 or abs(event.y - self.state._press_y) > 5:
-                self.state._potential_deselect = False
-            self.canvas.scan_dragto(event.x, event.y, gain=1)
+        else:
+            if getattr(self.state, '_panning', False):
+                dx = event.x - self.state._press_x
+                dy = event.y - self.state._press_y
+                if abs(dx) > 5 or abs(dy) > 5:
+                    self.state._potential_deselect = False
+                self.state.pan_x = self._pan_start[0] + dx
+                self.state.pan_y = self._pan_start[1] + dy
+                self.canvas_view.redraw(self.state.graph)
 
     def on_node_release(self, event):  # Renamed from on_canvas_release to match callback
         if getattr(self.state, "dragging_node", None):
@@ -602,15 +624,16 @@ class WorkflowApp:
                 self._edge_line,
                 coords[0],
                 coords[1],
-                self.canvas.canvasx(event.x),
-                self.canvas.canvasy(event.y)
+                event.x,
+                event.y
             )
 
     def on_right_release(self, event):
         if not getattr(self, "_edge_line", None):
             return
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
+        # Hit-test target node using screen/canvas coordinates.
+        x = event.x
+        y = event.y
         target = None
         for nid, (rect, txt) in self.canvas_view.node_widgets.items():
             rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
@@ -644,8 +667,7 @@ class WorkflowApp:
         if not getattr(self.state, "dragging_node", None):
             return
         dx, dy = self.drag_offset
-        new_x = (event.x - dx) / self.state.scale
-        new_y = (event.y - dy) / self.state.scale
+        new_x, new_y = self._screen_to_world(event.x - dx, event.y - dy)
         x0, y0 = self.state._multi_drag_initial.get(node_id, (new_x, new_y))
         delta_x = new_x - x0
         delta_y = new_y - y0
@@ -661,15 +683,14 @@ class WorkflowApp:
     # selection rectangle handlers
     def on_shift_left_press(self, event):
         self.state._select_rect_active = True
-        self.state._select_rect_start = (
-            self.canvas.canvasx(event.x),
-            self.canvas.canvasy(event.y)
-        )
+        world_x, world_y = self._screen_to_world(event.x, event.y)
+        self.state._select_rect_start = (world_x, world_y)
+        screen_x, screen_y = self._world_to_screen(world_x, world_y)
         self.state._select_rect_id = self.canvas.create_rectangle(
-            self.state._select_rect_start[0],
-            self.state._select_rect_start[1],
-            self.state._select_rect_start[0],
-            self.state._select_rect_start[1],
+            screen_x,
+            screen_y,
+            screen_x,
+            screen_y,
             outline="gray",
             dash=(2, 2),
             width=1,
@@ -681,19 +702,21 @@ class WorkflowApp:
                 self.state._select_rect_id is None or
                 self.state._select_rect_start is None):
             return
-        x0, y0 = self.state._select_rect_start
-        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
-        self.canvas.coords(self.state._select_rect_id, x0, y0, x1, y1)
+        world_x0, world_y0 = self.state._select_rect_start
+        world_x1, world_y1 = self._screen_to_world(event.x, event.y)
+        screen_x0, screen_y0 = self._world_to_screen(world_x0, world_y0)
+        screen_x1, screen_y1 = self._world_to_screen(world_x1, world_y1)
+        self.canvas.coords(self.state._select_rect_id, screen_x0, screen_y0, screen_x1, screen_y1)
 
     def on_shift_left_release(self, event):
         if (not self.state._select_rect_active or
                 self.state._select_rect_id is None or
                 self.state._select_rect_start is None):
             return
-        x0, y0 = self.state._select_rect_start
-        x1, y1 = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
-        x_min, x_max = min(x0, x1), max(x0, x1)
-        y_min, y_max = min(y0, y1), max(y0, y1)
+        world_x0, world_y0 = self.state._select_rect_start
+        world_x1, world_y1 = self._screen_to_world(event.x, event.y)
+        x_min, y_min = self._world_to_screen(min(world_x0, world_x1), min(world_y0, world_y1))
+        x_max, y_max = self._world_to_screen(max(world_x0, world_x1), max(world_y0, world_y1))
         for node_id, (rect, text) in self.canvas_view.node_widgets.items():
             rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
             if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
@@ -754,6 +777,17 @@ class WorkflowApp:
         new_scale = max(0.1, min(new_scale, 3.0))
         if abs(new_scale - old_scale) < 1e-9:
             return
+        
+        # Calculate scale ratio for pan adjustment
+        scale_ratio = new_scale / old_scale
+        
+        # Center-anchored zoom: adjust pan so the canvas center stays fixed.
+        center_x = self.canvas.winfo_width() / 2
+        center_y = self.canvas.winfo_height() / 2
+        # Formula: new_pan = center - (center - old_pan) * scale_ratio
+        self.state.pan_x = center_x - (center_x - self.state.pan_x) * scale_ratio
+        self.state.pan_y = center_y - (center_y - self.state.pan_y) * scale_ratio
+        
         self.state.scale = new_scale
         self.scale = self.state.scale  # keep legacy alias
         if not from_scroll:
@@ -784,6 +818,7 @@ class WorkflowApp:
         return "break"
 
     def on_node_right_click(self, event, node_id):
+        # Middle-click (Button-2) on a node selects it (legacy behavior).
         self.clear_selection()
         self.state.selected_nodes.append(node_id)
         nd = next((n for n in self.state.graph.get("nodes", []) if n.get("id") == node_id), None)
@@ -793,6 +828,7 @@ class WorkflowApp:
                     self.canvas.delete(item)
                 del self.canvas_view.node_widgets[node_id]
             self.canvas_view.draw_node(node_id, node_data=nd, selected=True)
+        return "break"
 
     def save_and_exit(self, event=None):
         self._on_close()

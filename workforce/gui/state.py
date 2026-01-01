@@ -7,6 +7,8 @@ class GUIState:
     selected_nodes: List[str] = field(default_factory=list)
 
     scale: float = 1.0
+    pan_x: float = 0.0
+    pan_y: float = 0.0
     base_font_size: int = 10
     base_edge_width: int = 2
 

@@ -29,23 +29,14 @@ wf --version -v?
 wf browser?
 
 
-Fix edit to load the url in the same way as the other functions with requests
-Add delete key or backspace for delete node(s)
-Fix the focus bug
-wf runner stop - figure out
-wf log need to write as gui can produce
-Some way to save and load configs (prefix suffix)
+There is a focus bug where if i click out of workforce window then it refoccusses back onto the workforce window then on the next click it works properly
+wf runner stop run_id - figure out
+A way to save the wf request log for modification, execution
+Loading and saving wrappers as a dropdown menu of options that can be added to
 Minimap for the bottom left
 Edges need to change color based on to_run
 Save PDF of layout button
-Workforce within workforce (edit a wf run command in a workforce window)
-runner run_nodes function to just run a portion of the network that is selected
-RUNNODES.py script for inspiration from gemini
-don't change focus back to canvas on reload - messes up
-scale the box with the font size not the zoom factor
-clipboard issues - may just be wsl2
-keep selected after running/reloading
-Some other way of selecting like highlighting the nodes
+Some way to quickly open file in node (using default program)
 zoom should be from the center of current canvas view
 Shortcuts on all the buttons plus in help menu
 design to disown on run 

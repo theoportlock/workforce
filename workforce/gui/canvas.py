@@ -30,8 +30,8 @@ class GraphCanvas:
 
         vx = float(data.get("x", 100))
         vy = float(data.get("y", 100))
-        x = vx * self.state.scale
-        y = vy * self.state.scale
+        x = (vx * self.state.scale) + self.state.pan_x
+        y = (vy * self.state.scale) + self.state.pan_y
         label = data.get("label", node_id)
         status = data.get("status", "").lower()
         status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
