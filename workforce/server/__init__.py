@@ -101,7 +101,7 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             cwd=os.getcwd(),
         )
         # Wait a bit to see if it starts
-        time.sleep(1)
+        time.sleep(0.5)
         if process.poll() is not None:
             log.error(f"Server subprocess exited immediately with code {process.returncode}")
             raise RuntimeError("Server failed to start")
