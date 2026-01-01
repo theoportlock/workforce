@@ -1,9 +1,0 @@
-filelock
-flask
-flask-socketio
-networkx
-pandas
-pytest
-requests
-websocket-client
-platformdirs

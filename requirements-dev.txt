@@ -1,5 +1,0 @@
-# requirements-dev.txt
-pytest
-pytest-cov
-flake8  # A linter
-mypy    # A static type checker

@@ -53,3 +53,7 @@ select = ["E", "F", "I"] # Style, Errors, Import sorting
 [tool.mypy]
 python_version = "3.9"
 ignore_missing_imports = true
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff", "mypy"]
+server = ["flask", "flask-socketio", "websocket-client"]
