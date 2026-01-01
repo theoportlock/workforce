@@ -26,17 +26,37 @@ from workforce.edit import (
     cmd_edit_status,
     cmd_edit_wrapper
 )
+from workforce import __version__
 
 # -----------------------------------------------------------------------------
 
+def print_version():
+    """Print version information."""
+    print(f"Workforce version {__version__}")
+    print(f"Python {sys.version}")
+
 def main():
+    # Handle --version flag at top level
+    if '--version' in sys.argv or '-v' in sys.argv:
+        print_version()
+        return
+
     # Default behaviour: GUI with default workfile
     if len(sys.argv) == 1:
         gui_main(resolve_target(default_workfile()))
         return
 
-    parser = argparse.ArgumentParser(prog="workforce", description="Workforce CLI")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = argparse.ArgumentParser(
+        prog="workforce",
+        description="Workforce - Visual workflow orchestration and execution"
+    )
+    parser.add_argument(
+        '--version', '-v',
+        action='store_true',
+        help='Show version information and exit'
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     # ---------------- GUI ----------------
     gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
@@ -78,7 +98,6 @@ def main():
     edit_p = subparsers.add_parser("edit", help="Edit workflow graph via API")
     edit_sub = edit_p.add_subparsers(dest="edit_cmd", required=True)
 
-
     # --- add-node ---
     en = edit_sub.add_parser("add-node")
     en.add_argument("filename")
@@ -91,7 +110,6 @@ def main():
         cmd_add_node(args, url)
     en.set_defaults(func=_add_node)
 
-
     # --- remove-node ---
     ern = edit_sub.add_parser("remove-node")
     ern.add_argument("filename")
@@ -100,7 +118,6 @@ def main():
         url = resolve_target(args.filename)
         cmd_remove_node(args, url)
     ern.set_defaults(func=_remove_node)
-
 
     # --- add-edge ---
     ee = edit_sub.add_parser("add-edge")
@@ -112,7 +129,6 @@ def main():
         cmd_add_edge(args, url)
     ee.set_defaults(func=_add_edge)
 
-
     # --- remove-edge ---
     ere = edit_sub.add_parser("remove-edge")
     ere.add_argument("filename")
@@ -122,7 +138,6 @@ def main():
         url = resolve_target(args.filename)
         cmd_remove_edge(args, url)
     ere.set_defaults(func=_remove_edge)
-
 
     # --- edit-status ---
     es = edit_sub.add_parser("edit-status")
@@ -135,7 +150,6 @@ def main():
         cmd_edit_status(args, url)
     es.set_defaults(func=_edit_status)
 
-
     # --- edit-wrapper ---
     ew = edit_sub.add_parser("edit-wrapper")
     ew.add_argument("filename")
@@ -147,8 +161,18 @@ def main():
 
     # Parse arguments and execute the corresponding function
     args = parser.parse_args()
-    args.func(args)
 
+    # Handle version flag if passed to parser
+    if hasattr(args, 'version') and args.version:
+        print_version()
+        return
+
+    # If no command provided, show help
+    if not hasattr(args, 'func'):
+        parser.print_help()
+        return
+
+    args.func(args)
 
 # -----------------------------------------------------------------------------
 

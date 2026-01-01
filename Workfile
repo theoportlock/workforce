@@ -10,12 +10,12 @@
   <key id="d0" for="graph" attr.name="wrapper" attr.type="string" />
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d1">echo asdfa</data>
+      <data key="d1">echo asdfad</data>
       <data key="d2">615.2857142857143</data>
       <data key="d3">302.57142857142856</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-asdfa
+asdfad
 
 
 STDERR:</data>
@@ -24,7 +24,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">570.0</data>
       <data key="d3">459.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
@@ -39,8 +39,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-requirements-dev.txt
-requirements.txt
 tests
 todo.md
 venv
@@ -69,8 +67,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-requirements-dev.txt
-requirements.txt
 tests
 todo.md
 venv
@@ -84,7 +80,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">486.0</data>
       <data key="d3">68.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
@@ -99,8 +95,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-requirements-dev.txt
-requirements.txt
 tests
 todo.md
 venv
@@ -125,7 +119,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">314.0</data>
       <data key="d3">309.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -147,7 +141,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">497.0</data>
       <data key="d3">498.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -176,8 +170,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-requirements-dev.txt
-requirements.txt
 tests
 todo.md
 venv
@@ -196,8 +188,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-requirements-dev.txt
-requirements.txt
 tests
 todo.md
 venv
@@ -244,7 +234,7 @@ bash: line 1: sdlkfj: command not found</data>
     </edge>
     <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d6">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
-      <data key="d7" />
+      <data key="d7">to_run</data>
     </edge>
     <data key="d0">bash -c 'sleep 1; {}'</data>
   </graph>

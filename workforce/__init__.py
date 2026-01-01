@@ -2,4 +2,4 @@
 
 __author__ = """Theo Portlock"""
 __email__ = 'zn.tportlock@gmail.com'
-__version__ = 'master'
+__version__ = '1.1.4'
