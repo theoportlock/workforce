@@ -7,7 +7,10 @@ Welcome to workforce's documentation!
 
    readme
    installation
+   tutorial
    usage
+   architecture
+   api
    contributing
    authors
    history

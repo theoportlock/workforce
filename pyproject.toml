@@ -29,8 +29,12 @@ classifiers = [
 
 dependencies = [
   "networkx",
-  "pandas",
-  "filelock"
+  "flask",
+  "flask-socketio",
+  "python-socketio",
+  "websocket-client",
+  "requests",
+  "platformdirs"
 ]
 
 [project.urls]
@@ -56,4 +60,3 @@ ignore_missing_imports = true
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov", "ruff", "mypy"]
-server = ["flask", "flask-socketio", "websocket-client"]

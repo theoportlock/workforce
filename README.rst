@@ -5,9 +5,6 @@ workforce
 .. image:: https://img.shields.io/pypi/v/workforce.svg
     :target: https://pypi.python.org/pypi/workforce
 
-.. image:: https://img.shields.io/travis/theoportlock/workforce.svg
-    :target: https://travis-ci.com/theoportlock/workforce
-
 .. image:: https://readthedocs.org/projects/workforce/badge/?version=latest
     :target: https://workforce.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
@@ -184,45 +181,19 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command (or within gui) will add those prefix and suffixes to each command ran by the pipeline.
 
-+-------------------------------+---------------------------------------------------------------------------------+
-| Options                       | Description                                                                     |
-+===============================+=================================================================================+
-| -p "tmux send-keys" -s "C-m"  | Sends each command to a tmux session and executes it.                           |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "ssh ADDRESS"              | Executes each command remotely on the specified server.                         |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "parallel" -s "FILENAMES"  | Runs the pipeline on each specified filename.                                   |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "docker run -it"           | Executes each command within a Docker container with an interactive terminal.   |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "echo" -s ">> commands.sh" | Exports the pipeline commands to a bash script named ``commands.sh``.           |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "conda activate ENV_NAME"  | Activates a specified Conda environment before executing the commands.          |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "nohup"                    | Runs commands in the background.                                                |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "sbatch"                   | Submits commands to Slurm-managed servers.                                      |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "kubectl run"              | Executes commands on a Kubernetes cluster.                                      |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "sudo"                     | Executes commands with elevated privileges.                                     |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "env VAR1=value1"          | Sets environment variables for the command.                                     |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "nice -n 10"               | Adjusts the process priority.                                                   |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "/usr/bin/time -v"         | Times command execution with resource statistics.                               |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "setsid"                   | Launches commands in a new session.                                             |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "strace -o trace.log"      | Traces system calls for debugging.                                              |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -s ">> logfile 2>&1"          | Appends output to log file.                                                     |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -s "| tee output.log"         | Shows output in terminal and saves to file.                                     |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p "powershell.exe"           | Executes commands in Windows PowerShell.                                        |
-+-------------------------------+---------------------------------------------------------------------------------+
++-------------------------------------------------+---------------------------------------------------------------------------+--+--+--+--+--+--+--+--+
+| Wrapper Command                                 | Description                                                               |  |  |  |  |  |  |  |  |
++=================================================+===========================================================================+==+==+==+==+==+==+==+==+
+| --wrapper 'bash -c "{}"'                        | Standard bash execution                                                   |  |  |  |  |  |  |  |  |
+| --wrapper 'bash -c '. env.sh ''                 | Bash execution with definition of config or other environmental settings  |  |  |  |  |  |  |  |  |
+| --wrapper 'tmux send-keys {} C-m'               | Sends each command to a tmux session and executes it.                     |  |  |  |  |  |  |  |  |
+| --wrapper 'ssh ADDRESS {}'                      | Executes each command remotely on the specified server.                   |  |  |  |  |  |  |  |  |
+| --wrapper 'parallel {} ::: FILENAMES'           | Runs the pipeline on each specified filename.                             |  |  |  |  |  |  |  |  |
+| --wrapper 'docker run -it IMAGE {}'             | Executes each command inside a Docker container with an interactive TTY.  |  |  |  |  |  |  |  |  |
+| --wrapper 'echo {} >> commands.sh'              | Exports pipeline commands to a bash script named commands.sh.             |  |  |  |  |  |  |  |  |
+| --wrapper 'bash -lc "conda activate ENV && {}"' | Activates a Conda environment before executing the command.               |  |  |  |  |  |  |  |  |
+| --wrapper 'nohup {} &'                          | Runs commands in the background.                                          |  |  |  |  |  |  |  |  |
++-------------------------------------------------+---------------------------------------------------------------------------+--+--+--+--+--+--+--+--+
 
 To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run. Opening the terminal with shortcut 't' (or on the toolbar), you can see the output of the commands.
 
