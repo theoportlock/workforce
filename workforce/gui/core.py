@@ -111,7 +111,6 @@ class WorkflowApp:
         self.canvas_view = GraphCanvas(self.canvas, self.state, callbacks)
 
         # After setting up menus and canvas, add logging for bindings
-        log.info("Binding shortcuts: q for quit, r for run")
         self.master.bind('q', lambda e: self.save_and_exit())
         self.master.bind('r', lambda e: self.run())
         self.master.bind('<Shift-C>', lambda e: self.clear_all())

@@ -101,7 +101,7 @@ class Runner:
 			)
 			stdout, stderr = process.communicate()
 
-			log_text = f"STDOUT:\n{stdout}\n\nSTDERR:\n{stderr}".strip()
+			log_text = f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}".strip()
 			self.send_node_log(node_id, log_text)
 
 			if process.returncode == 0:
