@@ -11,9 +11,9 @@ from .canvas import GraphCanvas
 from .core import WorkflowApp  # WorkflowApp moved to core to avoid circular imports
 
 # Lazy main launcher to avoid importing .app at module import time (prevents circular import)
-def main(url: str):
+def main(url: str, background: bool = True):
     from .app import launch
-    return launch(url)
+    return launch(url, background=background)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)

@@ -41,9 +41,9 @@ def main():
         print_version()
         return
 
-    # Default behaviour: GUI with default workfile
+    # Default behaviour: GUI with default workfile in background
     if len(sys.argv) == 1:
-        gui_main(resolve_target(default_workfile()))
+        gui_main(resolve_target(default_workfile()), background=True)
         return
 
     parser = argparse.ArgumentParser(
@@ -61,7 +61,12 @@ def main():
     # ---------------- GUI ----------------
     gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
     gui_p.add_argument("url_or_path", nargs="?", default=default_workfile())
-    gui_p.set_defaults(func=lambda args: gui_main(resolve_target(args.url_or_path)))
+    gui_p.add_argument("--foreground", "-f", action="store_true",
+                       help="Run GUI in foreground (default: background)")
+    gui_p.set_defaults(func=lambda args: gui_main(
+        resolve_target(args.url_or_path),
+        background=not args.foreground
+    ))
 
     # ---------------- RUN ----------------
     run_p = subparsers.add_parser("run", help="Execute workflow")
