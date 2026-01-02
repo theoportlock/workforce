@@ -112,7 +112,6 @@ STDERR:</data>
       <data key="d5">STDOUT:
 test
 
-
 STDERR:</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -134,7 +133,6 @@ STDERR:</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
-
 STDERR:</data>
     </node>
     <node id="53a5d1cb-5c1f-415c-a599-1a9652cdcf74">
@@ -149,11 +147,11 @@ STDERR:</data>
 STDERR:</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
-      <data key="d1">echo teststetsetja;lsdkfj;alksdjf;alksjdf;laksjd;flkajsdlfkja;sldkjfalksjdflakj;sdlkfj 
+      <data key="d1">echo teststet
 ls
 ls</data>
-      <data key="d2">676.2937883372665</data>
-      <data key="d3">78.29018324670528</data>
+      <data key="d2">741.6271216705999</data>
+      <data key="d3">58.290183246705276</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 teststetsetja

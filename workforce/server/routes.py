@@ -1,7 +1,8 @@
 import uuid
 import logging
 from flask import current_app, request
-from workforce import edit
+from workforce import edit, utils
+from .shutdown import shutdown_if_idle
 
 log = logging.getLogger(__name__)
 
@@ -71,15 +72,22 @@ def register_routes(app, ctx):
     @app.route("/client-connect", methods=["POST"])
     def client_connect():
         try:
-            return current_app.json.response({"status": "connected"}), 200
-        except Exception:
+            clients = utils.bump_registry_clients(ctx.path, 1)
+            log.info("Client connected; total clients now: %s", clients)
+            return current_app.json.response({"status": "connected", "clients": clients}), 200
+        except Exception as e:
+            log.exception("Error in client_connect: %s", e)
             return "", 204
 
     @app.route("/client-disconnect", methods=["POST"])
     def client_disconnect():
         try:
-            return current_app.json.response({"status": "disconnected"}), 200
-        except Exception:
+            clients = utils.bump_registry_clients(ctx.path, -1)
+            log.info("Client disconnected; total clients now: %s", clients)
+            shutdown_if_idle(ctx)
+            return current_app.json.response({"status": "disconnected", "clients": clients}), 200
+        except Exception as e:
+            log.exception("Error in client_disconnect: %s", e)
             return "", 204
 
     @app.route("/run", methods=["POST"])

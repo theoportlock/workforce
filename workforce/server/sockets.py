@@ -1,6 +1,8 @@
 from flask import request
 from flask_socketio import SocketIO, join_room, emit
 import logging
+from workforce import utils
+from .shutdown import shutdown_if_idle
 
 log = logging.getLogger(__name__)
 
@@ -15,6 +17,9 @@ def register_socket_handlers(socketio, ctx):
     @socketio.on("disconnect")
     def on_disconnect():
         log.info("SocketIO client disconnected: %s", request.sid)
+        # Don't decrement here - only via REST /client-disconnect endpoint
+        # SocketIO disconnect can fire multiple times or independently of GUI exit
+        log.debug("SocketIO disconnect does not modify client count (use /client-disconnect)")
 
     @socketio.on("subscribe")
     def on_subscribe(data):

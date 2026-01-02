@@ -73,6 +73,11 @@ def save_registry(registry: dict):
         json.dump(registry, f, indent=2)
 
 
+def _abs(path: str) -> str:
+    """Return an absolute, normalized path key for registry lookups."""
+    return os.path.abspath(path)
+
+
 def is_port_in_use(port: int) -> bool:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         return s.connect_ex(("127.0.0.1", port)) == 0
@@ -98,6 +103,36 @@ def clean_registry() -> dict:
         save_registry(updated)
 
     return updated
+
+
+def get_registry_entry(path: str) -> dict | None:
+    """Fetch a registry entry for a path if present (after cleaning)."""
+    abs_path = _abs(path)
+    return clean_registry().get(abs_path)
+
+
+def set_registry_entry(path: str, entry: dict) -> None:
+    """Persist a registry entry for a path."""
+    abs_path = _abs(path)
+    registry = clean_registry()
+    registry[abs_path] = entry
+    save_registry(registry)
+
+
+def bump_registry_clients(path: str, delta: int) -> int:
+    """Increment or decrement the client count for a server, clamped at zero."""
+    abs_path = _abs(path)
+    registry = clean_registry()
+    info = registry.get(abs_path)
+    if not info:
+        return 0
+
+    current = int(info.get("clients", 0) or 0)
+    new_value = max(0, current + delta)
+    info["clients"] = new_value
+    registry[abs_path] = info
+    save_registry(registry)
+    return new_value
 
 
 def find_free_port(start: int = 5000, end: int = 6000) -> int:
