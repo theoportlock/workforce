@@ -9,7 +9,7 @@ def register_routes(app, ctx):
     @app.route("/get-graph")
     def get_graph():
         G = edit.load_graph(ctx.path)
-        data = __import__("networkx").node_link_data(G, link="links")
+        data = __import__("networkx").node_link_data(G, edges="links")
         data["graph"] = G.graph
         data["graph"].setdefault("wrapper", "{}")
         return current_app.json.response(data)

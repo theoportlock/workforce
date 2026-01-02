@@ -82,10 +82,16 @@ def clean_registry() -> dict:
     """Remove entries for inactive servers."""
     registry = load_registry()
     updated = {}
+    current_time = time.time()
 
     for path, info in registry.items():
         port = info.get("port")
-        if port and is_port_in_use(port):
+        # Keep entries with no timestamp (legacy) or younger than 2 seconds (grace period)
+        # This prevents removing freshly-spawned servers that haven't bound to ports yet
+        created_at = info.get("created_at", 0)
+        age = current_time - created_at if created_at > 0 else float('inf')
+        
+        if port and (age < 2.0 or is_port_in_use(port)):
             updated[path] = info
 
     if updated != registry:
@@ -161,11 +167,17 @@ def resolve_target(path_or_url):
     from workforce.server import start_server
     start_server(path_or_url, background=True)
 
-    # Check registry again
-    registry = clean_registry()
-    if abs_path in registry:
-        info = registry[abs_path]
-        return f"http://127.0.0.1:{info['port']}"
+    # Poll for server to become available (max 5 seconds)
+    max_retries = 10
+    for attempt in range(max_retries):
+        time.sleep(0.5)
+        registry = load_registry()  # Use load_registry to avoid cleaning fresh entries
+        if abs_path in registry:
+            info = registry[abs_path]
+            port = info['port']
+            # Verify port is actually in use
+            if is_port_in_use(port):
+                return f"http://127.0.0.1:{port}"
 
     raise RuntimeError(f"Failed to start server for {path_or_url}")
 

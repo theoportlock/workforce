@@ -101,11 +101,11 @@ def start_server(filename: str, port: int | None = None, background: bool = True
             cwd=os.getcwd(),
         )
         # Wait a bit to see if it starts
-        time.sleep(0.5)
+        time.sleep(1.0)
         if process.poll() is not None:
             log.error(f"Server subprocess exited immediately with code {process.returncode}")
             raise RuntimeError("Server failed to start")
-        registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0}
+        registry[abs_path] = {"port": port, "pid": process.pid, "clients": 0, "created_at": time.time()}
         utils.save_registry(registry)
         log.info(f"Server started for '{abs_path}' on port {port} with PID {process.pid}")
         return
