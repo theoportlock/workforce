@@ -3,65 +3,74 @@ from workforce.utils import _post
 
 log = logging.getLogger(__name__)
 
-def cmd_add_node(args, base_url):
+def cmd_add_node(args, base_url, workspace_id):
     payload = {
         "label": args.label,
         "x": args.x,
         "y": args.y,
         "status": args.status,
     }
-    print(f"[CLIENT] POST /add-node {payload}")
-    resp = _post(base_url, "/add-node", payload)
+    endpoint = f"/workspace/{workspace_id}/add-node"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_remove_node(args, base_url):
+def cmd_remove_node(args, base_url, workspace_id):
     payload = {"node_id": args.node_id}
-    print(f"[CLIENT] POST /remove-node {payload}")
-    resp = _post(base_url, "/remove-node", payload)
+    endpoint = f"/workspace/{workspace_id}/remove-node"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_add_edge(args, base_url):
+def cmd_add_edge(args, base_url, workspace_id):
     payload = {"source": args.source, "target": args.target}
-    print(f"[CLIENT] POST /add-edge {payload}")
-    resp = _post(base_url, "/add-edge", payload)
+    endpoint = f"/workspace/{workspace_id}/add-edge"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_remove_edge(args, base_url):
+def cmd_remove_edge(args, base_url, workspace_id):
     payload = {"source": args.source, "target": args.target}
-    print(f"[CLIENT] POST /remove-edge {payload}")
-    resp = _post(base_url, "/remove-edge", payload)
+    endpoint = f"/workspace/{workspace_id}/remove-edge"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_edit_status(args, base_url):
+def cmd_edit_status(args, base_url, workspace_id):
     payload = {
         "element_type": args.element_type,
         "element_id": args.element_id,
         "value": args.value,
     }
-    print(f"[CLIENT] POST /edit-status {payload}")
-    resp = _post(base_url, "/edit-status", payload)
+    endpoint = f"/workspace/{workspace_id}/edit-status"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_edit_position(args, base_url):
+def cmd_edit_position(args, base_url, workspace_id):
     payload = {"node_id": args.node_id, "x": args.x, "y": args.y}
-    print(f"[CLIENT] POST /edit-node-position {payload}")
-    resp = _post(base_url, "/edit-node-position", payload)
+    endpoint = f"/workspace/{workspace_id}/edit-node-position"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_edit_wrapper(args, base_url):
+def cmd_edit_wrapper(args, base_url, workspace_id):
     payload = {"wrapper": args.wrapper}
-    print(f"[CLIENT] POST /edit-wrapper {payload}")
-    resp = _post(base_url, "/edit-wrapper", payload)
+    endpoint = f"/workspace/{workspace_id}/edit-wrapper"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_edit_node_label(args, base_url):
+def cmd_edit_node_label(args, base_url, workspace_id):
     payload = {"node_id": args.node_id, "label": args.label}
-    print(f"[CLIENT] POST /edit-node-label {payload}")
-    resp = _post(base_url, "/edit-node-label", payload)
+    endpoint = f"/workspace/{workspace_id}/edit-node-label"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)
 
-def cmd_save_node_log(args, base_url):
+def cmd_save_node_log(args, base_url, workspace_id):
     payload = {"node_id": args.node_id, "log": args.log}
-    print(f"[CLIENT] POST /save-node-log {payload}")
-    resp = _post(base_url, "/save-node-log", payload)
+    endpoint = f"/workspace/{workspace_id}/save-node-log"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
     print(resp)

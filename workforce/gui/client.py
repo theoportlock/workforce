@@ -8,8 +8,20 @@ from workforce import utils
 log = logging.getLogger(__name__)
 
 class ServerClient:
-    def __init__(self, base_url: str, on_graph_update=None):
+    def __init__(self, base_url: str, workspace_id: str, workfile_path: str, on_graph_update=None):
+        """
+        Initialize server client for a workspace.
+        
+        Args:
+            base_url: Base server URL (e.g., http://localhost:5000/workspace/<ws_id>)
+            workspace_id: Workspace ID (e.g., ws_abc123)
+            workfile_path: Absolute path to workfile (for client_connect)
+            on_graph_update: Callback for graph updates
+        """
         self.base_url = base_url.rstrip("/")
+        self.workspace_id = workspace_id
+        self.workfile_path = workfile_path
+        self.workspace_room = f"ws:{workspace_id}"
         self.on_graph_update = on_graph_update
         self.sio = None
         self.connected = False
@@ -31,6 +43,13 @@ class ServerClient:
                 def connect():
                     log.info("Successfully connected to %s", self.base_url)
                     self.connected = True
+                    
+                    # Join workspace room immediately after connect
+                    try:
+                        self.sio.emit('join_room', {"room": self.workspace_room})
+                        log.info(f"Joined workspace room {self.workspace_room}")
+                    except Exception as e:
+                        log.warning(f"Failed to join workspace room: {e}")
 
                 @self.sio.event
                 def connect_error(data):
@@ -53,7 +72,7 @@ class ServerClient:
                     if callable(self.on_graph_update):
                         self.on_graph_update(data)
 
-                self.sio.connect(self.base_url, wait_timeout=5, auth=None)
+                self.sio.connect(utils.WORKSPACE_SERVER_URL, wait_timeout=5, auth=None)
             except Exception as e:
                 log.warning("SocketIO setup failed: %s", e)
                 self.sio = None
@@ -62,12 +81,28 @@ class ServerClient:
         t.start()
 
     def disconnect(self):
+        """Disconnect SocketIO client."""
         if self.sio and getattr(self.sio, "connected", False):
             try:
                 self.sio.disconnect()
-            except Exception:
-                pass
+                log.info("SocketIO disconnected")
+            except Exception as e:
+                log.warning("Error disconnecting SocketIO: %s", e)
             self.sio = None
+        self.connected = False
+
+    def client_disconnect(self):
+        """Unregister client disconnection. May trigger workspace context destruction."""
+        try:
+            # First disconnect SocketIO
+            self.disconnect()
+            # Then notify server via REST
+            result = utils._post(self.base_url, "/client-disconnect", {})
+            log.info(f"Client disconnected from {self.workspace_id}")
+            return result
+        except Exception as e:
+            log.error(f"Error during client disconnect: {e}")
+            return None
 
     def get_graph(self, timeout=1.0):
         r = requests.get(self._url("/get-graph"), timeout=timeout)
@@ -107,13 +142,9 @@ class ServerClient:
         return utils._post(self.base_url, "/run", payload)
 
     def client_connect(self):
+        """Register client connection with the server."""
         try:
-            return utils._post(self.base_url, "/client-connect")
+            return utils._post(self.base_url, "/client-connect", {"workfile_path": self.workfile_path})
         except Exception:
             return None
 
-    def client_disconnect(self):
-        try:
-            return utils._post(self.base_url, "/client-disconnect")
-        except Exception:
-            return None

@@ -3,20 +3,22 @@
 
 """
 workforce — unified CLI entrypoint.
-All GUI/RUN/EDIT operations resolve either a URL or a filename into
-an active server URL automatically using utils.resolve_target().
+All GUI/RUN/EDIT/SERVER operations work with the single fixed-port server
+on localhost:5000 with workspace routing by hashed file path.
 """
 
 import argparse
 import sys
+import os
 
-from workforce.utils import default_workfile, resolve_target
+from workforce.utils import default_workfile, compute_workspace_id, get_workspace_url, get_absolute_path
 from workforce.gui import main as gui_main
 from workforce.run import main as run_main
 from workforce.server import (
     cmd_start as server_cmd_start,
     cmd_stop as server_cmd_stop,
     cmd_list as server_cmd_list,
+    start_server,
 )
 from workforce.edit import (
     cmd_add_node,
@@ -43,7 +45,15 @@ def main():
 
     # Default behaviour: GUI with default workfile in background
     if len(sys.argv) == 1:
-        gui_main(resolve_target(default_workfile()), background=True)
+        wf = default_workfile()
+        if not wf:
+            print("Error: No default Workfile found. Specify a file path.")
+            sys.exit(1)
+        ws_id = compute_workspace_id(wf)
+        base_url = get_workspace_url(ws_id)
+        # Auto-start server if not running
+        start_server(background=True)
+        gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=True)
         return
 
     parser = argparse.ArgumentParser(
@@ -63,40 +73,46 @@ def main():
     gui_p.add_argument("url_or_path", nargs="?", default=default_workfile())
     gui_p.add_argument("--foreground", "-f", action="store_true",
                        help="Run GUI in foreground (default: background)")
-    gui_p.set_defaults(func=lambda args: gui_main(
-        resolve_target(args.url_or_path),
-        background=not args.foreground
-    ))
+    def _gui(args):
+        if not args.url_or_path:
+            print("Error: No Workfile specified. Use 'wf gui <path>'.")
+            sys.exit(1)
+        wf_path = os.path.abspath(args.url_or_path)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        # Auto-start server if not running
+        start_server(background=True)
+        gui_main(base_url, wf_path=wf_path, workspace_id=ws_id, background=not args.foreground)
+    gui_p.set_defaults(func=_gui)
 
     # ---------------- RUN ----------------
     run_p = subparsers.add_parser("run", help="Execute workflow")
     run_p.add_argument("url_or_path", nargs="?", default=default_workfile())
     run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
-    run_p.set_defaults(func=lambda args: run_main(
-        resolve_target(args.url_or_path),
-        nodes=args.nodes,
-        wrapper=args.wrapper,
-    ))
+    def _run(args):
+        if not args.url_or_path:
+            print("Error: No Workfile specified. Use 'wf run <path>'.")
+            sys.exit(1)
+        # Pass path directly to run_main - it handles workspace resolution
+        run_main(args.url_or_path, nodes=args.nodes, wrapper=args.wrapper)
+    run_p.set_defaults(func=_run)
 
     # ---------------- SERVER ----------------
-    server_p = subparsers.add_parser("server", help="Manage servers")
+    server_p = subparsers.add_parser("server", help="Manage the single machine-wide server")
     server_sub = server_p.add_subparsers(dest="server_command", required=True)
 
-    # Start
-    sp = server_sub.add_parser("start", help="Start a server")
-    sp.add_argument("filename", nargs="?", default=default_workfile())
-    sp.add_argument("--foreground", "-f", action="store_true")
-    sp.add_argument("--port", type=int)
+    # Start (background by default)
+    sp = server_sub.add_parser("start", help="Start the server (background by default)")
+    sp.add_argument("--foreground", action="store_true", help="Run in foreground instead of background")
     sp.set_defaults(func=lambda args: server_cmd_start(args))
 
     # Stop
-    sp2 = server_sub.add_parser("stop", help="Stop a server")
-    sp2.add_argument("filename", nargs="?", default=default_workfile())
+    sp2 = server_sub.add_parser("stop", help="Stop the machine-wide server")
     sp2.set_defaults(func=lambda args: server_cmd_stop(args))
 
-    # List
-    sp3 = server_sub.add_parser("ls", help="List active servers")
+    # List (diagnostic)
+    sp3 = server_sub.add_parser("ls", help="List active workspaces")
     sp3.set_defaults(func=lambda args: server_cmd_list(args))
 
     # ---------------- EDIT ----------------
@@ -111,8 +127,10 @@ def main():
     en.add_argument("--y", type=float, default=0)
     en.add_argument("--status", default="")
     def _add_node(args):
-        url = resolve_target(args.filename)
-        cmd_add_node(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_add_node(args, base_url, ws_id)
     en.set_defaults(func=_add_node)
 
     # --- remove-node ---
@@ -120,8 +138,10 @@ def main():
     ern.add_argument("filename")
     ern.add_argument("node_id")
     def _remove_node(args):
-        url = resolve_target(args.filename)
-        cmd_remove_node(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_remove_node(args, base_url, ws_id)
     ern.set_defaults(func=_remove_node)
 
     # --- add-edge ---
@@ -130,8 +150,10 @@ def main():
     ee.add_argument("source")
     ee.add_argument("target")
     def _add_edge(args):
-        url = resolve_target(args.filename)
-        cmd_add_edge(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_add_edge(args, base_url, ws_id)
     ee.set_defaults(func=_add_edge)
 
     # --- remove-edge ---
@@ -140,8 +162,10 @@ def main():
     ere.add_argument("source")
     ere.add_argument("target")
     def _remove_edge(args):
-        url = resolve_target(args.filename)
-        cmd_remove_edge(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_remove_edge(args, base_url, ws_id)
     ere.set_defaults(func=_remove_edge)
 
     # --- edit-status ---
@@ -151,8 +175,10 @@ def main():
     es.add_argument("element_id")
     es.add_argument("value")
     def _edit_status(args):
-        url = resolve_target(args.filename)
-        cmd_edit_status(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_edit_status(args, base_url, ws_id)
     es.set_defaults(func=_edit_status)
 
     # --- edit-wrapper ---
@@ -160,8 +186,10 @@ def main():
     ew.add_argument("filename")
     ew.add_argument("wrapper")
     def _edit_wrapper(args):
-        url = resolve_target(args.filename)
-        cmd_edit_wrapper(args, url)
+        wf_path = os.path.abspath(args.filename)
+        ws_id = compute_workspace_id(wf_path)
+        base_url = get_workspace_url(ws_id)
+        cmd_edit_wrapper(args, base_url, ws_id)
     ew.set_defaults(func=_edit_wrapper)
 
     # Parse arguments and execute the corresponding function
@@ -183,3 +211,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

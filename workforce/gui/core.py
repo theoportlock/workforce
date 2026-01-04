@@ -15,11 +15,13 @@ log = logging.getLogger(__name__)
 
 
 class WorkflowApp:
-    def __init__(self, master, url: str):
+    def __init__(self, master, base_url: str, wf_path: str = None, workspace_id: str = None):
         self.master = master
         # Single source of truth for UI state
         self.state = GUIState()
-        self.base_url = url
+        self.base_url = base_url
+        self.wf_path = wf_path
+        self.workspace_id = workspace_id
 
         # UI layout
         self.master.title("Workforce")
@@ -49,7 +51,7 @@ class WorkflowApp:
         self.zoom_slider.grid(row=1, column=1, sticky="ns")
 
         # Server client abstracts REST + SocketIO
-        self.server = ServerClient(self.base_url, on_graph_update=self.on_graph_update)
+        self.server = ServerClient(self.base_url, workspace_id=workspace_id, workfile_path=wf_path, on_graph_update=self.on_graph_update)
         self.client_connected = False
 
         menubar = tk.Menu(self.master)
@@ -120,7 +122,7 @@ class WorkflowApp:
         self.master.bind('c', lambda e: self.clear_selected_status())
         self.master.bind('e', lambda e: self.connect_nodes())
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
-        self.master.bind('p', lambda e: self.wrapper_popup())
+        self.master.bind('w', lambda e: self.wrapper_popup())
         self.master.bind('l', lambda e: self.show_node_log())
         self.master.bind('o', lambda e: self.load_workfile())
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
@@ -165,11 +167,14 @@ class WorkflowApp:
 
     def _client_disconnect(self):
         if not self.client_connected or not self.base_url:
+            log.debug("Not disconnecting: client_connected=%s, base_url=%s", self.client_connected, bool(self.base_url))
             return
         try:
+            log.info(f"Disconnecting client from workspace {self.workspace_id}")
             self.server.client_disconnect()
-        except Exception:
-            pass
+            log.info(f"Successfully disconnected from workspace {self.workspace_id}")
+        except Exception as e:
+            log.error(f"Error disconnecting: {e}")
         self.client_connected = False
 
     # ----------------------
@@ -294,8 +299,11 @@ class WorkflowApp:
 
         def on_save(new_label):
             try:
+                log.info(f"Saving node label: node_id={node_id}, new_label={new_label}, base_url={self.base_url}")
                 utils._post(self.base_url, "/edit-node-label", {"node_id": node_id, "label": new_label})
+                log.info(f"Node label update request sent successfully")
             except Exception as e:
+                log.exception(f"Failed to update node label: {e}")
                 messagebox.showerror("Update error", str(e))
 
         self.node_label_popup(current_label, on_save)
@@ -421,14 +429,21 @@ class WorkflowApp:
 
             # Spawn a runner client in a background thread to execute nodes
             def spawn_runner():
-                from workforce.run.client import Runner
-                wrapper = self.state.wrapper or "{}"
-                runner = Runner(self.base_url, wrapper)
-                runner.start(initial_nodes=nodes)
+                try:
+                    from workforce.run.client import Runner
+                    wrapper = self.state.wrapper or "{}"
+                    log.info(f"GUI spawning runner with base_url={self.base_url}, workspace_id={self.workspace_id}, nodes={nodes}")
+                    runner = Runner(self.base_url, workspace_id=self.workspace_id, workfile_path=self.wf_path, wrapper=wrapper)
+                    runner.start(initial_nodes=nodes)
+                except Exception as e:
+                    log.exception(f"Error in spawn_runner: {e}")
+                    raise
 
-            threading.Thread(target=spawn_runner, daemon=True).start()
+            thread = threading.Thread(target=spawn_runner, daemon=False)
+            thread.start()
 
         except Exception as e:
+            log.exception(f"Run Error: {e}")
             messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
 
     def clear_selected_status(self):
@@ -834,22 +849,28 @@ class WorkflowApp:
 
     def _atexit_disconnect(self):
         try:
+            log.info("atexit handler: attempting graceful disconnection")
             self._client_disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            log.error(f"Error in atexit handler: {e}")
 
     def _on_close(self):
         try:
+            log.info("Window close handler: attempting graceful disconnection")
             self._client_disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            log.error(f"Error during close: {e}")
         try:
             self.master.destroy()
         except Exception:
-            self.master.quit()
+            try:
+                self.master.quit()
+            except Exception:
+                pass
 
     def on_graph_update(self, data=None):
         if not data:
+            log.debug("on_graph_update called with empty data")
             return
         # Handle partial status_change events (lightweight update)
         if "node_id" in data and "status" in data:
@@ -865,6 +886,9 @@ class WorkflowApp:
             self.master.after(0, self._redraw_graph)
         elif "nodes" in data or "links" in data:
             # Full graph update from server
-            log.debug(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
+            log.info(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
+            log.debug(f"Updated node labels: {[(n.get('id'), n.get('label')) for n in data.get('nodes', [])]}")
             self.state.graph = data
             self.master.after(0, self._redraw_graph)
+        else:
+            log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")

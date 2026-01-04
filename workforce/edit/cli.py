@@ -4,7 +4,7 @@ from .client import (
     cmd_edit_status, cmd_edit_position, cmd_edit_wrapper,
     cmd_edit_node_label, cmd_save_node_log
 )
-from workforce.utils import resolve_target
+from workforce.utils import compute_workspace_id, get_absolute_path, default_workfile
 
 def main():
     parser = argparse.ArgumentParser(prog="wf-edit", description="Workforce edit CLI")
@@ -71,4 +71,9 @@ def main():
     kwargs = vars(args)
     func = kwargs.pop("func")
     base_url = kwargs.pop("base_url")
-    func(args, base_url)
+    
+    # Compute workspace_id from default workfile (same as other CLI commands)
+    wf_path = default_workfile()
+    workspace_id = compute_workspace_id(get_absolute_path(wf_path))
+    
+    func(args, base_url, workspace_id)

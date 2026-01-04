@@ -8,8 +8,11 @@ from workforce import utils
 log = logging.getLogger(__name__)
 
 class Runner:
-	def __init__(self, base_url, wrapper="{}"):
+	def __init__(self, base_url: str, workspace_id: str, workfile_path: str, wrapper: str = "{}"):
 		self.base_url = base_url
+		self.workspace_id = workspace_id
+		self.workfile_path = workfile_path
+		self.workspace_room = f"ws:{workspace_id}"
 		self.wrapper = wrapper
 		self.run_id = None
 		self.sio = socketio.Client(logger=log.isEnabledFor(logging.DEBUG), engineio_logger=log.isEnabledFor(logging.DEBUG))
@@ -19,6 +22,8 @@ class Runner:
 		@self.sio.event
 		def connect():
 			log.info(f"Runner connected to {self.base_url}")
+			# Join workspace room for event isolation
+			self.sio.emit('join_room', {'room': self.workspace_room})
 
 		@self.sio.event
 		def disconnect():
@@ -60,14 +65,16 @@ class Runner:
 			}
 			if self.run_id:
 				payload["run_id"] = self.run_id
-			utils._post(self.base_url, "/edit-status", payload)
+			endpoint = "/edit-status"
+			utils._post(self.base_url, endpoint, payload)
 		except RuntimeError as e:
 			log.error(f"Failed to set status {status} for {node_id}: {e}")
 
 	def send_node_log(self, node_id, log_text):
 		"""Sends captured log output to the server."""
 		try:
-			utils._post(self.base_url, "/save-node-log", {
+			endpoint = "/save-node-log"
+			utils._post(self.base_url, endpoint, {
 				"node_id": node_id,
 				"log": log_text
 			})
@@ -120,25 +127,42 @@ class Runner:
 	def start(self, initial_nodes=None):
 		"""Connect to the server and start the run process."""
 		log.info(f"Runner client starting for {self.base_url}")
+		log.info(f"Initial nodes: {initial_nodes}")
 		try:
 			# Connect FIRST, then trigger the run
 			log.info("Connecting to server via Socket.IO...")
-			self.sio.connect(self.base_url, transports=['websocket'], wait_timeout=10)
+			# SocketIO connects to server root, not workspace URL
+			server_url = utils.WORKSPACE_SERVER_URL
+			self.sio.connect(server_url, transports=['websocket'], wait_timeout=10)
 			
+			# Register with server for this workspace
+			try:
+				endpoint = "/client-connect"
+				utils._post(self.base_url, endpoint, {"workfile_path": self.workfile_path})
+				log.info(f"Runner registered with workspace {self.workspace_id}")
+			except Exception as e:
+				log.error(f"Failed to register with workspace: {e}")
+				self.sio.disconnect()
+				return
+
 			# Now that we're connected, initiate the run
 			payload = {"nodes": initial_nodes or []}
 			try:
-				log.info("Posting /run to server to initiate run...")
-				run_response = utils._post(self.base_url, "/run", payload) or {}
+				endpoint = "/run"
+				log.info(f"Posting /run to server with payload: {payload}...")
+				run_response = utils._post(self.base_url, endpoint, payload) or {}
 				self.run_id = run_response.get("run_id")
 				if self.run_id:
 					log.info(f"Runner associated with run_id={self.run_id}")
+				else:
+					log.warning(f"No run_id in response: {run_response}")
 			except Exception as e:
 				log.error(f"Failed to POST /run after connecting: {e}")
 				self.sio.disconnect()
 				return
 
 			# Wait for node_ready events
+			log.info("Waiting for node_ready events...")
 			self.sio.wait()
 		except socketio.exceptions.ConnectionError as e:
 			log.error(f"Connection error: {e}")

@@ -17,7 +17,6 @@
       <data key="d5">STDOUT:
 asdfad
 
-
 STDERR:</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -44,7 +43,7 @@ todo.md
 venv
 Workfile
 workforce
-
+workforce.egg-info
 
 STDERR:</data>
     </node>
@@ -72,35 +71,7 @@ todo.md
 venv
 Workfile
 workforce
-
-
-STDERR:</data>
-    </node>
-    <node id="17fdc5dd-f379-41d4-a64d-3c162feb0fb7">
-      <data key="d1">ls</data>
-      <data key="d2">486.0</data>
-      <data key="d3">68.0</data>
-      <data key="d4">ran</data>
-      <data key="d5">STDOUT:
-AUTHORS.rst
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-workforce
-
+workforce.egg-info
 
 STDERR:</data>
     </node>
@@ -122,12 +93,11 @@ STDERR:</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
-
 STDERR:</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">173.22222222222223</data>
+      <data key="d2">172.22222222222223</data>
       <data key="d3">212.8888888888889</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
@@ -136,13 +106,32 @@ STDERR:</data>
 STDERR:</data>
     </node>
     <node id="53a5d1cb-5c1f-415c-a599-1a9652cdcf74">
-      <data key="d1">pwd</data>
+      <data key="d1">pwd
+ls</data>
       <data key="d2">497.0</data>
       <data key="d3">498.0</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
-
+AUTHORS.rst
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+tests
+todo.md
+venv
+Workfile
+workforce
+workforce.egg-info
 
 STDERR:</data>
     </node>
@@ -150,11 +139,11 @@ STDERR:</data>
       <data key="d1">echo teststet
 ls
 ls</data>
-      <data key="d2">741.6271216705999</data>
-      <data key="d3">58.290183246705276</data>
+      <data key="d2">784.6271216705999</data>
+      <data key="d3">92.29018324670528</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-teststetsetja
+teststet
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
@@ -173,6 +162,7 @@ todo.md
 venv
 Workfile
 workforce
+workforce.egg-info
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
@@ -187,20 +177,14 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
+tmpz371nenr
 todo.md
 venv
 Workfile
 workforce
+workforce.egg-info
 
-
-STDERR:
-bash: line 1: lsdkfj: command not found
-bash: line 1: alksdjf: command not found
-bash: line 1: alksjdf: command not found
-bash: line 1: laksjd: command not found
-bash: line 1: flkajsdlfkja: command not found
-bash: line 1: sldkjfalksjdflakj: command not found
-bash: line 1: sdlkfj: command not found</data>
+STDERR:</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d6">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
@@ -218,21 +202,17 @@ bash: line 1: sdlkfj: command not found</data>
       <data key="d6">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
       <data key="d7" />
     </edge>
-    <edge source="17fdc5dd-f379-41d4-a64d-3c162feb0fb7" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d6">9af85466-5c82-42ed-b8ff-5ad165e3018a</data>
-      <data key="d7" />
-    </edge>
     <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d6">84042702-2846-4077-8815-eb0ce8c318dc</data>
-      <data key="d7">to_run</data>
+      <data key="d7" />
     </edge>
     <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d6">8ae2e181-2a4c-4711-98ec-3722faa3f7af</data>
-      <data key="d7">to_run</data>
+      <data key="d7" />
     </edge>
     <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d6">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
-      <data key="d7">to_run</data>
+      <data key="d7" />
     </edge>
     <data key="d0">bash -c 'sleep 1; {}'</data>
   </graph>

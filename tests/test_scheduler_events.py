@@ -1,6 +1,7 @@
 """Tests for scheduler event emission."""
 
 import os
+import uuid
 import queue as std_queue
 import tempfile
 import threading
@@ -17,10 +18,11 @@ from workforce.server.queue import start_graph_worker
 
 def create_test_context(path):
     """Create a ServerContext for testing."""
+    workspace_id = f"ws_test_{uuid.uuid4().hex[:8]}"
     with tempfile.TemporaryDirectory() as cache_dir:
         ctx = ServerContext(
-            path=path,
-            port=5000,
+            workspace_id=workspace_id,
+            workfile_path=path,
             server_cache_dir=cache_dir,
             mod_queue=std_queue.Queue(),
             socketio=Mock()  # Mock socketio to avoid needing a real server
@@ -239,12 +241,12 @@ def test_events_without_socketio():
         
         # Create context without SocketIO
         ctx = ServerContext(
-            path=path,
-            port=5000,
+            workspace_id="ws_test_nosos",
+            workfile_path=path,
             server_cache_dir=tmpdir,
-            mod_queue=std_queue.Queue(),
-            socketio=None  # No socketio
+            mod_queue=std_queue.Queue()
         )
+        ctx.socketio = None  # No socketio
         
         emitted_events = []
         

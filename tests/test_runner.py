@@ -42,17 +42,24 @@ def temp_graph_file():
 def mock_server_context(temp_graph_file):
     """Create a mock server context for testing."""
     import queue
+    from workforce.server import sockets
     
     mod_queue = queue.Queue()
     cache_dir = tempfile.mkdtemp()
     
+    # Compute workspace_id from the temp file path
+    workspace_id = f"ws_test_{uuid.uuid4().hex[:8]}"
+    
     ctx = ServerContext(
-        path=temp_graph_file,
-        port=5000,
+        workspace_id=workspace_id,
+        workfile_path=temp_graph_file,
         server_cache_dir=cache_dir,
         mod_queue=mod_queue
     )
     ctx.socketio = MagicMock()
+    
+    # Register event handlers so domain events -> socketio events
+    sockets.register_event_handlers(ctx)
     
     yield ctx
     
@@ -179,7 +186,7 @@ def test_execute_node_success(mock_popen):
     process_mock.returncode = 0
     mock_popen.return_value = process_mock
 
-    runner = Runner("http://fake-server")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
 
@@ -204,7 +211,7 @@ def test_execute_node_failure(mock_popen):
     process_mock.returncode = 1
     mock_popen.return_value = process_mock
 
-    runner = Runner("http://fake-server")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
 
@@ -225,7 +232,7 @@ def test_execute_node_exception(mock_popen):
     """Test node execution when subprocess raises an exception."""
     mock_popen.side_effect = Exception("Command not found")
 
-    runner = Runner("http://fake-server")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
 
@@ -243,7 +250,7 @@ def test_execute_node_exception(mock_popen):
 
 def test_execute_node_empty_command():
     """Test execution of a node with empty command."""
-    runner = Runner("http://fake-server")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
 
@@ -261,7 +268,7 @@ def test_execute_node_empty_command():
 
 def test_runner_wrapper_substitution():
     """Test that wrapper correctly substitutes {} with command."""
-    runner = Runner("http://fake-server", wrapper="bash -c {}")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml", wrapper="bash -c {}")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
     
@@ -386,7 +393,7 @@ def test_scheduler_emits_node_ready_event(temp_graph_file, mock_server_context):
     ctx.socketio.emit.assert_any_call(
         "node_ready",
         {"node_id": nodes["a"], "label": "echo A", "run_id": run_id},
-        skip_sid=None
+        room=f"ws:{ctx.workspace_id}"
     )
 
 
@@ -410,7 +417,7 @@ def test_scheduler_emits_status_change_event(temp_graph_file, mock_server_contex
     ctx.socketio.emit.assert_any_call(
         "status_change",
         {"node_id": nodes["a"], "status": "running", "run_id": run_id},
-        skip_sid=None
+        room=f"ws:{ctx.workspace_id}"
     )
     
     # Mark node as ran
@@ -422,7 +429,7 @@ def test_scheduler_emits_status_change_event(temp_graph_file, mock_server_contex
     ctx.socketio.emit.assert_any_call(
         "status_change",
         {"node_id": nodes["a"], "status": "ran", "run_id": run_id},
-        skip_sid=None
+        room=f"ws:{ctx.workspace_id}"
     )
 
 
@@ -585,7 +592,7 @@ def test_resume_replaces_failed_with_run(temp_graph_file, mock_server_context):
     ctx.socketio.emit.assert_any_call(
         "node_ready",
         {"node_id": nodes["a"], "label": "echo A", "run_id": run_id},
-        skip_sid=None
+        room=f"ws:{ctx.workspace_id}"
     )
 
 
@@ -739,7 +746,7 @@ def test_node_with_no_command(temp_graph_file, mock_server_context):
     edit.save_graph(G, temp_graph_file)
     
     # Execute empty command
-    runner = Runner("http://fake-server")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
     
@@ -835,7 +842,7 @@ def test_parallel_branch_execution(temp_graph_file, mock_server_context):
 
 def test_wrapper_with_multiline_command(temp_graph_file):
     """Test wrapper handling of multiline commands."""
-    runner = Runner("http://fake-server", wrapper="bash -c {}")
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml", wrapper="bash -c {}")
     runner.set_node_status = MagicMock()
     runner.send_node_log = MagicMock()
     
