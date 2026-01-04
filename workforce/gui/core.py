@@ -11,6 +11,7 @@ from workforce import utils
 from .state import GUIState
 from .client import ServerClient
 from .canvas import GraphCanvas
+from .recent import RecentFileManager
 
 log = logging.getLogger(__name__)
 
@@ -55,13 +56,29 @@ class WorkflowApp:
         self.server = ServerClient(self.base_url, workspace_id=workspace_id, workfile_path=wf_path, on_graph_update=self.on_graph_update)
         self.client_connected = False
 
+        # Initialize recent files manager
+        self.recent_manager = RecentFileManager()
+        
+        # Add current workfile to recent list on startup
+        if wf_path:
+            self.recent_manager.add(wf_path)
+
         menubar = tk.Menu(self.master)
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Open...", command=self.open_file_dialog, accelerator="O")
+        # Recent files submenu (populated dynamically)
+        self.recent_submenu = tk.Menu(file_menu, tearoff=0)
+        file_menu.add_cascade(label="Open Recent", menu=self.recent_submenu)
+        file_menu.add_separator()
         file_menu.add_command(label="Save As...", command=self.save_as_dialog, accelerator="Ctrl+Shift+S")
         file_menu.add_command(label="Exit", command=self.master.quit, accelerator="Q")
         menubar.add_cascade(label="File", menu=file_menu)
+        # Set postcommand to rebuild recent submenu on each File menu open
+        file_menu.config(postcommand=self._rebuild_recent_submenu)
+        # Populate initial state (will also be called on each File menu open via postcommand)
+        self._rebuild_recent_submenu()
 
         # Edit menu
         edit_menu = tk.Menu(menubar, tearoff=0)
@@ -126,7 +143,7 @@ class WorkflowApp:
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
         self.master.bind('w', lambda e: self.wrapper_popup())
         self.master.bind('l', lambda e: self.show_node_log())
-        self.master.bind('o', lambda e: self.load_workfile())
+        self.master.bind('o', lambda e: self.open_file_dialog())
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
         self.master.bind('<Control-Shift-S>', lambda e: self.save_as_dialog())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
@@ -463,6 +480,100 @@ class WorkflowApp:
                 messagebox.showerror("Save As Error", f"Failed to save workflow:\n{e}")
         except Exception as e:
             messagebox.showerror("Save As Error", f"Failed to save workflow:\n{e}")
+
+    def open_file_dialog(self):
+        """
+        Show file picker dialog to open a workflow file.
+        Opens selected file in a new GUI/workspace and updates recent list.
+        """
+        # Determine initial directory
+        initial_dir = os.path.dirname(self.wf_path) if self.wf_path else os.path.expanduser("~")
+        
+        file_path = filedialog.askopenfilename(
+            initialdir=initial_dir,
+            title="Open Workflow",
+            filetypes=[("All files", "*"), ("Workflow files", "*.wf"), ("GraphML files", "*.graphml")],
+        )
+        
+        if not file_path:
+            return  # User cancelled
+        
+        # Convert to absolute path
+        abs_path = os.path.abspath(file_path)
+        
+        # Update recent list
+        self.recent_manager.add(abs_path)
+        
+        # Launch new GUI for this file in background
+        self._launch_gui_for_file(abs_path)
+    
+    def _launch_gui_for_file(self, file_path: str):
+        """
+        Launch a new GUI instance for the given file path.
+        
+        Args:
+            file_path: Absolute path to workflow file.
+        """
+        try:
+            # Import launch from gui/app.py to spawn new process
+            from .app import launch
+            
+            # Compute workspace ID and URL for the file
+            workspace_id = utils.compute_workspace_id(file_path)
+            base_url = utils.get_workspace_url(workspace_id)
+            
+            # Launch in background
+            launch(base_url, wf_path=file_path, workspace_id=workspace_id, background=True)
+        except Exception as e:
+            messagebox.showerror("Launch Error", f"Failed to launch GUI for file:\n{e}")
+    
+    def _rebuild_recent_submenu(self):
+        """
+        Rebuild the File → Open Recent submenu.
+        Called as postcommand on File menu to refresh on each open.
+        Validates paths exist and removes missing entries.
+        """
+        # Clear existing items
+        self.recent_submenu.delete(0, tk.END)
+        
+        # Get validated recent files list
+        recent_files = self.recent_manager.get_list()
+        
+        if not recent_files:
+            self.recent_submenu.add_command(label="(No recent files)", state=tk.DISABLED)
+            return
+        
+        # Add each recent file to submenu
+        for file_path in recent_files[:20]:  # Limit display to 20
+            # Create menu item with full file path as label
+            self.recent_submenu.add_command(
+                label=file_path,
+                command=lambda fp=file_path: self._open_recent_file(fp)
+            )
+    
+    def _open_recent_file(self, file_path: str):
+        """
+        Open a file from recent list.
+        Moves file to top of recent list and launches new GUI.
+        
+        Args:
+            file_path: Path to file to open.
+        """
+        # Verify file still exists
+        if not os.path.isfile(file_path):
+            messagebox.showwarning(
+                "File Not Found",
+                f"The file no longer exists:\n{file_path}\n\nIt will be removed from recent list."
+            )
+            self.recent_manager.remove(file_path)
+            self._rebuild_recent_submenu()
+            return
+        
+        # Move to top of recent list
+        self.recent_manager.move_to_top(file_path)
+        
+        # Launch new GUI for this file
+        self._launch_gui_for_file(file_path)
 
     def show_node_log(self):
         if len(self.state.selected_nodes) != 1:

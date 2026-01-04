@@ -312,30 +312,30 @@ def test_save_as_concurrent_workspaces(test_app, temp_workfiles):
             socketio=Mock(),
         )
         
-            start_graph_worker(ctx1)
-            start_graph_worker(ctx2)
+        start_graph_worker(ctx1)
+        start_graph_worker(ctx2)
 
-            try:
-                test_app.test_ctx_map = {workspace_id1: ctx1, workspace_id2: ctx2}
-                with test_app.test_client() as client:
-                    response = client.post(
-                        f"/workspace/{workspace_id1}/save-as",
-                        json={"new_path": new_file1}
-                    )
-                    assert response.status_code == 200
+        try:
+            test_app.test_ctx_map = {workspace_id1: ctx1, workspace_id2: ctx2}
+            with test_app.test_client() as client:
+                response = client.post(
+                    f"/workspace/{workspace_id1}/save-as",
+                    json={"new_path": new_file1}
+                )
+                assert response.status_code == 200
 
-                # Verify workspace 2 is unaffected
-                assert ctx2.workfile_path == original_file2
-                G2_check = edit.load_graph(original_file2)
-                assert "other_node" in G2_check.nodes
+            # Verify workspace 2 is unaffected
+            assert ctx2.workfile_path == original_file2
+            G2_check = edit.load_graph(original_file2)
+            assert "other_node" in G2_check.nodes
 
-            finally:
-                # Cleanup
-                ctx1.mod_queue.put(None)
-                ctx2.mod_queue.put(None)
-                for ctx in [ctx1, ctx2]:
-                    if ctx.worker_thread and ctx.worker_thread.is_alive():
-                        ctx.worker_thread.join(timeout=2)
+        finally:
+            # Cleanup
+            ctx1.mod_queue.put(None)
+            ctx2.mod_queue.put(None)
+            for ctx in [ctx1, ctx2]:
+                if ctx.worker_thread and ctx.worker_thread.is_alive():
+                    ctx.worker_thread.join(timeout=2)
 
 
 if __name__ == "__main__":
