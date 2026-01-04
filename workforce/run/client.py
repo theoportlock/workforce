@@ -16,6 +16,7 @@ class Runner:
 		self.wrapper = wrapper
 		self.run_id = None
 		self.sio = socketio.Client(logger=log.isEnabledFor(logging.DEBUG), engineio_logger=log.isEnabledFor(logging.DEBUG))
+		self._registered_with_server = False  # Track if we've registered with server
 		self._setup_events()
 
 	def _setup_events(self):
@@ -38,6 +39,16 @@ class Runner:
 				log.debug("Ignoring run_complete for other run_id %s", run_id)
 				return
 			log.info("Server signaled run completion. Disconnecting.")
+			# Notify server via REST API to decrement client count
+			if self._registered_with_server:
+				try:
+					endpoint = "/client-disconnect"
+					utils._post(self.base_url, endpoint, {})
+					self._registered_with_server = False
+					log.info("Successfully notified server of client disconnect")
+				except Exception as e:
+					log.error(f"Failed to notify server of disconnect: {e}")
+			# Then disconnect SocketIO
 			self.sio.disconnect()
 
 		@self.sio.on('node_ready')
@@ -139,6 +150,7 @@ class Runner:
 			try:
 				endpoint = "/client-connect"
 				utils._post(self.base_url, endpoint, {"workfile_path": self.workfile_path})
+				self._registered_with_server = True
 				log.info(f"Runner registered with workspace {self.workspace_id}")
 			except Exception as e:
 				log.error(f"Failed to register with workspace: {e}")
@@ -171,5 +183,15 @@ class Runner:
 		except KeyboardInterrupt:
 			log.info("\nStopping runner.")
 		finally:
+			# Always notify server and disconnect, even on error
+			if self._registered_with_server:
+				try:
+					endpoint = "/client-disconnect"
+					utils._post(self.base_url, endpoint, {})
+					self._registered_with_server = False
+					log.info("Runner cleanup: notified server of disconnect")
+				except Exception as e:
+					log.error(f"Runner cleanup: failed to notify server: {e}")
+			
 			if getattr(self.sio, "connected", False):
 				self.sio.disconnect()

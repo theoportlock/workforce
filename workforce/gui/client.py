@@ -141,6 +141,10 @@ class ServerClient:
         payload = {"nodes": nodes}
         return utils._post(self.base_url, "/run", payload)
 
+    def save_as(self, new_path):
+        """Save graph to new file and return new workspace info."""
+        return utils._post(self.base_url, "/save-as", {"new_path": new_path})
+
     def client_connect(self):
         """Register client connection with the server."""
         try:

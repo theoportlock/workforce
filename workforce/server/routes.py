@@ -1,5 +1,6 @@
 import uuid
 import logging
+import os
 from flask import current_app, request, g, jsonify
 from workforce import edit
 
@@ -280,4 +281,46 @@ def register_routes(app):
             return jsonify({"status": "started", "run_id": run_id}), 202
         except Exception as e:
             log.exception("Error in /run endpoint")
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])
+    def save_as(workspace_id):
+        """Save current graph to a new file path."""
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        
+        # Check for active runs
+        if ctx.active_runs:
+            return jsonify({"error": "Cannot save during active workflow execution"}), 409
+        
+        data = request.get_json(force=True)
+        new_path = data.get("new_path")
+        
+        if not new_path:
+            return jsonify({"error": "new_path required"}), 400
+        
+        try:
+            # Get absolute path
+            new_path = os.path.abspath(new_path)
+            
+            # Load current graph (with all statuses intact) and save to new location
+            G = edit.load_graph(ctx.workfile_path)
+            edit.save_graph(G, new_path)
+            
+            # Compute new workspace identifiers
+            from workforce.utils import compute_workspace_id, get_workspace_url
+            new_workspace_id = compute_workspace_id(new_path)
+            new_base_url = get_workspace_url(new_workspace_id)
+            
+            log.info(f"Saved workflow from {ctx.workfile_path} to {new_path} (new workspace: {new_workspace_id})")
+            
+            return jsonify({
+                "status": "saved",
+                "new_path": new_path,
+                "new_workspace_id": new_workspace_id,
+                "new_base_url": new_base_url
+            }), 200
+        except Exception as e:
+            log.exception("Error in /save-as endpoint")
             return jsonify({"status": "error", "message": str(e)}), 500

@@ -65,6 +65,16 @@ def _post(base_url: str, endpoint: str, payload: dict | None = None) -> dict:
             except json.JSONDecodeError:
                 raise RuntimeError(f"Server returned non-JSON response: {resp_data}")
 
+    except urllib.error.HTTPError as e:
+        # HTTP errors (404, 409, 500, etc.) - try to read error response
+        try:
+            error_body = e.read().decode("utf-8")
+            error_data = json.loads(error_body)
+            error_msg = error_data.get("error", str(e))
+        except:
+            error_msg = str(e)
+        raise RuntimeError(f"Failed to POST to {url}: HTTP Error {e.code} {e.reason}. {error_msg}")
+    
     except urllib.error.URLError as e:
         raise RuntimeError(f"Failed to POST to {url}: {e}")
 

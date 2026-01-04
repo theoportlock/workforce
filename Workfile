@@ -21,8 +21,8 @@ STDERR:</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
-      <data key="d2">570.0</data>
-      <data key="d3">459.0</data>
+      <data key="d2">506.0</data>
+      <data key="d3">392.0</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
@@ -105,36 +105,6 @@ STDERR:</data>
 
 STDERR:</data>
     </node>
-    <node id="53a5d1cb-5c1f-415c-a599-1a9652cdcf74">
-      <data key="d1">pwd
-ls</data>
-      <data key="d2">497.0</data>
-      <data key="d3">498.0</data>
-      <data key="d4">ran</data>
-      <data key="d5">STDOUT:
-/home/tpor598/workforce
-AUTHORS.rst
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-workforce
-workforce.egg-info
-
-STDERR:</data>
-    </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
       <data key="d1">echo teststet
 ls
@@ -158,6 +128,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
+tmpelwb5s6g
 todo.md
 venv
 Workfile
@@ -177,7 +148,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
-tmpz371nenr
+tmpelwb5s6g
 todo.md
 venv
 Workfile
@@ -186,12 +157,22 @@ workforce.egg-info
 
 STDERR:</data>
     </node>
+    <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
+      <data key="d1">pwd</data>
+      <data key="d2">466.0</data>
+      <data key="d3">508.0</data>
+      <data key="d4">ran</data>
+      <data key="d5">STDOUT:
+/home/tpor598/workforce
+
+STDERR:</data>
+    </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d6">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
       <data key="d7" />
     </edge>
-    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="53a5d1cb-5c1f-415c-a599-1a9652cdcf74">
-      <data key="d6">d98b292e-8219-423b-bfd1-d10042d7ca25</data>
+    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
+      <data key="d6">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
       <data key="d7" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">

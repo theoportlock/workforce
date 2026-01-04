@@ -1,7 +1,8 @@
 import logging
+import os
 import threading
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
 import requests
 import atexit
@@ -24,7 +25,7 @@ class WorkflowApp:
         self.workspace_id = workspace_id
 
         # UI layout
-        self.master.title("Workforce")
+        self.master.title(f"Workforce - {wf_path}" if wf_path else "Workforce")
 
         # Ensure layout supports a right-side zoom slider
         self.master.grid_rowconfigure(1, weight=1)
@@ -58,6 +59,7 @@ class WorkflowApp:
 
         # File menu
         file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Save As...", command=self.save_as_dialog, accelerator="Ctrl+Shift+S")
         file_menu.add_command(label="Exit", command=self.master.quit, accelerator="Q")
         menubar.add_cascade(label="File", menu=file_menu)
 
@@ -126,6 +128,7 @@ class WorkflowApp:
         self.master.bind('l', lambda e: self.show_node_log())
         self.master.bind('o', lambda e: self.load_workfile())
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
+        self.master.bind('<Control-Shift-S>', lambda e: self.save_as_dialog())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
 
@@ -166,16 +169,21 @@ class WorkflowApp:
             pass
 
     def _client_disconnect(self):
-        if not self.client_connected or not self.base_url:
-            log.debug("Not disconnecting: client_connected=%s, base_url=%s", self.client_connected, bool(self.base_url))
+        """Disconnect from server workspace and clean up."""
+        if not self.base_url:
+            log.debug("Not disconnecting: no base_url")
             return
+        
         try:
             log.info(f"Disconnecting client from workspace {self.workspace_id}")
+            # Always attempt to disconnect, regardless of client_connected flag
+            # (flag might not be set if connection failed initially)
             self.server.client_disconnect()
             log.info(f"Successfully disconnected from workspace {self.workspace_id}")
         except Exception as e:
             log.error(f"Error disconnecting: {e}")
-        self.client_connected = False
+        finally:
+            self.client_connected = False
 
     # ----------------------
     # Graph loading / saving
@@ -383,6 +391,78 @@ class WorkflowApp:
             utils._post(self.base_url, "/edit-wrapper", {"wrapper": self.state.wrapper})
         except Exception as e:
             messagebox.showerror("Save Error", f"Failed to save wrapper: {e}")
+
+    def save_as_dialog(self):
+        """Prompt user for new filename and switch to new workspace."""
+        if not self.wf_path:
+            messagebox.showerror("Save As Error", "No workflow file is currently open.")
+            return
+        
+        # Determine initial directory and filename
+        initial_dir = os.path.dirname(self.wf_path) if self.wf_path else os.getcwd()
+        initial_file = os.path.basename(self.wf_path) if self.wf_path else "Workfile.wf"
+        
+        new_path = filedialog.asksaveasfilename(
+            initialdir=initial_dir,
+            initialfile=initial_file,
+            title="Save Workflow As",
+            filetypes=[("Workflow files", "*.wf"), ("All files", "*.*")],
+            defaultextension=".wf"
+        )
+        
+        if not new_path:
+            return  # User cancelled
+        
+        try:
+            # Call server to save graph to new file
+            result = self.server.save_as(new_path)
+            
+            # Check if result is a dict (success) or if we got an error
+            if isinstance(result, dict) and "error" in result:
+                if "Cannot save during active workflow execution" in result.get("error", ""):
+                    messagebox.showerror(
+                        "Save As Blocked",
+                        "Cannot save while workflow is running. Please wait for completion."
+                    )
+                else:
+                    messagebox.showerror("Save As Error", f"Failed to save workflow:\n{result['error']}")
+                return
+            
+            # Disconnect from old workspace
+            self._client_disconnect()
+            
+            # Update to new workspace
+            self.wf_path = result["new_path"]
+            self.workspace_id = result["new_workspace_id"]
+            self.base_url = result["new_base_url"]
+            
+            # Create new server client for new workspace
+            self.server = ServerClient(
+                self.base_url,
+                workspace_id=self.workspace_id,
+                workfile_path=self.wf_path,
+                on_graph_update=self.on_graph_update
+            )
+            
+            # Connect to new workspace
+            self._client_connect()
+            self._reload_graph()
+            
+            # Update window title
+            self.master.title(f"Workforce - {self.wf_path}")
+            
+            messagebox.showinfo("Save As", f"Workflow saved to:\n{new_path}")
+            
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 409:
+                messagebox.showerror(
+                    "Save As Blocked",
+                    "Cannot save while workflow is running. Please wait for completion."
+                )
+            else:
+                messagebox.showerror("Save As Error", f"Failed to save workflow:\n{e}")
+        except Exception as e:
+            messagebox.showerror("Save As Error", f"Failed to save workflow:\n{e}")
 
     def show_node_log(self):
         if len(self.state.selected_nodes) != 1:
@@ -858,8 +938,13 @@ class WorkflowApp:
         try:
             log.info("Window close handler: attempting graceful disconnection")
             self._client_disconnect()
+            # Small delay to ensure disconnect POST completes
+            self.master.after(100, self._destroy_window)
         except Exception as e:
             log.error(f"Error during close: {e}")
+            self._destroy_window()
+    
+    def _destroy_window(self):
         try:
             self.master.destroy()
         except Exception:
