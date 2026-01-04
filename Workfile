@@ -13,7 +13,7 @@
       <data key="d1">echo asdfad</data>
       <data key="d2">615.2857142857143</data>
       <data key="d3">302.57142857142856</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 asdfad
 
@@ -23,7 +23,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">506.0</data>
       <data key="d3">392.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
@@ -111,7 +111,7 @@ ls
 ls</data>
       <data key="d2">784.6271216705999</data>
       <data key="d3">92.29018324670528</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 teststet
 AUTHORS.rst
@@ -128,7 +128,6 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
-tmpelwb5s6g
 todo.md
 venv
 Workfile
@@ -148,7 +147,6 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
-tmpelwb5s6g
 todo.md
 venv
 Workfile
@@ -161,7 +159,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">466.0</data>
       <data key="d3">508.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 

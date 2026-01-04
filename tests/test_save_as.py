@@ -20,7 +20,7 @@ from workforce.server.context import ServerContext
 from workforce.server.queue import start_graph_worker
 from workforce.server import routes
 from workforce import utils
-from flask import Flask, g
+from flask import Flask, g, request
 import queue as std_queue
 
 
@@ -48,6 +48,18 @@ def test_app():
     app = Flask(__name__)
     app.config['TESTING'] = True
     routes.register_routes(app)
+
+    @app.before_request
+    def _inject_test_ctx():
+        # Allow tests to inject contexts per workspace ID without touching server internals
+        ctx_map = getattr(app, "test_ctx_map", {})
+        if request.path.startswith("/workspace/"):
+            parts = request.path.strip("/").split("/")
+            if len(parts) >= 2:
+                ws_id = parts[1]
+                g.ctx = ctx_map.get(ws_id)
+                g.workspace_id = ws_id
+    
     return app
 
 
@@ -79,43 +91,39 @@ def mock_context(temp_workfiles):
 def test_save_as_basic(test_app, mock_context, temp_workfiles):
     """Test basic save-as functionality."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     with test_app.test_client() as client:
-        # Mock the context retrieval
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            # Make save-as request
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": new_file},
-                headers={"Content-Type": "application/json"}
-            )
-            
-            assert response.status_code == 200
-            data = response.get_json()
-            assert data["status"] == "saved"
-            assert data["new_path"] == new_file
-            assert "new_workspace_id" in data
-            assert "new_base_url" in data
-            
-            # Verify new file exists
-            assert os.path.exists(new_file)
-            
-            # Verify graph content was preserved
-            G_original = edit.load_graph(original_file)
-            G_new = edit.load_graph(new_file)
-            
-            assert G_original.nodes["node1"]["label"] == G_new.nodes["node1"]["label"]
-            assert G_original.nodes["node1"]["status"] == G_new.nodes["node1"]["status"]
-            assert G_original.nodes["node2"]["label"] == G_new.nodes["node2"]["label"]
-            assert G_original.graph["wrapper"] == G_new.graph["wrapper"]
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={"new_path": new_file},
+            headers={"Content-Type": "application/json"}
+        )
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["status"] == "saved"
+        assert data["new_path"] == new_file
+        assert "new_workspace_id" in data
+        assert "new_base_url" in data
+        
+        # Verify new file exists
+        assert os.path.exists(new_file)
+        
+        # Verify graph content was preserved
+        G_original = edit.load_graph(original_file)
+        G_new = edit.load_graph(new_file)
+        
+        assert G_original.nodes["node1"]["label"] == G_new.nodes["node1"]["label"]
+        assert G_original.nodes["node1"]["status"] == G_new.nodes["node1"]["status"]
+        assert G_original.nodes["node2"]["label"] == G_new.nodes["node2"]["label"]
+        assert G_original.graph["wrapper"] == G_new.graph["wrapper"]
 
 
 def test_save_as_preserves_statuses(test_app, mock_context, temp_workfiles):
     """Test that save-as preserves node execution statuses."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     # Add more nodes with various statuses
     G = edit.load_graph(original_file)
@@ -124,139 +132,120 @@ def test_save_as_preserves_statuses(test_app, mock_context, temp_workfiles):
     edit.save_graph(G, original_file)
     
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": new_file}
-            )
-            
-            assert response.status_code == 200
-            
-            # Verify all statuses preserved
-            G_new = edit.load_graph(new_file)
-            assert G_new.nodes["node1"]["status"] == "ran"
-            assert G_new.nodes["node2"]["status"] == ""
-            assert G_new.nodes["node3"]["status"] == "fail"
-            assert G_new.nodes["node4"]["status"] == "running"
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={"new_path": new_file}
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify all statuses preserved
+        G_new = edit.load_graph(new_file)
+        assert G_new.nodes["node1"]["status"] == "ran"
+        assert G_new.nodes["node2"]["status"] == ""
+        assert G_new.nodes["node3"]["status"] == "fail"
+        assert G_new.nodes["node4"]["status"] == "running"
 
 
 def test_save_as_blocked_during_active_run(test_app, mock_context, temp_workfiles):
     """Test that save-as is blocked when there are active runs."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     # Simulate an active run
     run_id = "test_run_123"
     mock_context.active_runs[run_id] = {"nodes": {"node1", "node2"}, "subset_only": False}
     
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": new_file}
-            )
-            
-            assert response.status_code == 409  # Conflict
-            data = response.get_json()
-            assert "error" in data
-            assert "Cannot save during active workflow execution" in data["error"]
-            
-            # Verify new file was NOT created
-            assert not os.path.exists(new_file)
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={"new_path": new_file}
+        )
+        
+        assert response.status_code == 409  # Conflict
+        data = response.get_json()
+        assert "error" in data
+        assert "Cannot save during active workflow execution" in data["error"]
+        
+        # Verify new file was NOT created
+        assert not os.path.exists(new_file)
 
 
 def test_save_as_missing_new_path(test_app, mock_context, temp_workfiles):
     """Test that save-as requires new_path parameter."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            # Request without new_path
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={}
-            )
-            
-            assert response.status_code == 400  # Bad Request
-            data = response.get_json()
-            assert "error" in data
-            assert "new_path required" in data["error"]
+        # Request without new_path
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={}
+        )
+        
+        assert response.status_code == 400  # Bad Request
+        data = response.get_json()
+        assert "error" in data
+        assert "new_path required" in data["error"]
 
 
 def test_save_as_workspace_not_found(test_app):
     """Test save-as with non-existent workspace."""
+    test_app.test_ctx_map = {}
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = "ws_nonexistent"
-            g.ctx = None  # Simulate missing context
-            
-            response = client.post(
-                "/workspace/ws_nonexistent/save-as",
-                json={"new_path": "/tmp/test.wf"}
-            )
-            
-            assert response.status_code == 404
-            data = response.get_json()
-            assert "error" in data
-            assert "Workspace not found" in data["error"]
+        response = client.post(
+            "/workspace/ws_nonexistent/save-as",
+            json={"new_path": "/tmp/test.wf"}
+        )
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert "error" in data
+        assert "Workspace not found" in data["error"]
 
 
 def test_save_as_new_workspace_id_computed(test_app, mock_context, temp_workfiles):
     """Test that save-as computes correct new workspace ID."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": new_file}
-            )
-            
-            assert response.status_code == 200
-            data = response.get_json()
-            
-            # Verify workspace ID is correctly computed from new path
-            expected_workspace_id = utils.compute_workspace_id(new_file)
-            assert data["new_workspace_id"] == expected_workspace_id
-            
-            # Verify URL is correct
-            expected_url = utils.get_workspace_url(expected_workspace_id)
-            assert data["new_base_url"] == expected_url
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={"new_path": new_file}
+        )
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        
+        # Verify workspace ID is correctly computed from new path
+        expected_workspace_id = utils.compute_workspace_id(new_file)
+        assert data["new_workspace_id"] == expected_workspace_id
+        
+        # Verify URL is correct
+        expected_url = utils.get_workspace_url(expected_workspace_id)
+        assert data["new_base_url"] == expected_url
 
 
 def test_save_as_absolute_path_handling(test_app, mock_context, temp_workfiles):
     """Test that save-as handles relative paths by converting to absolute."""
     original_file, new_file = temp_workfiles
+    test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
     with test_app.test_client() as client:
-        with test_app.test_request_context():
-            g.workspace_id = mock_context.workspace_id
-            g.ctx = mock_context
-            
-            # Use relative path
-            relative_path = os.path.basename(new_file)
-            
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": relative_path}
-            )
-            
-            assert response.status_code == 200
-            data = response.get_json()
-            
-            # Verify the returned path is absolute
-            assert os.path.isabs(data["new_path"])
+        # Use relative path
+        relative_path = os.path.basename(new_file)
+        
+        response = client.post(
+            f"/workspace/{mock_context.workspace_id}/save-as",
+            json={"new_path": relative_path}
+        )
+        
+        assert response.status_code == 200
+        data = response.get_json()
+        
+        # Verify the returned path is absolute
+        assert os.path.isabs(data["new_path"])
 
 
 def test_save_as_integration_with_gui_client():
@@ -323,35 +312,30 @@ def test_save_as_concurrent_workspaces(test_app, temp_workfiles):
             socketio=Mock(),
         )
         
-        start_graph_worker(ctx1)
-        start_graph_worker(ctx2)
-        
-        try:
-            with test_app.test_client() as client:
-                # Save workspace 1 to new location
-                with test_app.test_request_context():
-                    g.workspace_id = workspace_id1
-                    g.ctx = ctx1
-                    
+            start_graph_worker(ctx1)
+            start_graph_worker(ctx2)
+
+            try:
+                test_app.test_ctx_map = {workspace_id1: ctx1, workspace_id2: ctx2}
+                with test_app.test_client() as client:
                     response = client.post(
                         f"/workspace/{workspace_id1}/save-as",
                         json={"new_path": new_file1}
                     )
-                    
                     assert response.status_code == 200
-                
+
                 # Verify workspace 2 is unaffected
                 assert ctx2.workfile_path == original_file2
                 G2_check = edit.load_graph(original_file2)
                 assert "other_node" in G2_check.nodes
-        
-        finally:
-            # Cleanup
-            ctx1.mod_queue.put(None)
-            ctx2.mod_queue.put(None)
-            for ctx in [ctx1, ctx2]:
-                if ctx.worker_thread and ctx.worker_thread.is_alive():
-                    ctx.worker_thread.join(timeout=2)
+
+            finally:
+                # Cleanup
+                ctx1.mod_queue.put(None)
+                ctx2.mod_queue.put(None)
+                for ctx in [ctx1, ctx2]:
+                    if ctx.worker_thread and ctx.worker_thread.is_alive():
+                        ctx.worker_thread.join(timeout=2)
 
 
 if __name__ == "__main__":

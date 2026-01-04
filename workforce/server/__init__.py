@@ -2,6 +2,8 @@ import os
 import platform
 import signal
 import subprocess
+import urllib.request
+import urllib.error
 import time
 import socket
 import sys
@@ -122,6 +124,21 @@ def is_port_in_use(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+def _is_compatible_server(port: int) -> bool:
+    """Check whether something listening on the port looks like a Workforce server."""
+    url = f"http://localhost:{port}/workspaces"
+    try:
+        with urllib.request.urlopen(url, timeout=1) as resp:
+            if resp.status != 200:
+                return False
+            # Basic schema check
+            import json
+            data = json.loads(resp.read().decode("utf-8"))
+            return "workspaces" in data
+    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError):
+        return False
+
+
 def start_server(background: bool = True):
     """
     Start the single machine-wide server on fixed port.
@@ -134,14 +151,28 @@ def start_server(background: bool = True):
     
     # Check if port is already in use
     if is_port_in_use(port):
-        # Port in use; if background=True, assume compatible server already running
-        # If foreground, fail fast
-        if not background:
-            raise RuntimeError(f"Port {port} is already in use. Cannot start server.")
-        log.info(f"Port {port} already in use; assuming compatible server is running.")
-        return
+        if _is_compatible_server(port):
+            log.info(f"Port {port} already in use; compatible Workforce server detected.")
+            return
+        # Incompatible process on port 5000
+        raise RuntimeError(
+            f"Port {port} is in use by another process that is not a Workforce server. "
+            "Stop that process or free the port before launching Workforce."
+        )
     
     if background and sys.platform != "emscripten":
+        # Ensure workforce package is in PYTHONPATH for subprocess
+        env = os.environ.copy()
+        
+        # Find the parent directory containing the workforce package
+        import workforce
+        package_root = os.path.dirname(os.path.dirname(os.path.abspath(workforce.__file__)))
+        
+        # Add to PYTHONPATH if not already there
+        pythonpath = env.get('PYTHONPATH', '')
+        if package_root not in pythonpath.split(os.pathsep):
+            env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
+        
         # Spawn background server subprocess
         cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground"]
         log.info(f"Starting background server: {' '.join(cmd)}")
@@ -151,6 +182,7 @@ def start_server(background: bool = True):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=os.getcwd(),
+            env=env,
         )
         
         # Wait for port to become available

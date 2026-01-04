@@ -10,6 +10,7 @@ import json
 import os
 import socket
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 
@@ -96,6 +97,33 @@ def default_workfile() -> str | None:
 def get_absolute_path(path: str) -> str:
     """Convert relative or absolute path to absolute path."""
     return os.path.abspath(path)
+
+
+def ensure_workfile(path: str | None = None) -> str:
+    """Resolve a workfile path or create a temporary one when absent.
+
+    Order of precedence:
+    1) Explicit path provided
+    2) ./Workfile if it exists
+    3) New temp file path in the system temp directory (not pre-created)
+
+    Returns an absolute path suitable for compute_workspace_id.
+    """
+    if path:
+        return os.path.abspath(path)
+
+    existing = default_workfile()
+    if existing:
+        return os.path.abspath(existing)
+
+    fd, temp_path = tempfile.mkstemp(prefix="workforce_tmp_", suffix=".wf.graphml")
+    os.close(fd)
+    # Remove the empty file so the first load can create a valid GraphML
+    try:
+        os.unlink(temp_path)
+    except FileNotFoundError:
+        pass
+    return temp_path
 
 
 def is_port_in_use(port: int) -> bool:

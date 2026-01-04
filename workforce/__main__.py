@@ -11,7 +11,7 @@ import argparse
 import sys
 import os
 
-from workforce.utils import default_workfile, compute_workspace_id, get_workspace_url, get_absolute_path
+from workforce.utils import default_workfile, compute_workspace_id, get_workspace_url, get_absolute_path, ensure_workfile
 from workforce.gui import main as gui_main
 from workforce.run import main as run_main
 from workforce.server import (
@@ -43,12 +43,9 @@ def main():
         print_version()
         return
 
-    # Default behaviour: GUI with default workfile in background
+    # Default behaviour: GUI with default workfile or temporary workfile in background
     if len(sys.argv) == 1:
-        wf = default_workfile()
-        if not wf:
-            print("Error: No default Workfile found. Specify a file path.")
-            sys.exit(1)
+        wf = ensure_workfile()
         ws_id = compute_workspace_id(wf)
         base_url = get_workspace_url(ws_id)
         # Auto-start server if not running
@@ -74,10 +71,7 @@ def main():
     gui_p.add_argument("--foreground", "-f", action="store_true",
                        help="Run GUI in foreground (default: background)")
     def _gui(args):
-        if not args.url_or_path:
-            print("Error: No Workfile specified. Use 'wf gui <path>'.")
-            sys.exit(1)
-        wf_path = os.path.abspath(args.url_or_path)
+        wf_path = ensure_workfile(args.url_or_path)
         ws_id = compute_workspace_id(wf_path)
         base_url = get_workspace_url(ws_id)
         # Auto-start server if not running
@@ -91,11 +85,9 @@ def main():
     run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
     def _run(args):
-        if not args.url_or_path:
-            print("Error: No Workfile specified. Use 'wf run <path>'.")
-            sys.exit(1)
-        # Pass path directly to run_main - it handles workspace resolution
-        run_main(args.url_or_path, nodes=args.nodes, wrapper=args.wrapper)
+        wf_path = ensure_workfile(args.url_or_path)
+        # Pass resolved path directly to run_main - it handles workspace resolution
+        run_main(wf_path, nodes=args.nodes, wrapper=args.wrapper)
     run_p.set_defaults(func=_run)
 
     # ---------------- SERVER ----------------

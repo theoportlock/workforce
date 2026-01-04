@@ -20,6 +20,20 @@ def launch(base_url: str, wf_path: str = None, workspace_id: str = None, backgro
     """
     # Background mode: spawn a new process
     if background and sys.platform != "emscripten":
+        # Ensure workforce package is in PYTHONPATH for subprocess
+        env = os.environ.copy()
+        
+        # Find the parent directory containing the workforce package
+        # workforce.__file__ gives us .../workforce/__init__.py
+        # We want the parent of the workforce directory
+        import workforce
+        package_root = os.path.dirname(os.path.dirname(os.path.abspath(workforce.__file__)))
+        
+        # Add to PYTHONPATH if not already there
+        pythonpath = env.get('PYTHONPATH', '')
+        if package_root not in pythonpath.split(os.pathsep):
+            env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
+        
         cmd = [
             sys.executable,
             "-m", "workforce",
@@ -27,13 +41,25 @@ def launch(base_url: str, wf_path: str = None, workspace_id: str = None, backgro
             wf_path or ".",
             "--foreground"
         ]
-        subprocess.Popen(
+        proc = subprocess.Popen(
             cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             cwd=os.getcwd(),
+            text=True,
+            env=env,
         )
-        print(f"GUI launched in background for {wf_path}")
+        # Give the child a brief moment to surface immediate errors
+        try:
+            ret = proc.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            print(f"GUI launched in background for {wf_path}")
+            return
+
+        # If the child exited immediately, surface its output
+        output = proc.stdout.read() if proc.stdout else ""
+        msg = output.strip() or f"GUI process exited with code {ret}"
+        print(f"GUI failed to launch for {wf_path}: {msg}")
         return
     
     # Foreground mode: run GUI directly
