@@ -13,9 +13,9 @@
       <data key="d1">echo asdfad</data>
       <data key="d2">615.2857142857143</data>
       <data key="d3">302.57142857142856</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
-asdfad
+
 
 STDERR:</data>
     </node>
@@ -23,11 +23,12 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">506.0</data>
       <data key="d3">392.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -35,6 +36,7 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
+new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -56,6 +58,7 @@ STDERR:</data>
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -63,6 +66,7 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
+new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -81,7 +85,7 @@ STDERR:</data>
       <data key="d3">188.8686868686869</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-test
+
 
 STDERR:</data>
     </node>
@@ -111,12 +115,13 @@ ls
 ls</data>
       <data key="d2">784.6271216705999</data>
       <data key="d3">92.29018324670528</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
-teststet
+
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -124,6 +129,7 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
+new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -136,6 +142,7 @@ workforce.egg-info
 AUTHORS.rst
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -143,6 +150,7 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
+new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -159,7 +167,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">466.0</data>
       <data key="d3">508.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
