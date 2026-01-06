@@ -118,15 +118,19 @@ def get_context(workspace_id: str) -> ServerContext | None:
         return _contexts.get(workspace_id)
 
 
-def is_port_in_use(port: int) -> bool:
-    """Check if a port is already in use."""
+def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
+    """Check if a port is already in use on any interface."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
+        try:
+            s.bind((host, port))
+            return False  # Port is free
+        except OSError:
+            return True  # Port is in use
 
 
-def _is_compatible_server(port: int) -> bool:
+def _is_compatible_server(host: str, port: int) -> bool:
     """Check whether something listening on the port looks like a Workforce server."""
-    url = f"http://localhost:{port}/workspaces"
+    url = f"http://{host}:{port}/workspaces"
     try:
         with urllib.request.urlopen(url, timeout=1) as resp:
             if resp.status != 200:
@@ -139,26 +143,17 @@ def _is_compatible_server(port: int) -> bool:
         return False
 
 
-def start_server(background: bool = True):
+def start_server(background: bool = True, host: str = "0.0.0.0"):
     """
-    Start the single machine-wide server on fixed port.
-    Fail fast if port is unavailable.
+    Start the single machine-wide server with dynamic port discovery.
     
     Args:
         background: If True, spawn subprocess. If False, run foreground.
+        host: Host to bind to (default: 0.0.0.0, accessible from all interfaces).
     """
-    port = utils.WORKSPACE_SERVER_PORT
-    
-    # Check if port is already in use
-    if is_port_in_use(port):
-        if _is_compatible_server(port):
-            log.info(f"Port {port} already in use; compatible Workforce server detected.")
-            return
-        # Incompatible process on port 5000
-        raise RuntimeError(
-            f"Port {port} is in use by another process that is not a Workforce server. "
-            "Stop that process or free the port before launching Workforce."
-        )
+    # Find a free port
+    port = utils.find_free_port()
+    log.info(f"Found free port: {port}")
     
     if background and sys.platform != "emscripten":
         # Ensure workforce package is in PYTHONPATH for subprocess
@@ -173,8 +168,8 @@ def start_server(background: bool = True):
         if package_root not in pythonpath.split(os.pathsep):
             env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
         
-        # Spawn background server subprocess
-        cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground"]
+        # Spawn background server subprocess with host argument
+        cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground", "--host", host]
         log.info(f"Starting background server: {' '.join(cmd)}")
         
         process = subprocess.Popen(
@@ -185,12 +180,14 @@ def start_server(background: bool = True):
             env=env,
         )
         
-        # Wait for port to become available
+        # Wait for server to be discoverable via health check
         max_retries = 10
         for attempt in range(max_retries):
             time.sleep(0.5)
-            if is_port_in_use(port):
-                log.info(f"Server started on port {port} (PID {process.pid})")
+            result = utils.find_running_server(host="127.0.0.1")  # Always check localhost for discovery
+            if result:
+                found_host, found_port = result
+                log.info(f"Server started on {found_host}:{found_port} (PID {process.pid})")
                 return
         
         # If we get here, server didn't start
@@ -201,11 +198,11 @@ def start_server(background: bool = True):
     # Foreground server
     app, socketio = get_app()
     
-    log.info(f"Starting Workforce server on http://localhost:{port}")
+    log.info(f"Starting Workforce server on http://{host}:{port}")
     log.info("Server ready. Waiting for client connections...")
     
     try:
-        socketio.run(app, host="127.0.0.1", port=port, allow_unsafe_werkzeug=True)
+        socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         log.info("Server shutting down...")
     finally:
@@ -218,14 +215,18 @@ def stop_server():
     import signal
     import subprocess
     
-    if not is_port_in_use(utils.WORKSPACE_SERVER_PORT):
-        log.warning(f"No server found on port {utils.WORKSPACE_SERVER_PORT}")
+    # Find running server
+    result = utils.find_running_server()
+    if not result:
+        log.warning("No Workforce server found running")
         return
     
-    # Find process listening on port 5000
+    found_host, found_port = result
+    
+    # Find process listening on discovered port
     try:
         result = subprocess.run(
-            ["lsof", "-i", f":{utils.WORKSPACE_SERVER_PORT}", "-t"],
+            ["lsof", "-i", f":{found_port}", "-t"],
             capture_output=True,
             text=True,
             timeout=2
@@ -240,7 +241,7 @@ def stop_server():
                 except (ValueError, ProcessLookupError, PermissionError) as e:
                     log.warning(f"Failed to kill PID {pid_str}: {e}")
         else:
-            log.warning("Could not find PID for server process")
+            log.warning(f"Could not find PID for server process on port {found_port}")
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         log.warning(f"Could not determine server PID (lsof error): {e}")
         # Fallback: try pkill
@@ -253,23 +254,29 @@ def stop_server():
 
 def list_servers():
     """List active workspace contexts (diagnostic)."""
+    # Find running server
+    result = utils.find_running_server()
+    if not result:
+        print("Server is not running.")
+        print("Start the server with: wf server start")
+        return
+    
+    found_host, found_port = result
+    
     # Try to fetch from server's /workspaces endpoint
     try:
         import urllib.request
         import json
-        url = "http://localhost:5000/workspaces"
+        url = f"http://{found_host}:{found_port}/workspaces"
         with urllib.request.urlopen(url, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             workspaces = data.get("workspaces", [])
             if not workspaces:
                 print("No active workspaces on server.")
                 return
-            print("Active workspaces:")
+            print(f"Active workspaces on {found_host}:{found_port}:")
             for ws in workspaces:
                 print(f"  - {ws['workspace_id']}: {ws['workfile_path']} ({ws['client_count']} clients)")
-    except urllib.error.URLError as e:
-        print("Server is not running.")
-        print("Start the server with: wf server start")
     except Exception as e:
         print(f"Error communicating with server: {e}")
 
@@ -278,7 +285,8 @@ def list_servers():
 def cmd_start(args):
     # Default to background mode, unless --foreground is specified
     foreground = getattr(args, 'foreground', False)
-    start_server(background=not foreground)
+    host = getattr(args, 'host', '0.0.0.0')
+    start_server(background=not foreground, host=host)
 
 def cmd_stop(args):
     stop_server()

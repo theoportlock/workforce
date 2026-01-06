@@ -14,9 +14,9 @@ import tempfile
 import urllib.error
 import urllib.request
 
-# Workspace server configuration
-WORKSPACE_SERVER_URL = "http://localhost:5000"
-WORKSPACE_SERVER_PORT = 5000
+# Workspace server configuration (dynamic port via find_free_port)
+WORKSPACE_SERVER_URL = "http://localhost:5000"  # Deprecated: use resolve_server() instead
+WORKSPACE_SERVER_PORT = 5000  # Deprecated: use find_free_port() instead
 
 # -----------------------------------------------------------------------------
 # Workspace identification
@@ -134,3 +134,83 @@ def is_port_in_use(port: int) -> bool:
             return False  # Port is free
         except OSError:
             return True  # Port is in use
+
+
+# -----------------------------------------------------------------------------
+# Server discovery and lifecycle
+# -----------------------------------------------------------------------------
+
+def find_free_port(start: int = 5000, end: int = 5100) -> int:
+    """Find the first available port in the given range."""
+    for port in range(start, end + 1):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("", port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"No free port found in range {start}-{end}")
+
+
+def find_running_server(host: str = "127.0.0.1", port_range: tuple = (5000, 5100), timeout: float = 1) -> tuple | None:
+    """
+    Scan port range for an active Workforce server via health check.
+    
+    Returns:
+        (host, port) tuple if found, None if no server detected.
+    """
+    start_port, end_port = port_range
+    for port in range(start_port, end_port + 1):
+        try:
+            url = f"http://{host}:{port}/workspaces"
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    if "workspaces" in data:
+                        return (host, port)
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError, OSError):
+            continue
+    return None
+
+
+def resolve_server(host: str | None = None) -> str:
+    """
+    Find a running Workforce server or auto-start one.
+    
+    Args:
+        host: Host to bind to (default: 127.0.0.1 for discovery, 0.0.0.0 for startup).
+              If None, uses 127.0.0.1 for discovery, then 0.0.0.0 for startup.
+    
+    Returns:
+        Full server URL (e.g., http://127.0.0.1:5042)
+    
+    Raises:
+        RuntimeError: If server cannot be found or started.
+    """
+    discovery_host = host or "127.0.0.1"
+    
+    # Try to find existing server
+    result = find_running_server(host=discovery_host)
+    if result:
+        found_host, found_port = result
+        return f"http://{found_host}:{found_port}"
+    
+    # No server found, start one
+    # Import here to avoid circular dependency
+    from workforce.server import start_server
+    
+    startup_host = host or "0.0.0.0"
+    try:
+        start_server(background=True, host=startup_host)
+    except Exception as e:
+        raise RuntimeError(f"Failed to start server: {e}")
+    
+    # Try to find the newly started server
+    # Use discovery host (127.0.0.1) since server on 0.0.0.0 is reachable locally via 127.0.0.1
+    result = find_running_server(host=discovery_host, port_range=(5000, 5100), timeout=1)
+    if result:
+        found_host, found_port = result
+        return f"http://{found_host}:{found_port}"
+    
+    raise RuntimeError("Server started but could not be discovered")

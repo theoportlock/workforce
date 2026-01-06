@@ -254,7 +254,7 @@ def test_save_as_integration_with_gui_client():
     
     # Create a mock client
     client = ServerClient(
-        base_url="http://localhost:5000/workspace/ws_test",
+        base_url="http://127.0.0.1:5042/workspace/ws_test",
         workspace_id="ws_test",
         workfile_path="/tmp/test.wf",
         on_graph_update=None
@@ -266,14 +266,14 @@ def test_save_as_integration_with_gui_client():
             "status": "saved",
             "new_path": "/tmp/new.wf",
             "new_workspace_id": "ws_new",
-            "new_base_url": "http://localhost:5000/workspace/ws_new"
+            "new_base_url": "http://127.0.0.1:5042/workspace/ws_new"
         }
         
         result = client.save_as("/tmp/new.wf")
         
         # Verify _post was called with correct parameters
         mock_post.assert_called_once_with(
-            "http://localhost:5000/workspace/ws_test",
+            "http://127.0.0.1:5042/workspace/ws_test",
             "/save-as",
             {"new_path": "/tmp/new.wf"}
         )

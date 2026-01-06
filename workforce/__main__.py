@@ -3,14 +3,15 @@
 
 """
 workforce — unified CLI entrypoint.
-All GUI/RUN/EDIT/SERVER operations work with the single fixed-port server
-on localhost:5000 with workspace routing by hashed file path.
+All GUI/RUN/EDIT/SERVER operations work with a single server instance
+with dynamic port discovery and workspace routing by hashed file path.
 """
 
 import argparse
 import sys
 import os
 
+from workforce import utils
 from workforce.utils import default_workfile, compute_workspace_id, get_workspace_url, get_absolute_path, ensure_workfile
 from workforce.gui import main as gui_main
 from workforce.run import main as run_main
@@ -47,9 +48,8 @@ def main():
     if len(sys.argv) == 1:
         wf = ensure_workfile()
         ws_id = compute_workspace_id(wf)
-        base_url = get_workspace_url(ws_id)
-        # Auto-start server if not running
-        start_server(background=True)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=True)
         return
 
@@ -73,9 +73,8 @@ def main():
     def _gui(args):
         wf_path = ensure_workfile(args.url_or_path)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
-        # Auto-start server if not running
-        start_server(background=True)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         gui_main(base_url, wf_path=wf_path, workspace_id=ws_id, background=not args.foreground)
     gui_p.set_defaults(func=_gui)
 
@@ -97,6 +96,7 @@ def main():
     # Start (background by default)
     sp = server_sub.add_parser("start", help="Start the server (background by default)")
     sp.add_argument("--foreground", action="store_true", help="Run in foreground instead of background")
+    sp.add_argument("--host", default="0.0.0.0", help="Host to bind to (default: 0.0.0.0)")
     sp.set_defaults(func=lambda args: server_cmd_start(args))
 
     # Stop
@@ -121,7 +121,8 @@ def main():
     def _add_node(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_add_node(args, base_url, ws_id)
     en.set_defaults(func=_add_node)
 
@@ -132,7 +133,8 @@ def main():
     def _remove_node(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_remove_node(args, base_url, ws_id)
     ern.set_defaults(func=_remove_node)
 
@@ -144,7 +146,8 @@ def main():
     def _add_edge(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_add_edge(args, base_url, ws_id)
     ee.set_defaults(func=_add_edge)
 
@@ -156,7 +159,8 @@ def main():
     def _remove_edge(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_remove_edge(args, base_url, ws_id)
     ere.set_defaults(func=_remove_edge)
 
@@ -169,7 +173,8 @@ def main():
     def _edit_status(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_edit_status(args, base_url, ws_id)
     es.set_defaults(func=_edit_status)
 
@@ -180,7 +185,8 @@ def main():
     def _edit_wrapper(args):
         wf_path = os.path.abspath(args.filename)
         ws_id = compute_workspace_id(wf_path)
-        base_url = get_workspace_url(ws_id)
+        server_url = utils.resolve_server()
+        base_url = f"{server_url}/workspace/{ws_id}"
         cmd_edit_wrapper(args, base_url, ws_id)
     ew.set_defaults(func=_edit_wrapper)
 

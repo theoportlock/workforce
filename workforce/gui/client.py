@@ -13,7 +13,7 @@ class ServerClient:
         Initialize server client for a workspace.
         
         Args:
-            base_url: Base server URL (e.g., http://localhost:5000/workspace/<ws_id>)
+            base_url: Base server URL (e.g., http://127.0.0.1:5042/workspace/<ws_id>)
             workspace_id: Workspace ID (e.g., ws_abc123)
             workfile_path: Absolute path to workfile (for client_connect)
             on_graph_update: Callback for graph updates

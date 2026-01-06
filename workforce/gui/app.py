@@ -13,7 +13,7 @@ def launch(base_url: str, wf_path: str = None, workspace_id: str = None, backgro
     Launch the GUI for a workspace.
     
     Args:
-        base_url: Full workspace URL (e.g., http://localhost:5000/workspace/ws_abc123)
+        base_url: Full workspace URL (e.g., http://127.0.0.1:5042/workspace/ws_abc123)
         wf_path: Absolute path to workfile
         workspace_id: Workspace ID (e.g., ws_abc123)
         background: If True, spawn in subprocess
