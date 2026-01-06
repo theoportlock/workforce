@@ -26,9 +26,9 @@ STDERR:</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
+build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -36,7 +36,6 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
-new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -56,9 +55,9 @@ STDERR:</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
+build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -66,7 +65,6 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
-new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -81,8 +79,8 @@ STDERR:</data>
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
       <data key="d1">echo test</data>
-      <data key="d2">300.51515151515156</data>
-      <data key="d3">188.8686868686869</data>
+      <data key="d2">307.51515151515156</data>
+      <data key="d3">141.8686868686869</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 
@@ -101,8 +99,8 @@ STDERR:</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">172.22222222222223</data>
-      <data key="d3">212.8888888888889</data>
+      <data key="d2">103.22222222222223</data>
+      <data key="d3">163.8888888888889</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
@@ -110,7 +108,7 @@ STDERR:</data>
 STDERR:</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
-      <data key="d1">echo teststet
+      <data key="d1">echo "teststet"
 ls
 ls</data>
       <data key="d2">784.6271216705999</data>
@@ -119,9 +117,9 @@ ls</data>
       <data key="d5">STDOUT:
 
 AUTHORS.rst
+build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -129,7 +127,6 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
-new_file.wf
 prompt.txt
 pyproject.toml
 README.rst
@@ -140,9 +137,9 @@ Workfile
 workforce
 workforce.egg-info
 AUTHORS.rst
+build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-C:\Users\tpor598\workforce\Workfile
 docs
 env.sh
 HISTORY.rst
@@ -150,7 +147,6 @@ installer.iss
 LICENSE
 Makefile
 MANIFEST.in
-new_file.wf
 prompt.txt
 pyproject.toml
 README.rst

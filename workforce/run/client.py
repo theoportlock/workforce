@@ -1,16 +1,11 @@
-import logging
-import shlex
 import socketio
 import subprocess
 import threading
+import logging
 
 from workforce import utils
 
 log = logging.getLogger(__name__)
-
-
-def _posix_quote(script: str) -> str:
-	return shlex.quote(script)
 
 class Runner:
 	def __init__(self, base_url: str, workspace_id: str, workfile_path: str, wrapper: str = "{}"):
@@ -103,17 +98,16 @@ class Runner:
 		try:
 			self.set_node_status(node_id, "running")
 
-			# Treat empty or whitespace-only labels as no-op commands.
-			if not str(label).strip():
+			if "{}" in self.wrapper:
+				command = self.wrapper.replace("{}", utils.shell_quote_multiline(label))
+			else:
+				command = f"{self.wrapper} {utils.shell_quote_multiline(label)}"
+
+			if not command.strip():
 				log.info(f"--> Empty command for {node_id}, marking done.")
 				self.send_node_log(node_id, "[No command to run]")
 				self.set_node_status(node_id, "ran")
 				return
-
-			if "{}" in self.wrapper:
-				command = self.wrapper.replace("{}", _posix_quote(label))
-			else:
-				command = f"{self.wrapper} {_posix_quote(label)}"
 
 			log.debug(f"Executing command: {command}")
 			process = subprocess.Popen(
