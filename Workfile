@@ -15,7 +15,7 @@
       <data key="d3">302.57142857142856</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-
+asdfad
 
 STDERR:</data>
     </node>
@@ -83,7 +83,7 @@ STDERR:</data>
       <data key="d3">141.8686868686869</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-
+test
 
 STDERR:</data>
     </node>
@@ -111,11 +111,11 @@ STDERR:</data>
       <data key="d1">echo "teststet"
 ls
 ls</data>
-      <data key="d2">784.6271216705999</data>
-      <data key="d3">92.29018324670528</data>
+      <data key="d2">812.6271216705999</data>
+      <data key="d3">163.29018324670528</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
-
+teststet
 AUTHORS.rst
 build
 CODE_OF_CONDUCT.rst
@@ -131,6 +131,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
+tmpv7wgb3br
 todo.md
 venv
 Workfile
@@ -151,6 +152,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
+tmpv7wgb3br
 todo.md
 venv
 Workfile

@@ -14,7 +14,7 @@ def launch(base_url: str, wf_path: str = None, workspace_id: str = None, backgro
     
     Args:
         base_url: Full workspace URL (e.g., http://127.0.0.1:5042/workspace/ws_abc123)
-        wf_path: Absolute path to workfile
+        wf_path: Absolute path to workfile or remote placeholder
         workspace_id: Workspace ID (e.g., ws_abc123)
         background: If True, spawn in subprocess
     """
@@ -34,11 +34,18 @@ def launch(base_url: str, wf_path: str = None, workspace_id: str = None, backgro
         if package_root not in pythonpath.split(os.pathsep):
             env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
         
+        # For remote workspaces, pass the full workspace URL instead of placeholder path
+        if wf_path and wf_path.startswith('<remote:'):
+            # Extract workspace ID and construct URL from base_url
+            arg = base_url
+        else:
+            arg = wf_path or "."
+        
         cmd = [
             sys.executable,
             "-m", "workforce",
             "gui",
-            wf_path or ".",
+            arg,
             "--foreground"
         ]
         proc = subprocess.Popen(

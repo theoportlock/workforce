@@ -67,26 +67,79 @@ def main():
 
     # ---------------- GUI ----------------
     gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
-    gui_p.add_argument("url_or_path", nargs="?", default=default_workfile())
+    gui_p.add_argument("url_or_path", nargs="?", default=default_workfile(),
+                       help="Workfile path or workspace URL (e.g., http://host:port/workspace/ws_abc123)")
     gui_p.add_argument("--foreground", "-f", action="store_true",
                        help="Run GUI in foreground (default: background)")
     def _gui(args):
-        wf_path = ensure_workfile(args.url_or_path)
-        ws_id = compute_workspace_id(wf_path)
-        server_url = utils.resolve_server()
-        base_url = f"{server_url}/workspace/{ws_id}"
-        gui_main(base_url, wf_path=wf_path, workspace_id=ws_id, background=not args.foreground)
+        # Check if input is a workspace URL
+        parsed = utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
+        
+        if parsed:
+            # Direct workspace URL provided
+            server_url, ws_id = parsed
+            base_url = f"{server_url}/workspace/{ws_id}"
+            # Use a placeholder workfile path (not used for remote access)
+            wf_path = f"<remote:{ws_id}>"
+            gui_main(base_url, wf_path=wf_path, workspace_id=ws_id, background=not args.foreground)
+        elif args.url_or_path and utils.looks_like_url(args.url_or_path):
+            # Looks like a URL but parsing failed - give helpful error
+            print(f"Error: Invalid workspace URL format: {args.url_or_path}")
+            print()
+            print("Valid formats:")
+            print("  http://host:port/workspace/ws_XXXXXXXX")
+            print("  host:port/workspace/ws_XXXXXXXX")
+            print()
+            print("Note: Workspace IDs must start with 'ws_' followed by 8+ hex characters")
+            print()
+            print("To find your workspace URL, run on the server:")
+            print("  wf server ls")
+            sys.exit(1)
+        else:
+            # Traditional file path
+            wf_path = ensure_workfile(args.url_or_path)
+            ws_id = compute_workspace_id(wf_path)
+            server_url = utils.resolve_server()
+            base_url = f"{server_url}/workspace/{ws_id}"
+            gui_main(base_url, wf_path=wf_path, workspace_id=ws_id, background=not args.foreground)
     gui_p.set_defaults(func=_gui)
 
     # ---------------- RUN ----------------
     run_p = subparsers.add_parser("run", help="Execute workflow")
-    run_p.add_argument("url_or_path", nargs="?", default=default_workfile())
+    run_p.add_argument("url_or_path", nargs="?", default=default_workfile(),
+                       help="Workfile path or workspace URL (e.g., http://host:port/workspace/ws_abc123)")
     run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
     def _run(args):
-        wf_path = ensure_workfile(args.url_or_path)
-        # Pass resolved path directly to run_main - it handles workspace resolution
-        run_main(wf_path, nodes=args.nodes, wrapper=args.wrapper)
+        # Check if input is a workspace URL
+        parsed = utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
+        
+        if parsed:
+            # Direct workspace URL provided
+            server_url, ws_id = parsed
+            base_url = f"{server_url}/workspace/{ws_id}"
+            wf_path = f"<remote:{ws_id}>"
+            # Import here to avoid circular dependency
+            from workforce.run.client import Runner
+            runner = Runner(base_url, workspace_id=ws_id, workfile_path=wf_path, wrapper=args.wrapper)
+            runner.start(initial_nodes=args.nodes)
+        elif args.url_or_path and utils.looks_like_url(args.url_or_path):
+            # Looks like a URL but parsing failed - give helpful error
+            print(f"Error: Invalid workspace URL format: {args.url_or_path}")
+            print()
+            print("Valid formats:")
+            print("  http://host:port/workspace/ws_XXXXXXXX")
+            print("  host:port/workspace/ws_XXXXXXXX")
+            print()
+            print("Note: Workspace IDs must start with 'ws_' followed by 8+ hex characters")
+            print()
+            print("To find your workspace URL, run on the server:")
+            print("  wf server ls")
+            sys.exit(1)
+        else:
+            # Traditional file path
+            wf_path = ensure_workfile(args.url_or_path)
+            run_main(wf_path, nodes=args.nodes, wrapper=args.wrapper)
     run_p.set_defaults(func=_run)
 
     # ---------------- SERVER ----------------

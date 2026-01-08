@@ -253,7 +253,7 @@ def stop_server():
 
 
 def list_servers():
-    """List active workspace contexts (diagnostic)."""
+    """List active workspace contexts with connection URLs."""
     # Find running server
     result = utils.find_running_server()
     if not result:
@@ -267,16 +267,86 @@ def list_servers():
     try:
         import urllib.request
         import json
+        import socket
+        
         url = f"http://{found_host}:{found_port}/workspaces"
         with urllib.request.urlopen(url, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             workspaces = data.get("workspaces", [])
+            
+            # Get local network interfaces
+            local_ips = []
+            try:
+                # Get the primary network interface IP (most reliable method)
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))  # Doesn't actually send data
+                ip = s.getsockname()[0]
+                s.close()
+                if ip != '127.0.0.1' and not ip.startswith('127.'):
+                    local_ips.append(ip)
+            except:
+                pass
+            
+            # Check what interface the server is bound to
+            try:
+                import subprocess
+                netstat_output = subprocess.run(
+                    ["ss", "-tlnp"], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=1
+                ).stdout
+                
+                # Look for the port binding
+                bound_to_all = f"0.0.0.0:{found_port}" in netstat_output or f"*:{found_port}" in netstat_output
+            except:
+                bound_to_all = False
+            
+            # Display server info
+            print("=" * 80)
+            print(f"Workforce Server on port {found_port}")
+            print("=" * 80)
+            
+            if bound_to_all and local_ips:
+                print("\n📍 Access URLs:")
+                print(f"  Local:    http://127.0.0.1:{found_port}")
+                for ip in local_ips:
+                    print(f"  LAN:      http://{ip}:{found_port}")
+            else:
+                print(f"\n📍 Access URL: http://{found_host}:{found_port}")
+                if not bound_to_all:
+                    print("   ⚠️  Server bound to localhost only (not accessible from LAN)")
+                    print(f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0")
+            
+            # Display workspaces
             if not workspaces:
-                print("No active workspaces on server.")
+                print("\n📂 No active workspaces")
+                print("   Open a workflow with: wf gui")
                 return
-            print(f"Active workspaces on {found_host}:{found_port}:")
+                
+            print(f"\n📂 Active Workspaces ({len(workspaces)}):")
+            print("-" * 80)
+            
             for ws in workspaces:
-                print(f"  - {ws['workspace_id']}: {ws['workfile_path']} ({ws['client_count']} clients)")
+                ws_id = ws['workspace_id']
+                ws_path = ws['workfile_path']
+                client_count = ws['client_count']
+                
+                print(f"\n  Workspace: {ws_id}")
+                print(f"  File:      {ws_path}")
+                print(f"  Clients:   {client_count}")
+                
+                # Show connection URLs
+                if bound_to_all and local_ips:
+                    print(f"  URLs:")
+                    print(f"    Local:   http://127.0.0.1:{found_port}/workspace/{ws_id}")
+                    for ip in local_ips:
+                        print(f"    LAN:     http://{ip}:{found_port}/workspace/{ws_id}")
+                else:
+                    print(f"  URL:       http://{found_host}:{found_port}/workspace/{ws_id}")
+            
+            print("\n" + "=" * 80)
+            
     except Exception as e:
         print(f"Error communicating with server: {e}")
 

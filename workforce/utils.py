@@ -30,6 +30,53 @@ def compute_workspace_id(workfile_path: str) -> str:
     return f"ws_{hash_hex}"
 
 
+def parse_workspace_url(url: str) -> tuple[str, str] | None:
+    """
+    Parse a workspace URL to extract server URL and workspace ID.
+    
+    Supports formats:
+    - http://host:port/workspace/ws_abc123
+    - http://host:port/workspace/ws_abc123/get-graph
+    - host:port/workspace/ws_abc123
+    
+    Returns:
+        (server_url, workspace_id) tuple or None if not a valid workspace URL
+    """
+    import re
+    
+    # Add http:// if missing
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
+    
+    # Match pattern: http://host:port/workspace/ws_XXXXXXXX[/endpoint]
+    # Workspace ID format: ws_ followed by 8+ alphanumeric characters
+    pattern = r'^(https?://[^/]+)/workspace/(ws_[a-zA-Z0-9]{8,})(?:/.*)?$'
+    match = re.match(pattern, url)
+    
+    if match:
+        server_url = match.group(1)
+        workspace_id = match.group(2)
+        return (server_url, workspace_id)
+    
+    return None
+
+
+def is_workspace_url(text: str) -> bool:
+    """Check if text looks like a workspace URL."""
+    return parse_workspace_url(text) is not None
+
+
+def looks_like_url(text: str) -> bool:
+    """Check if text looks like a URL (but may not be valid)."""
+    if not text:
+        return False
+    return (
+        text.startswith(('http://', 'https://')) or 
+        ':' in text or 
+        '/workspace/' in text
+    )
+
+
 def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
     """Build absolute URL for a workspace endpoint."""
     base = f"{WORKSPACE_SERVER_URL}/workspace/{workspace_id}"
