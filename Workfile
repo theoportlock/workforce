@@ -99,8 +99,8 @@ STDERR:</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">103.22222222222223</data>
-      <data key="d3">163.8888888888889</data>
+      <data key="d2">100.22222222222223</data>
+      <data key="d3">186.8888888888889</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
@@ -131,7 +131,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
-tmpv7wgb3br
+tmpso2cv5u9
 todo.md
 venv
 Workfile
@@ -152,7 +152,7 @@ prompt.txt
 pyproject.toml
 README.rst
 tests
-tmpv7wgb3br
+tmpso2cv5u9
 todo.md
 venv
 Workfile

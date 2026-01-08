@@ -130,7 +130,7 @@ Keyboard Shortcuts
 * **Shift+E** - Clear edges from selected nodes
 * **C** - Clear status of selected nodes
 * **Shift+C** - Clear all statuses in workflow
-* **L** - View logs for selected node
+* **S** - View logs for selected node
 * **P** - Edit command wrapper
 * **O** - Load/open Workfile
 * **Ctrl+S** - Save workflow
@@ -139,7 +139,6 @@ Keyboard Shortcuts
 * **Double-Click Node** - Edit node command
 * **Right-Click + Drag** - Create edge from source to target node
 * **Middle-Click Node** - Select node
-* **Double Middle-Click Node** - View node log
 * **Left-Click + Drag Node** - Move node(s)
 * **Shift + Left-Click + Drag Canvas** - Rectangle selection
 
@@ -178,8 +177,8 @@ Viewing Logs
 To view output from a node:
 
 1. Select the node (left-click)
-2. Press 'L' to open the log viewer, OR
-3. Double middle-click (double Button-2) on the node
+2. Press 'S' to open the log viewer
+3. In the log popup, press 'S' or Escape to close it
 4. View combined stdout/stderr from the command execution
 
 Workflow File Format

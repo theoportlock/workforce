@@ -72,7 +72,14 @@ class ServerClient:
                     if callable(self.on_graph_update):
                         self.on_graph_update(data)
 
-                self.sio.connect(utils.WORKSPACE_SERVER_URL, wait_timeout=5, auth=None)
+                # Connect to the server root derived from the workspace base_url
+                try:
+                    from urllib.parse import urlsplit
+                    split = urlsplit(self.base_url)
+                    server_root = f"{split.scheme}://{split.netloc}"
+                except Exception:
+                    server_root = utils.WORKSPACE_SERVER_URL
+                self.sio.connect(server_root, wait_timeout=5, auth=None)
             except Exception as e:
                 log.warning("SocketIO setup failed: %s", e)
                 self.sio = None

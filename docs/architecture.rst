@@ -175,7 +175,7 @@ The execution loop follows this pattern:
    * Node command is executed via subprocess
    * stdout and stderr are captured in real-time
    * Outputs are stored as node attributes in the graph
-   * Logs are viewable from GUI (press 'l')
+   * Logs are viewable from GUI (press 's')
 
 2. **Event Emission**
    

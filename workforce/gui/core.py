@@ -92,7 +92,7 @@ class WorkflowApp:
         # Run menu
         run_menu = tk.Menu(menubar, tearoff=0)
         run_menu.add_command(label="Run", command=self.run, accelerator="r")
-        run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="L")
+        run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="S")
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu
@@ -142,7 +142,7 @@ class WorkflowApp:
         self.master.bind('e', lambda e: self.connect_nodes())
         self.master.bind('E', lambda e: self.delete_edges_from_selected())
         self.master.bind('w', lambda e: self.wrapper_popup())
-        self.master.bind('l', lambda e: self.show_node_log())
+        self.master.bind('s', lambda e: self.show_node_log())
         self.master.bind('o', lambda e: self.open_file_dialog())
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
         self.master.bind('<Control-Shift-S>', lambda e: self.save_as_dialog())
@@ -589,6 +589,7 @@ class WorkflowApp:
         log_window.geometry("800x600")
         log_window.minsize(400, 200)
         log_window.bind('<Escape>', lambda e: log_window.destroy())
+        log_window.bind('s', lambda e: log_window.destroy())
         log_display = ScrolledText(log_window, wrap='word', font=("TkFixedFont", 10))
         log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         log_display.insert(tk.END, "Loading log...")

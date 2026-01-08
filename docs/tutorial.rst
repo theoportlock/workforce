@@ -139,8 +139,8 @@ Step 6: View Logs
 Check the output from any node:
 
 1. **Left-click** a node to select it
-2. Press **'L'** to view logs, OR
-3. **Double middle-click** (Button-2) on the node
+2. Press **'S'** to view logs
+3. In the log popup, press **'S'** or **Escape** to close it
 4. See the combined stdout and stderr from the command execution
 
 Verify your files were created:

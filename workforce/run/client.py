@@ -142,8 +142,15 @@ class Runner:
 		try:
 			# Connect FIRST, then trigger the run
 			log.info("Connecting to server via Socket.IO...")
-			# SocketIO connects to server root, not workspace URL
-			server_url = utils.WORKSPACE_SERVER_URL
+			# SocketIO connects to server root, not workspace URL.
+			# Derive server root (scheme://host:port) from the provided base_url.
+			try:
+				from urllib.parse import urlsplit
+				split = urlsplit(self.base_url)
+				server_url = f"{split.scheme}://{split.netloc}"
+			except Exception:
+				# Fallback to legacy constant if parsing fails
+				server_url = utils.WORKSPACE_SERVER_URL
 			self.sio.connect(server_url, transports=['websocket'], wait_timeout=10)
 			
 			# Register with server for this workspace
