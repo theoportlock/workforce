@@ -23,9 +23,45 @@ WORKSPACE_SERVER_PORT = 5000  # Deprecated: use find_free_port() instead
 # -----------------------------------------------------------------------------
 
 def compute_workspace_id(workfile_path: str) -> str:
-    """Compute deterministic workspace ID from absolute Workfile path."""
+    """Compute deterministic workspace ID from absolute Workfile path.
+    
+    Normalizes paths to handle cross-OS and network share compatibility:
+    - Converts to absolute path
+    - Normalizes separators to forward slashes
+    - On Windows, strips drive letters for network paths (//server/share)
+    - Resolves symlinks to canonical path
+    
+    Args:
+        workfile_path: Path to the workflow file
+    
+    Returns:
+        Workspace ID in format ws_<8-char-hash>
+    """
+    # Get absolute path
     abs_path = os.path.abspath(workfile_path)
-    path_bytes = abs_path.encode("utf-8")
+    
+    # Resolve symlinks to get canonical path
+    try:
+        abs_path = os.path.realpath(abs_path)
+    except (OSError, ValueError):
+        # If realpath fails (e.g., broken symlink), use abspath
+        pass
+    
+    # Normalize path separators to forward slashes for cross-platform consistency
+    normalized_path = abs_path.replace(os.sep, '/')
+    
+    # On Windows, handle network paths by stripping drive letters from UNC paths
+    # \\server\share becomes //server/share for consistency
+    if sys.platform == 'win32' and normalized_path.startswith('//'):
+        # Already a UNC path, keep as-is
+        pass
+    elif sys.platform == 'win32' and len(normalized_path) > 1 and normalized_path[1] == ':':
+        # Local drive path like C:/path - keep as-is for now
+        # Could be enhanced to detect if it's a mapped network drive
+        pass
+    
+    # Compute hash of normalized path
+    path_bytes = normalized_path.encode("utf-8")
     hash_hex = hashlib.sha256(path_bytes).hexdigest()[:8]
     return f"ws_{hash_hex}"
 

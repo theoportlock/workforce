@@ -54,13 +54,25 @@ def get_app():
     return _app, _socketio
 
 
-def get_or_create_context(workspace_id: str, workfile_path: str) -> ServerContext:
-    """Get existing context or create a new one for the workspace."""
+def get_or_create_context(workspace_id: str, workfile_path: str, increment_client: bool = True) -> ServerContext:
+    """Get existing context or create a new one for the workspace.
+    
+    Args:
+        workspace_id: Unique identifier for the workspace
+        workfile_path: Path to the workflow file
+        increment_client: If True, increment client count under lock (default: True)
+    
+    Returns:
+        ServerContext for the workspace
+    """
     global _contexts, _socketio
     
     with _contexts_lock:
         if workspace_id in _contexts:
-            return _contexts[workspace_id]
+            ctx = _contexts[workspace_id]
+            if increment_client:
+                ctx.increment_clients()
+            return ctx
         
         # Create new context
         cache_dir = platformdirs.user_cache_dir("workforce")
@@ -77,16 +89,21 @@ def get_or_create_context(workspace_id: str, workfile_path: str) -> ServerContex
             socketio=_socketio,
         )
         
-        # Register event handlers for this workspace
-        server_sockets.register_event_handlers(ctx)
-        
-        # Start the worker thread for this context
-        start_graph_worker(ctx)
+        # Initialize client count if incrementing
+        if increment_client:
+            ctx.increment_clients()
         
         _contexts[workspace_id] = ctx
-        log.info(f"Created workspace context: {workspace_id} for {workfile_path}")
-        
-        return ctx
+        log.info(f"Created workspace context: {workspace_id} for {workfile_path} (clients: {ctx.client_count})")
+    
+    # Register handlers and start worker AFTER releasing lock to avoid deadlock
+    # Register event handlers for this workspace
+    server_sockets.register_event_handlers(ctx)
+    
+    # Start the worker thread for this context
+    start_graph_worker(ctx)
+    
+    return ctx
 
 
 def destroy_context(workspace_id: str):
@@ -98,18 +115,28 @@ def destroy_context(workspace_id: str):
             return
         
         ctx = _contexts.pop(workspace_id)
+    
+    # Stop worker outside lock to avoid deadlock
+    if ctx.worker_thread and ctx.worker_thread.is_alive():
+        log.info(f"Stopping worker thread for {workspace_id}")
+        # Signal queue to stop (None sentinel)
+        ctx.mod_queue.put(None)
         
-        # Stop worker if running
-        if ctx.worker_thread and ctx.worker_thread.is_alive():
-            # Signal queue to stop (empty queue = worker exits)
-            ctx.mod_queue.put(None)
-            ctx.worker_thread.join(timeout=2)
+        # Wait for thread with timeout
+        ctx.worker_thread.join(timeout=5)
         
-        # Clear run tracking
-        ctx.active_runs.clear()
-        ctx.active_node_run.clear()
-        
-        log.info(f"Destroyed workspace context: {workspace_id}")
+        if ctx.worker_thread.is_alive():
+            log.error(f"Worker thread for {workspace_id} did not stop within 5 seconds - may be stuck in I/O or deadlocked")
+            # Thread will become orphaned but at least we warned about it
+            # In production, could consider thread.daemon=True or more aggressive termination
+        else:
+            log.info(f"Worker thread for {workspace_id} stopped cleanly")
+    
+    # Clear run tracking
+    ctx.active_runs.clear()
+    ctx.active_node_run.clear()
+    
+    log.info(f"Destroyed workspace context: {workspace_id}")
 
 
 def get_context(workspace_id: str) -> ServerContext | None:

@@ -21,6 +21,8 @@ class WorkflowApp:
         self.master = master
         # Single source of truth for UI state
         self.state = GUIState()
+        # Lock to protect state mutations from concurrent threads (SocketIO + HTTP)
+        self._state_lock = threading.Lock()
         self.base_url = base_url
         self.wf_path = wf_path
         self.workspace_id = workspace_id
@@ -182,8 +184,21 @@ class WorkflowApp:
             # Also notify server via REST API
             self.server.client_connect()
             self.client_connected = True
-        except Exception:
-            pass
+            log.info(f"Successfully connected to workspace {self.workspace_id}")
+        except ConnectionError as e:
+            log.error(f"Failed to connect to server: {e}")
+            messagebox.showwarning(
+                "Connection Failed",
+                f"Could not connect to server at {self.base_url}\n\n"
+                f"Error: {e}\n\n"
+                "The GUI will open in offline mode."
+            )
+        except Exception as e:
+            log.exception(f"Unexpected error during client connection: {e}")
+            messagebox.showerror(
+                "Connection Error",
+                f"An unexpected error occurred while connecting:\n{e}"
+            )
 
     def _client_disconnect(self):
         """Disconnect from server workspace and clean up."""
@@ -212,9 +227,10 @@ class WorkflowApp:
             try:
                 data = self.server.get_graph(timeout=10.0)
                 if data:
-                    self.state.graph = data
-                    graph_attrs = self.state.graph.get('graph', {})
-                    self.state.wrapper = graph_attrs.get('wrapper', '{}')
+                    with self._state_lock:
+                        self.state.graph = data
+                        graph_attrs = self.state.graph.get('graph', {})
+                        self.state.wrapper = graph_attrs.get('wrapper', '{}')
                     self.master.after(0, self._redraw_graph)
                 return
             except Exception as e:
@@ -1066,26 +1082,40 @@ class WorkflowApp:
                 pass
 
     def on_graph_update(self, data=None):
+        """Called from SocketIO background thread - must be thread-safe.
+        
+        Queues all state updates through Tkinter main thread to prevent
+        race conditions between SocketIO and HTTP fetch threads.
+        """
         if not data:
             log.debug("on_graph_update called with empty data")
             return
-        # Handle partial status_change events (lightweight update)
-        if "node_id" in data and "status" in data:
-            # Partial update: only update node status
-            node_id = data.get("node_id")
-            status = data.get("status")
-            log.debug(f"Status update: node_id={node_id}, status={status}")
-            for node in self.state.graph.get("nodes", []):
-                if node.get("id") == node_id:
-                    log.debug(f"Found node {node_id}, updating status from {node.get('status')} to {status}")
-                    node["status"] = status
-                    break
-            self.master.after(0, self._redraw_graph)
-        elif "nodes" in data or "links" in data:
-            # Full graph update from server
-            log.info(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
-            log.debug(f"Updated node labels: {[(n.get('id'), n.get('label')) for n in data.get('nodes', [])]}")
-            self.state.graph = data
-            self.master.after(0, self._redraw_graph)
-        else:
-            log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")
+        
+        def apply_update():
+            """Apply update in main thread with lock protection."""
+            with self._state_lock:
+                # Handle partial status_change events (lightweight update)
+                if "node_id" in data and "status" in data:
+                    # Partial update: only update node status
+                    node_id = data.get("node_id")
+                    status = data.get("status")
+                    log.debug(f"Status update: node_id={node_id}, status={status}")
+                    for node in self.state.graph.get("nodes", []):
+                        if node.get("id") == node_id:
+                            log.debug(f"Found node {node_id}, updating status from {node.get('status')} to {status}")
+                            node["status"] = status
+                            break
+                elif "nodes" in data or "links" in data:
+                    # Full graph update from server
+                    log.info(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
+                    log.debug(f"Updated node labels: {[(n.get('id'), n.get('label')) for n in data.get('nodes', [])]}")
+                    self.state.graph = data
+                else:
+                    log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")
+                    return  # Don't redraw if we didn't update anything
+            
+            # Redraw after releasing lock
+            self._redraw_graph()
+        
+        # Queue update to main thread
+        self.master.after(0, apply_update)

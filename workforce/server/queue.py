@@ -186,10 +186,14 @@ def start_graph_worker(ctx):
                             log.info(f"Edge {el_id} has run_id={run_id}")
                             _check_target_node_ready(ctx.workfile_path, G, el_id, run_id)
                         
-            except Exception:
-                log.exception("Graph worker error")
+            except Exception as e:
+                log.exception(f"Graph worker error processing queue item: {e}")
             finally:
-                ctx.mod_queue.task_done()
+                # Wrap task_done in its own try-except to ensure it's always called
+                try:
+                    ctx.mod_queue.task_done()
+                except Exception as e:
+                    log.error(f"Failed to call task_done: {e}")
 
                 # Run completion check
                 if ctx.mod_queue.empty():

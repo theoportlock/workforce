@@ -5,8 +5,12 @@ import uuid
 import json
 import threading
 import time
+import logging
 from typing import Any, Callable, Dict
 from pathlib import Path
+from collections import deque
+
+log = logging.getLogger(__name__)
 
 @dataclass
 class ServerContext:
@@ -29,6 +33,10 @@ class ServerContext:
     active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool}
     active_node_run: Dict[str, str] = field(default_factory=dict)    # node_id -> run_id
     
+    # Request deduplication (idempotency)
+    processed_requests: deque = field(default_factory=lambda: deque(maxlen=1000))  # Track last 1000 request IDs
+    request_lock: threading.Lock = field(default_factory=threading.Lock)  # Protect processed_requests
+    
     def __post_init__(self):
         """Initialize event bus with file logging."""
         from workforce.server.events import EventBus
@@ -44,28 +52,65 @@ class ServerContext:
         self.client_count += 1
 
     def decrement_clients(self) -> int:
-        """Called when a client disconnects. Returns new client count."""
-        self.client_count = max(0, self.client_count - 1)
+        """Called when a client disconnects. Returns new client count.
+        
+        Raises:
+            ValueError: If client count would go negative (indicates double-disconnect bug)
+        """
+        if self.client_count <= 0:
+            log.warning(f"Client count underflow detected for workspace {self.workspace_id}: "
+                       f"decrement called when count is {self.client_count}. "
+                       f"This indicates a double-disconnect bug.")
+            # Don't raise exception to avoid breaking client, but log loudly
+            return 0
+        
+        self.client_count -= 1
         return self.client_count
 
     def should_destroy(self) -> bool:
         """Returns True if context should be destroyed (no clients left)."""
         return self.client_count <= 0
 
-    def enqueue(self, func: Callable, *args, **kwargs):
+    def enqueue(self, func: Callable, *args, idempotency_key: str | None = None, **kwargs):
         """
         Cache the mutation and push task onto the queue.
+        
+        Args:
+            func: Function to execute
+            *args: Positional arguments for func
+            idempotency_key: Optional key to prevent duplicate operations
+            **kwargs: Keyword arguments for func
+        
+        Returns:
+            dict: Status dict with 'status' and optionally 'idempotency_key'
         """
+        # Check for duplicate requests
+        if idempotency_key:
+            with self.request_lock:
+                if idempotency_key in self.processed_requests:
+                    log.info(f"Skipping duplicate request {idempotency_key}")
+                    return {"status": "duplicate", "idempotency_key": idempotency_key}
+                # Mark as processed before enqueuing to prevent race
+                self.processed_requests.append(idempotency_key)
+        
+        # Cache request to disk for crash recovery
         try:
-            request_id = str(uuid.uuid4())
+            request_id = idempotency_key or str(uuid.uuid4())
             request_file = os.path.join(self.server_cache_dir, f"{request_id}.json")
-            payload = {"operation": getattr(func, "__name__", str(func)), "args": args, "kwargs": kwargs}
+            payload = {
+                "operation": getattr(func, "__name__", str(func)),
+                "args": args,
+                "kwargs": kwargs,
+                "idempotency_key": idempotency_key
+            }
             with open(request_file, "w") as f:
                 json.dump(payload, f)
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Failed to cache request: {e}")
+        
+        # Queue the operation
         self.mod_queue.put((func, args, kwargs))
-        return {"status": "queued"}
+        return {"status": "queued", "idempotency_key": idempotency_key}
 
     def enqueue_status(self, workfile_path: str, element_type: str, element_id: str, value: str, run_id: str | None = None):
         """

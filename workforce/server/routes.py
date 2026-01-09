@@ -74,13 +74,16 @@ def register_routes(app):
             return jsonify({"error": "Workspace not found"}), 404
         
         data = request.get_json(force=True)
+        # Extract idempotency key from header or request data
+        idempotency_key = request.headers.get("X-Idempotency-Key") or data.get("idempotency_key")
         result = ctx.enqueue(
             edit.add_node_to_graph,
             ctx.workfile_path,
             data["label"],
             data.get("x", 0),
             data.get("y", 0),
-            data.get("status", "")
+            data.get("status", ""),
+            idempotency_key=idempotency_key
         )
         return jsonify(result), 202
 
@@ -183,9 +186,8 @@ def register_routes(app):
             if not workfile_path:
                 return jsonify({"error": "workfile_path required"}), 400
             
-            # Create or get context
-            ctx = get_or_create_context(workspace_id, workfile_path)
-            ctx.increment_clients()
+            # Create or get context (client count incremented inside under lock)
+            ctx = get_or_create_context(workspace_id, workfile_path, increment_client=True)
             
             log.info(f"Client connected to {workspace_id}; clients: {ctx.client_count}")
             return jsonify({"status": "connected", "workspace_id": workspace_id}), 200
