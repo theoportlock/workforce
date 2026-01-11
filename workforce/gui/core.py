@@ -382,9 +382,11 @@ class WorkflowApp:
         def save_and_close(event=None):
             new_label = text_widget.get("1.0", "end-1c")
             on_save(new_label)
+            editor.grab_release()
             editor.destroy()
 
         def cancel_and_close(event=None):
+            editor.grab_release()
             editor.destroy()
 
         btn_frame = tk.Frame(editor)
@@ -431,9 +433,11 @@ class WorkflowApp:
         def save_and_close(event=None):
             self.state.wrapper = wrapper_entry.get()
             self.save_wrapper()
+            editor.grab_release()
             editor.destroy()
 
         def cancel_and_close(event=None):
+            editor.grab_release()
             editor.destroy()
 
         btn_frame = tk.Frame(editor, background=THEME["colors"]["canvas_bg"]) 

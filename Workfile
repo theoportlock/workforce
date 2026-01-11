@@ -16,8 +16,8 @@
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d1">echo asdfad</data>
-      <data key="d2">604.9523809523811</data>
-      <data key="d3">268.2380952380952</data>
+      <data key="d2">649.9523809523811</data>
+      <data key="d3">313.2380952380952</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 asdfad
@@ -32,8 +32,8 @@ STDERR:</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
-      <data key="d2">489.66666666666663</data>
-      <data key="d3">319.33333333333326</data>
+      <data key="d2">534.6666666666666</data>
+      <data key="d3">364.33333333333326</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
@@ -309,8 +309,8 @@ workforce.egg-info
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
       <data key="d1">pwd</data>
-      <data key="d2">534.3333333333333</data>
-      <data key="d3">435.0</data>
+      <data key="d2">579.3333333333333</data>
+      <data key="d3">480.0</data>
       <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
