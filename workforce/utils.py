@@ -14,10 +14,6 @@ import tempfile
 import urllib.error
 import urllib.request
 
-# Workspace server configuration (dynamic port via find_free_port)
-WORKSPACE_SERVER_URL = "http://localhost:5000"  # Deprecated: use resolve_server() instead
-WORKSPACE_SERVER_PORT = 5000  # Deprecated: use find_free_port() instead
-
 # -----------------------------------------------------------------------------
 # Workspace identification
 # -----------------------------------------------------------------------------
@@ -114,8 +110,12 @@ def looks_like_url(text: str) -> bool:
 
 
 def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
-    """Build absolute URL for a workspace endpoint."""
-    base = f"{WORKSPACE_SERVER_URL}/workspace/{workspace_id}"
+    """Build absolute URL for a workspace endpoint.
+    
+    Discovers running server dynamically via resolve_server().
+    """
+    server_url = resolve_server()
+    base = f"{server_url}/workspace/{workspace_id}"
     if endpoint:
         if not endpoint.startswith("/"):
             endpoint = "/" + endpoint

@@ -1,5 +1,7 @@
-edit has functions that accepts graph?
-graph, filename, port
+Change color scheme
+Remote wf server ls that accepts arg for server name
+Multi node requests for status change and for node position
+Add PID to run and separate off the stdout and stderr in log and add error code
 
 wf edit = ERROR
 wf edit node status 'ran' = uses wf server
@@ -28,7 +30,7 @@ wf status?
 wf --version -v?
 wf browser?
 
-
+home server that manages the registry in memory - potential webviewer
 There is a focus bug where if i click out of workforce window then it refoccusses back onto the workforce window then on the next click it works properly
 wf runner stop run_id - figure out
 A way to save the wf request log for modification, execution

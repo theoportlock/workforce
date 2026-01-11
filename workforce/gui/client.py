@@ -78,7 +78,8 @@ class ServerClient:
                     split = urlsplit(self.base_url)
                     server_root = f"{split.scheme}://{split.netloc}"
                 except Exception:
-                    server_root = utils.WORKSPACE_SERVER_URL
+                    # Fallback to server discovery if URL parsing fails
+                    server_root = utils.resolve_server()
                 self.sio.connect(server_root, wait_timeout=5, auth=None)
             except Exception as e:
                 log.warning("SocketIO setup failed: %s", e)

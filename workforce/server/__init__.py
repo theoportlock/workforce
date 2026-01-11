@@ -178,6 +178,15 @@ def start_server(background: bool = True, host: str = "0.0.0.0"):
         background: If True, spawn subprocess. If False, run foreground.
         host: Host to bind to (default: 0.0.0.0, accessible from all interfaces).
     """
+    # Check if server is already running
+    discovery_host = "127.0.0.1"  # Always check localhost for discovery
+    result = utils.find_running_server(host=discovery_host)
+    if result:
+        found_host, found_port = result
+        log.info(f"Server already running on {found_host}:{found_port}")
+        log.info("Use 'wf server stop' to stop the existing server if you want to restart.")
+        return
+    
     # Find a free port
     port = utils.find_free_port()
     log.info(f"Found free port: {port}")

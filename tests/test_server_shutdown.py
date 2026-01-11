@@ -63,3 +63,44 @@ def test_server_starts_and_context_lifecycle(tmp_path):
     # Server should still be running (it's machine-wide, not killed after context closes)
     assert _wait_for(lambda: utils.find_running_server() is not None), "Server should still be running"
 
+
+def test_duplicate_server_prevention():
+    """Test that attempting to start a second server when one is already running logs message and exits gracefully."""
+    # Ensure a server is running
+    result = utils.find_running_server()
+    if not result:
+        start_server(background=True)
+        result = _wait_for(lambda: utils.find_running_server(), timeout=8.0)
+        assert result is not None, "Server did not start"
+    
+    found_host, found_port = result
+    
+    # Verify server is accessible
+    resp = requests.get(f"http://{found_host}:{found_port}/workspaces")
+    assert resp.status_code == 200
+    
+    # Attempt to start another server - should detect existing and return early
+    # This call should NOT create a second server on a different port
+    start_server(background=True)
+    
+    # Give it a moment to potentially (incorrectly) start
+    time.sleep(1.0)
+    
+    # Verify only one server is running by checking that the port didn't change
+    new_result = utils.find_running_server()
+    assert new_result is not None
+    new_host, new_port = new_result
+    
+    # Should still be the same server
+    assert new_port == found_port, f"New server started on port {new_port} instead of using existing server on {found_port}"
+    
+    # Verify no second server on adjacent ports
+    for port in range(5000, 5100):
+        if port == found_port:
+            continue  # Skip the legitimate server port
+        try:
+            resp = requests.get(f"http://127.0.0.1:{port}/workspaces", timeout=0.5)
+            if resp.status_code == 200 and "workspaces" in resp.json():
+                raise AssertionError(f"Unexpected second server found on port {port}")
+        except requests.exceptions.RequestException:
+            pass  # Expected - no server on this port

@@ -149,8 +149,8 @@ class Runner:
 				split = urlsplit(self.base_url)
 				server_url = f"{split.scheme}://{split.netloc}"
 			except Exception:
-				# Fallback to legacy constant if parsing fails
-				server_url = utils.WORKSPACE_SERVER_URL
+				# Fallback to server discovery if parsing fails
+				server_url = utils.resolve_server()
 			self.sio.connect(server_url, transports=['websocket'], wait_timeout=10)
 			
 			# Register with server for this workspace

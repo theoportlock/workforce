@@ -319,15 +319,17 @@ You can also use Workforce programmatically:
     # Note: Most graph operations save automatically
     # Individual functions like add_node_to_graph() handle save internally
 
-For running workflows programmatically, connect to the server via SocketIO:
+For running workflows programmatically, connect to the server:
 
 .. code-block:: python
 
-    from workforce.run.client import WorkforceClient
-    from workforce.utils import resolve_target
+    from workforce import utils
     
-    # Resolve file path to server URL (auto-starts if needed)
-    server_url = resolve_target('workflow.graphml')
+    # Compute workspace ID from file path
+    workspace_id = utils.compute_workspace_id('workflow.graphml')
     
-    # Runner client connects and waits for node_ready events
+    # Get workspace URL (auto-discovers or starts server)
+    workspace_url = utils.get_workspace_url(workspace_id)
+    
+    # Runner client connects to workspace URL and waits for node_ready events
     # This is typically done by the run command, not manually

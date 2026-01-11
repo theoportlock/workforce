@@ -44,30 +44,39 @@ Architecture Overview
 Server
 ~~~~~~
 
-The server component manages workflow execution through a registry-based system:
+The server component provides a single machine-wide instance that manages multiple workspace contexts:
 
 **Server Startup**: When starting a server using the CLI (``python -m workforce server start``):
 
-1. Checks if the Workfile (absolute path) has been assigned a URL in the shared Registry file
-2. If not assigned, starts a Flask API server on a unique URL (or uses a URL provided via CLI if available)
-3. Registers the Workfile + URL mapping in the Registry with:
-   - Initial client count set to 1
-   - Process ID (PID) for server management
-   - Port number for connection
+1. Checks if a server is already running via health check discovery (ports 5000-5100)
+2. If found, informs user and exits (enforces singleton per machine)
+3. If not found, discovers free port and starts Flask + Socket.IO server
+4. Waits for clients to connect and creates workspace contexts on-demand
+
+**Workspace Management**:
+
+- Each workfile gets a deterministic workspace ID (SHA256 hash of absolute path)
+- Server maintains isolated ServerContext objects per workspace with:
+  - Dedicated modification queue for serialized graph operations
+  - Per-workspace event bus for domain events
+  - Worker thread for processing queued mutations
+  - Socket.IO room for event isolation
+- Contexts created on first client connect, destroyed on last disconnect
 
 **Server Operations**:
 
-- Accepts requests to modify the Workfile using the ``edit`` API
-- Accepts requests to run the Workfile using the ``run`` API with arguments:
-  - ``subgraph``: Specific nodes to include in execution
-  - ``selected``: Explicitly chosen nodes
+- Accepts workspace-scoped requests at ``/workspace/{workspace_id}/...`` endpoints
+- Edit API: Modify workflow structure (add/remove nodes, edges, statuses)
+- Run API: Initiate workflow execution with arguments:
+  - ``nodes``: Specific nodes to execute as subset
   - ``wrapper``: Command prefix/suffix wrapper
+- Status updates propagate via Socket.IO room-based events
 
-**Server Shutdown**: On stop or failure:
+**Server Shutdown**: On idle (no active clients or runs):
 
-- Fails all running processes gracefully
-- Removes Workfile + URL mapping from Registry
-- Cleans up resources (heartbeat monitoring)
+- Automatically shuts down after brief idle period
+- Contexts destroyed on last client disconnect
+- Next client connection auto-starts new server instance
 
 Unified Execution Model
 ~~~~~~~~~~~~~~~~~~~~~~~~

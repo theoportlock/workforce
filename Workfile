@@ -13,7 +13,7 @@
       <data key="d1">echo asdfad</data>
       <data key="d2">615.2857142857143</data>
       <data key="d3">302.57142857142856</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 asdfad
 
@@ -23,7 +23,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">506.0</data>
       <data key="d3">392.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 AUTHORS.rst
 build
@@ -52,7 +52,7 @@ STDERR:</data>
       <data key="d1">ls</data>
       <data key="d2">571.0</data>
       <data key="d3">184.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 AUTHORS.rst
 build
@@ -81,7 +81,7 @@ STDERR:</data>
       <data key="d1">echo test</data>
       <data key="d2">307.51515151515156</data>
       <data key="d3">141.8686868686869</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 test
 
@@ -91,7 +91,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">314.0</data>
       <data key="d3">309.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -99,9 +99,9 @@ STDERR:</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">100.22222222222223</data>
-      <data key="d3">186.8888888888889</data>
-      <data key="d4">ran</data>
+      <data key="d2">125.22222222222223</data>
+      <data key="d3">236.8888888888889</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -113,7 +113,7 @@ ls
 ls</data>
       <data key="d2">812.6271216705999</data>
       <data key="d3">163.29018324670528</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 teststet
 AUTHORS.rst
@@ -165,7 +165,7 @@ STDERR:</data>
       <data key="d1">pwd</data>
       <data key="d2">466.0</data>
       <data key="d3">508.0</data>
-      <data key="d4">ran</data>
+      <data key="d4" />
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 

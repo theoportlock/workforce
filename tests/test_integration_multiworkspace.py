@@ -23,33 +23,28 @@ from workforce.server.context import ServerContext
 
 
 @pytest.fixture(scope="module")
-def server_ready():
-    """Start server once per test module."""
+def server_url():
+    """Start server once per test module and return its URL."""
+    # Use resolve_server to find or start server
     try:
-        start_server(background=True)
-        # Wait for server to be ready
-        max_retries = 30
-        for attempt in range(max_retries):
-            try:
-                resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces", timeout=1)
-                if resp.status_code == 200:
-                    break
-            except Exception:
-                pass
-            time.sleep(0.3)
-        else:
-            pytest.skip("Server failed to start")
-    except RuntimeError:
-        # Server already running or port in use, try to use existing server
-        max_retries = 10
-        for attempt in range(max_retries):
-            if utils.is_port_in_use(utils.WORKSPACE_SERVER_PORT):
-                break
-            time.sleep(0.5)
-        else:
-            pytest.skip("Could not connect to server on port 5000")
+        server = utils.resolve_server()
+    except Exception as e:
+        pytest.skip(f"Failed to start/discover server: {e}")
     
-    yield
+    # Verify server is accessible
+    max_retries = 30
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(f"{server}/workspaces", timeout=1)
+            if resp.status_code == 200:
+                yield server
+                return
+        except Exception:
+            pass
+        time.sleep(0.3)
+    else:
+        pytest.skip("Server failed to respond")
+    
     # Server stays running for other tests
 
 
@@ -87,13 +82,14 @@ def create_simple_graph(path):
 class TestServerInitialization:
     """Test basic server startup and initialization."""
     
-    def test_server_running_on_fixed_port(self, server_ready):
-        """Verify server is running on fixed port 5000."""
-        assert utils.is_port_in_use(utils.WORKSPACE_SERVER_PORT)
+    def test_server_accessible(self, server_url):
+        """Verify server is accessible and responding."""
+        result = utils.find_running_server()
+        assert result is not None
     
-    def test_workspace_endpoint_accessible(self, server_ready):
+    def test_workspace_endpoint_accessible(self, server_url):
         """Verify /workspaces diagnostic endpoint is accessible."""
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         assert resp.status_code == 200
         data = resp.json()
         assert "workspaces" in data
@@ -119,26 +115,26 @@ class TestWorkspaceRouting:
         # IDs should start with ws_
         assert id1a.startswith("ws_")
     
-    def test_workspace_url_construction(self):
+    def test_workspace_url_construction(self, server_url):
         """Verify workspace URLs are constructed correctly."""
         workspace_id = "ws_abc123"
         url = utils.get_workspace_url(workspace_id)
-        assert url == f"{utils.WORKSPACE_SERVER_URL}/workspace/{workspace_id}"
+        assert url == f"{server_url}/workspace/{workspace_id}"
         
         endpoint_url = utils.get_workspace_url(workspace_id, "/get-graph")
-        assert endpoint_url == f"{utils.WORKSPACE_SERVER_URL}/workspace/{workspace_id}/get-graph"
+        assert endpoint_url == f"{server_url}/workspace/{workspace_id}/get-graph"
 
 
 class TestClientLifecycle:
     """Test on-demand context creation and destruction."""
     
-    def test_context_created_on_first_client_connect(self, server_ready, temp_workfile):
+    def test_context_created_on_first_client_connect(self, server_url, temp_workfile):
         """Verify workspace context is created on first client connect."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
         
         # Verify no context exists initially
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         workspaces = resp.json()["workspaces"]
         ws_ids = [ws["workspace_id"] for ws in workspaces]
         assert workspace_id not in ws_ids
@@ -150,7 +146,7 @@ class TestClientLifecycle:
         
         # Verify context now exists
         time.sleep(0.1)  # Brief delay for context creation
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         workspaces = resp.json()["workspaces"]
         ws_ids = [ws["workspace_id"] for ws in workspaces]
         assert workspace_id in ws_ids
@@ -159,7 +155,7 @@ class TestClientLifecycle:
         endpoint = f"{base_url}/client-disconnect"
         requests.post(endpoint, json={})
     
-    def test_context_destroyed_on_last_client_disconnect(self, server_ready, temp_workfile):
+    def test_context_destroyed_on_last_client_disconnect(self, server_url, temp_workfile):
         """Verify workspace context is destroyed when last client disconnects."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
@@ -169,7 +165,7 @@ class TestClientLifecycle:
         time.sleep(0.1)
         
         # Verify context exists
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         workspaces = resp.json()["workspaces"]
         ws_ids = [ws["workspace_id"] for ws in workspaces]
         assert workspace_id in ws_ids
@@ -179,7 +175,7 @@ class TestClientLifecycle:
         time.sleep(0.2)  # Brief delay for context destruction
         
         # Verify context is destroyed
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         workspaces = resp.json()["workspaces"]
         ws_ids = [ws["workspace_id"] for ws in workspaces]
         assert workspace_id not in ws_ids
@@ -188,7 +184,7 @@ class TestClientLifecycle:
 class TestMultipleWorkspaces:
     """Test multiple workspaces operating concurrently."""
     
-    def test_multiple_workspaces_isolation(self, server_ready):
+    def test_multiple_workspaces_isolation(self, server_url):
         """Verify multiple workspaces can operate independently."""
         # Create two workfiles
         with tempfile.NamedTemporaryFile(suffix=".graphml", delete=False) as f1:
@@ -209,7 +205,7 @@ class TestMultipleWorkspaces:
             time.sleep(0.1)
             
             # Verify both contexts exist
-            resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+            resp = requests.get(f"{server_url}/workspaces")
             workspaces = resp.json()["workspaces"]
             ws_ids = [ws["workspace_id"] for ws in workspaces]
             assert ws_id1 in ws_ids
@@ -225,7 +221,7 @@ class TestMultipleWorkspaces:
             time.sleep(0.1)
             
             # Verify only first context is destroyed
-            resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+            resp = requests.get(f"{server_url}/workspaces")
             workspaces = resp.json()["workspaces"]
             ws_ids = [ws["workspace_id"] for ws in workspaces]
             assert ws_id1 not in ws_ids
@@ -241,7 +237,7 @@ class TestMultipleWorkspaces:
 class TestGraphOperations:
     """Test graph operations through REST API."""
     
-    def test_add_and_get_nodes(self, server_ready, temp_workfile):
+    def test_add_and_get_nodes(self, server_url, temp_workfile):
         """Test adding nodes and retrieving graph."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
@@ -273,7 +269,7 @@ class TestGraphOperations:
         finally:
             requests.post(f"{base_url}/client-disconnect", json={})
     
-    def test_graph_persistence(self, server_ready, temp_workfile):
+    def test_graph_persistence(self, server_url, temp_workfile):
         """Test that graph changes persist to disk."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
@@ -322,7 +318,7 @@ class TestGraphOperations:
 class TestWorkspaceDiagnostics:
     """Test diagnostic endpoints for workspace monitoring."""
     
-    def test_workspaces_endpoint_shows_active_contexts(self, server_ready, temp_workfile):
+    def test_workspaces_endpoint_shows_active_contexts(self, server_url, temp_workfile):
         """Verify /workspaces endpoint correctly reports active contexts."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
@@ -332,7 +328,7 @@ class TestWorkspaceDiagnostics:
         time.sleep(0.1)
         
         try:
-            resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+            resp = requests.get(f"{server_url}/workspaces")
             assert resp.status_code == 200
             workspaces = resp.json()["workspaces"]
             
@@ -350,9 +346,9 @@ class TestWorkspaceDiagnostics:
         finally:
             requests.post(f"{base_url}/client-disconnect", json={})
     
-    def test_workspaces_endpoint_empty_when_no_clients(self, server_ready):
+    def test_workspaces_endpoint_empty_when_no_clients(self, server_url):
         """Verify /workspaces endpoint shows empty list when no contexts."""
-        resp = requests.get(f"{utils.WORKSPACE_SERVER_URL}/workspaces")
+        resp = requests.get(f"{server_url}/workspaces")
         assert resp.status_code == 200
         workspaces = resp.json()["workspaces"]
         # After cleanup from previous tests, should be empty or at least consistent
@@ -362,7 +358,7 @@ class TestWorkspaceDiagnostics:
 class TestErrorHandling:
     """Test error handling in workspace routing."""
     
-    def test_missing_workfile_path_on_connect(self, server_ready, temp_workfile):
+    def test_missing_workfile_path_on_connect(self, server_url, temp_workfile):
         """Verify proper error when workfile_path not provided."""
         workspace_id = utils.compute_workspace_id(temp_workfile)
         base_url = utils.get_workspace_url(workspace_id)
@@ -371,7 +367,7 @@ class TestErrorHandling:
         assert resp.status_code == 400
         assert "workfile_path" in resp.json()["error"]
     
-    def test_nonexistent_workspace_returns_404(self, server_ready):
+    def test_nonexistent_workspace_returns_404(self, server_url):
         """Verify 404 for operations on non-existent workspace."""
         fake_workspace_id = "ws_nonexistent"
         base_url = utils.get_workspace_url(fake_workspace_id)

@@ -17,66 +17,74 @@ Core Components
 Server
 ~~~~~~
 
-The server component is the heart of Workforce's execution engine. It manages:
+The server component is the heart of Workforce's execution engine. A single machine-wide server manages multiple workflows through isolated workspace contexts. It manages:
 
 * **Workflow State** - Tracks node and edge status during execution
 * **Event System** - Pub/sub event broadcasting for real-time updates
 * **Execution Queue** - Schedules nodes based on dependency resolution
 * **Client Coordination** - Handles multiple simultaneous clients
-* **Registry Management** - Maps workflow files to server URLs and ports
+* **Workspace Contexts** - Isolated execution environments per workfile
 
 Server Startup Process
 ^^^^^^^^^^^^^^^^^^^^^^
 
-When starting a server using ``wf server start Workfile``:
+When starting a server (typically automatic when running ``wf`` commands):
 
-1. **Registry Check**: The system checks if the Workfile (absolute path) has been assigned a URL in the shared Registry file located in the user's home directory
+1. **Singleton Check**: The system scans ports 5000-5100 with ``find_running_server()`` using /workspaces health checks to detect any existing server
 
-2. **URL Assignment**: If not already registered:
+2. **Server Discovery**: If a server is already running:
    
-   * A Flask API server starts on a unique URL
-   * The server can use a user-specified URL via CLI or auto-assign one
-   * Port selection is automatic unless specified
+   * The system logs the existing server location
+   * Exits without starting a duplicate server
+   * Enforces single machine-wide server policy
 
-3. **Registration**: The Workfile + URL mapping is stored in the Registry with:
+3. **Port Discovery**: If no server exists:
    
-   * Initial client count (set to 1)
-   * Process ID (PID) for server management
-   * Port number for connection
-   * Timestamp for last access
+   * Scans port range 5000-5100 for available port
+   * Selects first free port automatically
+   * No manual port configuration needed
 
-4. **Server Ready**: The server begins accepting API requests for workflow editing and execution
+4. **Server Initialization**: Flask + Socket.IO server starts:
+   
+   * Listens on discovered port
+   * Ready to accept workspace connections
+   * Creates workspace contexts on-demand as clients connect
+
+5. **Server Ready**: The server begins accepting API requests and client connections
 
 Server Operations
 ^^^^^^^^^^^^^^^^^
 
-Once running, the server exposes several APIs:
+Once running, the server exposes workspace-scoped APIs at ``http://host:port/workspace/{workspace_id}/...``:
 
 * **Edit API**: Modifies the Workfile structure (add/remove nodes and edges)
 * **Run API**: Initiates workflow execution with parameters:
   
-  * ``subgraph``: Specific nodes to include in execution
-  * ``selected``: Explicitly chosen nodes
+  * ``nodes``: Specific nodes to include in execution
   * ``wrapper``: Command prefix/suffix wrapper
 
-* **Status API**: Provides real-time status of nodes and edges via WebSocket
+* **Status API**: Provides real-time status of nodes and edges via Socket.IO
 * **Logs API**: Returns stdout/stderr from completed nodes
+
+Each workspace operates independently with isolated state and event streams.
 
 Server Shutdown
 ^^^^^^^^^^^^^^^
 
-On stop or failure:
+Servers automatically shut down when idle (no clients and no active runs):
 
 1. All running processes are gracefully terminated
 2. Node statuses are updated to reflect termination
-3. Workfile + URL mapping is removed from Registry
-4. Resources are cleaned up (WebSocket connections closed)
-5. Heartbeat monitoring stops
+3. Workspace contexts are destroyed
+4. Resources are cleaned up (Socket.IO connections closed)
+5. Server process exits cleanly
+
+Manual shutdown via ``wf server stop`` is also supported.
 
 Client
 ~~~~~~
 
-Clients connect to the server to interact with workflows. Multiple types of clients exist:
+Clients connect to workspace-scoped URLs to interact with workflows. Multiple types of clients exist:
 
 * **GUI Client** - Tkinter-based visual editor
 * **Run Client** - CLI-based workflow executor
@@ -84,26 +92,52 @@ Clients connect to the server to interact with workflows. Multiple types of clie
 
 All clients communicate with the server via:
 
-* HTTP API calls for workflow modifications
-* WebSocket connections for real-time status updates
+* HTTP API calls for workflow modifications (workspace-scoped endpoints)
+* Socket.IO connections for real-time status updates (workspace-specific rooms)
 
-Registry System
-~~~~~~~~~~~~~~~
+Multiple clients can connect to the same workspace context simultaneously, sharing state and receiving synchronized updates.
 
-The Registry is a central file (``$TMPDIR/workforce_servers.json``) that maintains the mapping between:
+Workspace Management
+~~~~~~~~~~~~~~~~~~~~
 
-* Workflow file paths (absolute paths)
-* Server URLs and ports
-* Server PIDs for process management
-* Client connection counts
-* Last access timestamps
+Workforce uses a single machine-wide server that manages multiple workflows through isolated workspace contexts.
 
-This allows:
+**Server Discovery**:
 
-* Multiple workflows to run simultaneously on different ports
-* Automatic server discovery when launching clients
-* Proper cleanup of orphaned servers
-* Connection sharing across multiple GUI/CLI instances
+* ``find_running_server()`` scans ports 5000-5100 with /workspaces health checks
+* Detects existing server before attempting to start new one
+* Returns server URL for client connections
+
+**Workspace Identification**:
+
+* Each workfile gets a deterministic workspace ID via ``compute_workspace_id()``
+* Workspace ID is SHA256 hash of absolute file path
+* Ensures consistent identification across multiple sessions
+
+**Workspace Contexts**:
+
+* Server maintains dict of ``ServerContext`` objects keyed by workspace_id
+* Each context created on-demand when first client connects
+* Context includes:
+  
+  * ``mod_queue`` - Serialized graph modification queue
+  * ``EventBus`` - Domain event system for that workspace
+  * Worker thread - Dedicated queue processor
+  * Socket.IO room - Isolated event broadcasting
+  * Active runs tracking - Per-run node sets and metadata
+
+**Context Lifecycle**:
+
+* Created: When first client connects to workspace
+* Destroyed: When last client disconnects from workspace
+* Isolation: Each workspace operates independently
+
+This architecture allows:
+
+* Multiple workflows to run simultaneously on one server
+* Automatic workspace context creation and cleanup
+* Complete isolation between different workflows
+* Connection sharing across multiple GUI/CLI instances for same workflow
 
 Execution Model
 ---------------
@@ -279,10 +313,11 @@ Multi-User Support
 
 The event system enables true multi-user collaboration:
 
-* Multiple GUI clients can connect to the same workflow simultaneously
-* Changes made in one client are broadcast to all others in real-time
+* Multiple GUI clients can connect to the same workspace context simultaneously
+* Changes made in one client are broadcast to all others in real-time via Socket.IO rooms
 * Execution initiated by one client is visible to all connected clients
-* Client count is tracked in the Registry
+* Each workspace maintains isolated event streams preventing cross-workspace interference
+* Client connections are workspace-scoped, ensuring proper event routing
 
 Data Flow
 ---------
@@ -324,14 +359,16 @@ Network Communication
 
 * RESTful endpoints for workflow modification
 * JSON request/response format
-* Authenticated with server URL from Registry
+* Workspace-scoped URLs: ``/workspace/{workspace_id}/...``
+* Server URL discovered via ``find_running_server()``
 
-**WebSocket**:
+**Socket.IO**:
 
 * Real-time bidirectional communication
-* Event broadcasting from server to clients
+* Event broadcasting from server to clients via workspace-specific rooms
 * Status updates and log streaming
 * Persistent connection during workflow execution
+* Room-based isolation ensures events only reach relevant clients
 
 Process Management
 ------------------
@@ -385,10 +422,11 @@ Workflow Failures
 Server Failures
 ~~~~~~~~~~~~~~~
 
-* Registry tracks server PIDs
-* Orphaned servers can be detected and cleaned up
-* Heartbeat mechanism monitors server health
+* Server auto-discovery detects running servers via health checks
+* Idle servers automatically shut down (no clients + no active runs)
+* Deferred shutdown with 1-second delay prevents race conditions
 * Clients detect disconnection and notify user
+* Manual cleanup via ``wf server stop`` if needed
 
 Security Considerations
 -----------------------

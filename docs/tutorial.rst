@@ -346,12 +346,14 @@ Programmatic Execution
 
 .. code-block:: python
 
-    from workforce.utils import resolve_target
+    from workforce import utils
     
-    # Resolve file path to server URL
-    # This will auto-start a server if one isn't running
-    server_url = resolve_target('tutorial_workflow.graphml')
-    print(f"Server URL: {server_url}")
+    # Compute workspace ID from file path
+    workspace_id = utils.compute_workspace_id('tutorial_workflow.graphml')
+    
+    # Get workspace URL (auto-discovers or starts server)
+    workspace_url = utils.get_workspace_url(workspace_id)
+    print(f"Workspace URL: {workspace_url}")
     
     # To run the workflow, use the CLI:
     # wf run tutorial_workflow.graphml

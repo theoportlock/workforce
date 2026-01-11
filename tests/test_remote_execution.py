@@ -66,11 +66,8 @@ def test_remote_execution_via_workspace_url(tmp_path):
     assert resp.status_code == 200
 
     try:
-        # 4) Monkeypatch Runner's Socket.IO target to discovered server URL
-        #    (Runner currently reads utils.WORKSPACE_SERVER_URL for Socket.IO connect)
-        utils.WORKSPACE_SERVER_URL = base_server_url
-
-        # 5) Start runner pointing at the workspace URL and wait for completion
+        # 4) Start runner pointing at the workspace URL
+        #    (Runner will derive server root from workspace URL)
         runner = Runner(ws_base, workspace_id=ws_id, workfile_path=str(workfile), wrapper="{}")
 
         # Run in a thread so we can poll graph state while it executes

@@ -1,14 +1,15 @@
 # Workforce – AI Coding Agent Guide
 
-- Purpose: GraphML-backed workflow editor/runner; nodes store bash commands and statuses; server exposes REST + Socket.IO; GUI and CLI resolve URLs/files into active servers.
+- Purpose: GraphML-backed workflow editor/runner; nodes store bash commands and statuses; server exposes REST + Socket.IO; GUI and CLI interact with single machine-wide server managing multiple workspace contexts.
 - Primary entrypoints: wf CLI dispatches GUI/RUN/SERVER/EDIT subcommands (workforce/__main__.py); tests live in tests/ and expect pytest.
 
 ## Core architecture
-- Registry: temp file mapping Workfile → port/PID; resolved via resolve_target and cleaned before use (workforce/utils.py). default_workfile() opens ./Workfile if present.
-- Server start: start_server in workforce/server/__init__.py sets up Flask + Socket.IO, background option via subprocess, caches queued mutations, registers routes and socket handlers, and spins graph worker thread.
-- REST API: routes in workforce/server/routes.py provide graph CRUD, status edits, wrapper updates, node log upload, and /run which seeds run_id and decides roots (failed nodes → otherwise 0 in-degree or selected subset roots).
-- Socket layer: workforce/server/sockets.py registers connect/subscribe and translates domain events to socket events (graph_update, node_ready, status_change, run_complete).
-- Event bus + graph worker: ServerContext holds mod_queue, active_runs, and active_node_run. start_graph_worker in workforce/server/queue.py processes queued mutations, emits EventBus events, and enforces subset-only propagation: completed nodes mark outgoing edges to_run (only if target in run set); edges reaching all-ready targets set node status to run; RUN_COMPLETE emitted when no nodes left.
+- Server discovery: Single machine-wide server discovered via find_running_server() which scans ports 5000-5100 with health checks. resolve_server() finds or auto-starts server. default_workfile() opens ./Workfile if present.
+- Workspace contexts: Each workfile gets deterministic workspace ID via compute_workspace_id() (SHA256 hash of absolute path). Server maintains dict of ServerContext objects keyed by workspace ID, created on-demand when first client connects.
+- Server start: start_server in workforce/server/__init__.py checks for existing server via find_running_server(), returns early if found. Otherwise sets up Flask + Socket.IO, background option via subprocess, and starts listening on dynamic port (5000-5100).
+- REST API: routes in workforce/server/routes.py provide workspace-scoped graph CRUD (URLs: /workspace/{workspace_id}/...), status edits, wrapper updates, node log upload, and /run which seeds run_id and decides roots (failed nodes → otherwise 0 in-degree or selected subset roots).
+- Socket layer: workforce/server/sockets.py registers connect/subscribe and translates domain events to Socket.IO events (graph_update, node_ready, status_change, run_complete). Each workspace has dedicated Socket.IO room for event isolation.
+- Event bus + graph worker: ServerContext holds mod_queue, active_runs, active_node_run, and dedicated worker thread per workspace. start_graph_worker in workforce/server/queue.py processes queued mutations, emits EventBus events, and enforces subset-only propagation: completed nodes mark outgoing edges to_run (only if target in run set); edges reaching all-ready targets set node status to run; RUN_COMPLETE emitted when no nodes left.
 - Graph utilities: workforce/edit/graph.py loads/saves GraphML atomically, adds/removes nodes/edges (UUIDs), edits status/position/labels/wrapper/log. Graph attributes: node.label command, node.status "", run, running, ran, fail; edge.status "", to_run; graph.wrapper command template.
 - Runner: workforce/run/client.py connects via Socket.IO, listens for node_ready, marks status running/ran/fail via /edit-status, sends logs via /save-node-log, wraps commands with wrapper ("{}" placeholder required for interpolation).
 - GUI: workforce/gui/app.py launches Tk-based WorkflowApp; GUI background launch spawns python -m workforce gui <url> --foreground.
@@ -16,16 +17,17 @@
 ## Development workflow
 - Create or open workflows: wf (opens ./Workfile), wf <file.graphml>, wf gui <path>, wf edit <subcommand> for API edits.
 - Run execution: wf run <file|url> [--nodes id1 id2] [--wrapper "docker run -it ubuntu bash -c '{}'"]. Server auto-starts if not running.
-- Server admin: wf server start/stop/ls [--port N] (default cleans registry and finds free port).
-- Tests: use pytest from repo root; tests cover scheduler/resume/subset flow (tests/test_runner.py et al.).
+- Server admin: wf server start/stop/ls. Server enforces singleton per machine - second start attempt logs existing server location.
+- Tests: use pytest from repo root; tests cover scheduler/resume/subset flow (tests/test_runner.py et al.) and multi-workspace isolation (tests/test_integration_multiworkspace.py).
 - Packaging: Makefile has PyInstaller/deb/pkg targets; not part of normal dev loop.
 
 ## Patterns and cautions
 - Always mutate graphs via server queue (ctx.enqueue/enqueue_status) to keep clients in sync and emit events; direct file writes bypass event bus.
-- Subset runs: ctx.active_runs tracks allowed nodes; graph worker skips edges/targets outside the subset. Resume logic prioritizes failed nodes when no explicit selection.
+- Subset runs: ctx.active_runs tracks allowed nodes per run_id; graph worker skips edges/targets outside the subset. Resume logic prioritizes failed nodes when no explicit selection.
 - Status lifecycle: statuses changed via /edit-status; node_ready emits when status set to run; RUN_COMPLETE when no nodes remain run/running for a run_id.
 - Wrapper handling: wrapper strings should include "{}" placeholder; Runner falls back to appending command when placeholder absent.
-- Registry hygiene: clean_registry removes dead servers based on port checks; background servers write registry entry with PID/port/created_at.
+- Workspace isolation: Each workspace has dedicated Socket.IO room, worker thread, mod_queue, and event bus. Operations on one workspace never affect others.
+- Context lifecycle: Contexts created on first client connect, destroyed on last disconnect. Workspace IDs deterministic from file paths.
 - Logs: node stdout/stderr captured and posted back; GUI log viewer relies on node log attribute.
 
 ## When contributing
@@ -61,27 +63,20 @@ The unified command-line interface that routes all commands:
   - `server`: Manage background servers (start/stop/list)
   - `edit`: Modify workflow graph via API
 
-**Key pattern**: Uses `resolve_target()` to automatically convert file paths to running server URLs.
+**Key pattern**: Uses `resolve_server()` to find or auto-start the single machine-wide server, and `compute_workspace_id()` to convert file paths to workspace IDs.
 
 ### 3. **`workforce/utils.py`** - Shared Utilities
 
-**Registry Management**:
-- Maintains JSON registry at `/tmp/workforce_servers.json`
-- Tracks active servers by absolute file path
-- Stores: port, PID, client count, creation timestamp
-- `clean_registry()`: Removes dead servers (port checks)
+**Server Discovery**:
+- `find_running_server()`: Scans ports 5000-5100 with /workspaces health checks
+- `resolve_server()`: Finds running server or auto-starts one, returns server URL
+- `compute_workspace_id()`: Deterministic workspace ID from absolute file path (SHA256 hash)
+- `get_workspace_url()`: Constructs workspace URL from workspace ID and server URL
 
 **Network Helpers**:
-- `find_free_port()`: Scans 5000-6000 range for available ports
+- `find_free_port()`: Scans 5000-5100 range for available ports
 - `is_port_in_use()`: Socket-based port availability check
 - `_post()`: HTTP POST wrapper using urllib
-
-**Target Resolution** (critical function):
-- `resolve_target(path_or_url)`: 
-  - If already URL → return as-is
-  - If file with active server → return server URL
-  - If file without server → launch server, return URL
-  - Polls registry for up to 5 seconds waiting for server startup
 
 **Shell Utilities**:
 - `shell_quote_multiline()`: Escapes single quotes for shell safety
