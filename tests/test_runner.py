@@ -184,6 +184,7 @@ def test_execute_node_success(mock_popen):
     process_mock = MagicMock()
     process_mock.communicate.return_value = ("output line 1\noutput line 2", "warning message")
     process_mock.returncode = 0
+    process_mock.pid = 12345
     mock_popen.return_value = process_mock
 
     runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
@@ -196,11 +197,13 @@ def test_execute_node_success(mock_popen):
     runner.set_node_status.assert_any_call("node1", "running")
     runner.set_node_status.assert_any_call("node1", "ran")
     
-    # Verify log capture
+    # Verify log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
     runner.send_node_log.assert_called_once()
-    log_text = runner.send_node_log.call_args[0][1]
-    assert "output line 1" in log_text
-    assert "warning message" in log_text
+    call_args = runner.send_node_log.call_args[0]
+    stdout = call_args[2]
+    stderr = call_args[3]
+    assert "output line 1" in stdout
+    assert "warning message" in stderr
 
 
 @patch("workforce.run.client.subprocess.Popen")
@@ -209,6 +212,7 @@ def test_execute_node_failure(mock_popen):
     process_mock = MagicMock()
     process_mock.communicate.return_value = ("", "error message")
     process_mock.returncode = 1
+    process_mock.pid = 12346
     mock_popen.return_value = process_mock
 
     runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml")
@@ -221,10 +225,13 @@ def test_execute_node_failure(mock_popen):
     runner.set_node_status.assert_any_call("node1", "running")
     runner.set_node_status.assert_any_call("node1", "fail")
     
-    # Verify error log capture
+    # Verify error log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
     runner.send_node_log.assert_called_once()
-    log_text = runner.send_node_log.call_args[0][1]
-    assert "error message" in log_text
+    call_args = runner.send_node_log.call_args[0]
+    stderr = call_args[3]
+    error_code = call_args[5]
+    assert "error message" in stderr
+    assert error_code == 1
 
 
 @patch("workforce.run.client.subprocess.Popen")
@@ -241,11 +248,12 @@ def test_execute_node_exception(mock_popen):
     # Verify failure status
     runner.set_node_status.assert_called_with("node1", "fail")
     
-    # Verify error log capture
+    # Verify error log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
     runner.send_node_log.assert_called_once()
-    log_text = runner.send_node_log.call_args[0][1]
-    assert "Runner internal error" in log_text
-    assert "Command not found" in log_text
+    call_args = runner.send_node_log.call_args[0]
+    stderr = call_args[3]
+    assert "Runner internal error" in stderr
+    assert "Command not found" in stderr
 
 
 def test_execute_node_empty_command():
@@ -260,10 +268,11 @@ def test_execute_node_empty_command():
     runner.set_node_status.assert_any_call("node1", "running")
     runner.set_node_status.assert_any_call("node1", "ran")
     
-    # Verify log indicates no command
+    # Verify log indicates no command (new signature: node_id, command, stdout, stderr, pid, error_code)
     runner.send_node_log.assert_called_once()
-    log_text = runner.send_node_log.call_args[0][1]
-    assert "No command" in log_text
+    call_args = runner.send_node_log.call_args[0]
+    command = call_args[1]
+    assert command == ""  # Empty command case
 
 
 def test_runner_wrapper_substitution():

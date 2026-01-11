@@ -62,8 +62,26 @@ def register_routes(app):
         
         G = edit.load_graph(ctx.workfile_path)
         if node_id in G.nodes:
-            log_text = G.nodes[node_id].get("log", "[No log available for this node]")
-            return jsonify({"log": log_text})
+            node = G.nodes[node_id]
+            
+            # Check if node has new structured execution data
+            if any(key in node for key in ["command", "stdout", "stderr", "pid", "error_code"]):
+                command = node.get("command", "")
+                stdout = node.get("stdout", "")
+                stderr = node.get("stderr", "")
+                pid = node.get("pid", "")
+                error_code = node.get("error_code", "")
+                
+                # Format as requested: COMMAND:\n... STDOUT:\n... STDERR:\n... PID:\n... Error code:\n...
+                log_text = f"COMMAND:\n{command}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}\n\nPID:\n{pid}\n\nError code:\n{error_code}"
+                return jsonify({"log": log_text})
+            
+            # Fallback to old log format if present
+            if "log" in node:
+                log_text = node.get("log", "[No log available for this node]")
+                return jsonify({"log": log_text})
+            
+            return jsonify({"log": "[No log available for this node]"})
         else:
             return jsonify({"error": "Node not found"}), 404
 
@@ -193,7 +211,23 @@ def register_routes(app):
             return jsonify({"error": "Workspace not found"}), 404
         
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.save_node_log_in_graph, ctx.workfile_path, data["node_id"], data["log"])
+        
+        # Handle both old format (single "log" field) and new format (structured fields)
+        if "log" in data and len(data) == 2:  # Old format: node_id + log
+            # Backward compatibility: single log string
+            result = ctx.enqueue(edit.save_node_log_in_graph, ctx.workfile_path, data["node_id"], data["log"])
+        else:
+            # New format: structured execution data
+            result = ctx.enqueue(
+                edit.save_node_execution_data_in_graph,
+                ctx.workfile_path,
+                data.get("node_id"),
+                data.get("command", ""),
+                data.get("stdout", ""),
+                data.get("stderr", ""),
+                data.get("pid", ""),
+                data.get("error_code", "")
+            )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/client-connect", methods=["POST"])

@@ -81,13 +81,26 @@ class Runner:
 		except RuntimeError as e:
 			log.error(f"Failed to set status {status} for {node_id}: {e}")
 
-	def send_node_log(self, node_id, log_text):
-		"""Sends captured log output to the server."""
+	def send_node_log(self, node_id, command, stdout, stderr, pid, error_code):
+		"""Sends structured execution data to the server in one request.
+		
+		Args:
+			node_id: The node ID
+			command: The command that was executed (string)
+			stdout: Standard output from command (string)
+			stderr: Standard error from command (string)
+			pid: Process ID (int)
+			error_code: Exit code (int or None)
+		"""
 		try:
 			endpoint = "/save-node-log"
 			utils._post(self.base_url, endpoint, {
 				"node_id": node_id,
-				"log": log_text
+				"command": str(command) if command else "",
+				"stdout": str(stdout) if stdout else "",
+				"stderr": str(stderr) if stderr else "",
+				"pid": str(pid) if pid else "",
+				"error_code": str(error_code) if error_code is not None else ""
 			})
 		except RuntimeError as e:
 			log.error(f"Failed to send log for {node_id}: {e}")
@@ -105,7 +118,7 @@ class Runner:
 
 			if not command.strip():
 				log.info(f"--> Empty command for {node_id}, marking done.")
-				self.send_node_log(node_id, "[No command to run]")
+				self.send_node_log(node_id, command, "", "", "", None)
 				self.set_node_status(node_id, "ran")
 				return
 
@@ -119,8 +132,8 @@ class Runner:
 			)
 			stdout, stderr = process.communicate()
 
-			log_text = f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}".strip()
-			self.send_node_log(node_id, log_text)
+			# Send structured execution data with pid and error_code
+			self.send_node_log(node_id, command, stdout, stderr, process.pid, process.returncode)
 
 			if process.returncode == 0:
 				log.info(f"--> Node {node_id} completed successfully")
@@ -131,7 +144,7 @@ class Runner:
 
 		except Exception as e:
 			error_log = f"[Runner internal error]\n{e}"
-			self.send_node_log(node_id, error_log)
+			self.send_node_log(node_id, "", "", error_log, "", None)
 			log.error(f"!! Error executing {node_id}: {e}", exc_info=True)
 			self.set_node_status(node_id, "fail")
 

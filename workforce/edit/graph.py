@@ -225,9 +225,39 @@ def edit_node_label_in_graph(path, node_id, label):
     return {"status": "updated"}
 
 def save_node_log_in_graph(path, node_id, log):
+    """DEPRECATED: Use save_node_execution_data_in_graph instead."""
     G = load_graph(path)
     if node_id not in G:
         return {"error": "Node not found"}
     G.nodes[node_id]["log"] = log
     save_graph(G, path)
+    return {"status": "updated"}
+
+def save_node_execution_data_in_graph(path, node_id, command, stdout, stderr, pid, error_code):
+    """Save execution data as separate node attributes (all as strings).
+    
+    Args:
+        path: Path to graph file
+        node_id: Node ID to update
+        command: The command that was executed (string)
+        stdout: Standard output from command (string)
+        stderr: Standard error from command (string)
+        pid: Process ID (string representation of int)
+        error_code: Exit code (string representation of int)
+        
+    Returns:
+        Dict with status
+    """
+    G = load_graph(path)
+    if node_id not in G:
+        return {"error": "Node not found"}
+    
+    G.nodes[node_id]["command"] = str(command) if command else ""
+    G.nodes[node_id]["stdout"] = str(stdout) if stdout else ""
+    G.nodes[node_id]["stderr"] = str(stderr) if stderr else ""
+    G.nodes[node_id]["pid"] = str(pid) if pid else ""
+    G.nodes[node_id]["error_code"] = str(error_code) if error_code else ""
+    
+    save_graph(G, path)
+    log.info(f"Saved execution data for node {node_id} in graph: {path}")
     return {"status": "updated"}
