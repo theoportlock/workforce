@@ -1176,12 +1176,31 @@ class WorkflowApp:
         world_x1, world_y1 = self._screen_to_world(event.x, event.y)
         x_min, y_min = self._world_to_screen(min(world_x0, world_x1), min(world_y0, world_y1))
         x_max, y_max = self._world_to_screen(max(world_x0, world_x1), max(world_y0, world_y1))
+        
+        # Collect nodes that overlap the rectangle
+        nodes_in_rect = []
         for node_id, (rect, text) in self.canvas_view.node_widgets.items():
             rx1, ry1, rx2, ry2 = self.canvas.coords(rect)
             if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
-                if node_id not in self.state.selected_nodes:
-                    self.state.selected_nodes.append(node_id)
-                    self.canvas.itemconfig(rect, outline=THEME["colors"]["node"]["selected_outline"], width=1)
+                nodes_in_rect.append(node_id)
+        
+        # Toggle each node (remove if selected, add if not)
+        for node_id in nodes_in_rect:
+            if node_id in self.state.selected_nodes:
+                self.state.selected_nodes.remove(node_id)
+            else:
+                self.state.selected_nodes.append(node_id)
+        
+        # Redraw affected nodes to update visual state
+        for node_id in nodes_in_rect:
+            if node_id in self.canvas_view.node_widgets:
+                for item in self.canvas_view.node_widgets[node_id]:
+                    self.canvas.delete(item)
+                del self.canvas_view.node_widgets[node_id]
+            node_data = next((n for n in self.state.graph.get("nodes", []) if n.get("id") == node_id), None)
+            if node_data:
+                self.canvas_view.draw_node(node_id, node_data=node_data)
+        
         self.canvas.delete(self.state._select_rect_id)
         self.state._select_rect_id = None
         self.state._select_rect_start = None
