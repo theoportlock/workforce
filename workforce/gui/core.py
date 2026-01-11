@@ -406,31 +406,162 @@ class WorkflowApp:
         text_widget.focus_set()
 
     def wrapper_popup(self):
+        from tkinter import ttk
+        from workforce.gui.presets import PresetManager
+
         editor = tk.Toplevel(self.master)
         editor.configure(background=THEME["colors"]["canvas_bg"]) 
         editor.title("Command Wrapper")
-        editor.geometry("600x150")
-        editor.minsize(400, 150)
+        # Larger geometry per requirement
+        editor.geometry("800x500")
+        editor.minsize(600, 300)
+
         frame = tk.Frame(editor, background=THEME["colors"]["canvas_bg"]) 
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Instruction label (existing) + italic edit/use hint
         label = tk.Label(
             frame,
             text="Enter the command wrapper. Use {} as a placeholder for the node's command.",
             background=THEME["colors"]["canvas_bg"],
             foreground=THEME["colors"]["text"]
         )
-        label.pack(pady=(0, 5), anchor="w")
+        label.pack(pady=(0, 2), anchor="w")
+        hint = tk.Label(
+            frame,
+            text="Double-click a cell to edit. Press Enter to load selection into the editor.",
+            font=("TkDefaultFont", 9, "italic"),
+            background=THEME["colors"]["canvas_bg"],
+            foreground=THEME["colors"]["text"]
+        )
+        hint.pack(pady=(0, 6), anchor="w")
+
+        # Presets manager
+        pm = PresetManager()
+        presets = pm.list()
+
+        # Wrapper editor entry above the Treeview
         wrapper_entry = tk.Entry(
             frame,
             font=("TkDefaultFont", 10),
             background=THEME["colors"]["canvas_bg"],
             foreground=THEME["colors"]["text"],
+            insertbackground=THEME["colors"]["text"],
         )
-        wrapper_entry.pack(fill=tk.X, expand=True)
+        wrapper_entry.pack(fill=tk.X, expand=True, pady=(0, 8))
         wrapper_entry.insert(0, self.state.wrapper)
         frame.columnconfigure(0, weight=1)
 
-        def save_and_close(event=None):
+        # Treeview: two columns, multi-line, scrollable
+        tree_container = tk.Frame(frame, background=THEME["colors"]["canvas_bg"]) 
+        tree_container.pack(fill=tk.BOTH, expand=True, padx=0, pady=(0, 8))
+        columns = ("Preset", "Wrapper")
+        tree = ttk.Treeview(tree_container, columns=columns, show="headings", height=8)
+        tree.heading("Preset", text="Preset")
+        tree.heading("Wrapper", text="Wrapper")
+        tree.column("Preset", width=200, anchor="w")
+        tree.column("Wrapper", width=560, anchor="w")
+        vsb = ttk.Scrollbar(tree_container, orient="vertical", command=tree.yview)
+        hsb = ttk.Scrollbar(tree_container, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=vsb.set)
+        tree.configure(xscrollcommand=hsb.set)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vsb.pack(side=tk.LEFT, fill=tk.Y)
+        hsb.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Local map: item iid -> full wrapper string
+        iid_to_wrapper = {}
+
+        def _truncate(s: str, max_len: int = 80) -> str:
+            return s if len(s) <= max_len else (s[: max_len - 3] + "...")
+
+        def refresh_treeview(select_index: int | None = None):
+            nonlocal presets
+            # Clear
+            for item in tree.get_children():
+                tree.delete(item)
+            iid_to_wrapper.clear()
+            iid_to_index = {}
+            # Repopulate
+            for idx, p in enumerate(presets):
+                name = p.get("name", "")
+                wrap = p.get("wrapper", "")
+                truncated = _truncate(wrap)
+                iid = tree.insert("", "end", values=(name, truncated))
+                iid_to_wrapper[iid] = wrap
+                iid_to_index[iid] = idx
+            # Reselect by index if provided
+            if select_index is not None:
+                children = tree.get_children()
+                if 0 <= select_index < len(children):
+                    tree.selection_set(children[select_index])
+
+        refresh_treeview()
+
+        # Inline cell editing on double-click
+        edit_entry = None
+
+        def begin_cell_edit(event):
+            nonlocal edit_entry
+            if edit_entry is not None:
+                return
+            rowid = tree.identify_row(event.y)
+            colid = tree.identify_column(event.x)  # '#1' or '#2'
+            if not rowid or colid not in ('#1', '#2'):
+                return
+            bbox = tree.bbox(rowid, colid)
+            if not bbox:
+                return
+            x, y, w, h = bbox
+            # Current full value
+            values = tree.item(rowid, 'values')
+            cur_name = values[0] if values else ''
+            cur_wrap = iid_to_wrapper.get(rowid, '')
+            initial = cur_name if colid == '#1' else cur_wrap
+            edit_entry = tk.Entry(tree, background=THEME["colors"]["canvas_bg"], foreground=THEME["colors"]["text"], insertbackground=THEME["colors"]["text"]) 
+            edit_entry.place(x=x, y=y, width=w, height=h)
+            edit_entry.insert(0, initial)
+            edit_entry.focus_set()
+
+            def commit_edit(event=None):
+                nonlocal edit_entry, presets
+                new_val = edit_entry.get()
+                # Determine index
+                children = tree.get_children()
+                try:
+                    idx = children.index(rowid)
+                except ValueError:
+                    idx = None
+                if idx is not None and 0 <= idx < len(presets):
+                    if colid == '#1':
+                        presets[idx]['name'] = new_val
+                    else:
+                        presets[idx]['wrapper'] = new_val
+                    # Persist and refresh, reselect same index
+                    pm.save(presets)
+                    refresh_treeview(select_index=idx)
+                edit_entry.destroy()
+                edit_entry = None
+
+            edit_entry.bind('<Return>', commit_edit)
+            edit_entry.bind('<FocusOut>', commit_edit)
+
+        tree.bind('<Double-Button-1>', begin_cell_edit)
+
+        def on_tree_enter(event=None):
+            selection = tree.selection()
+            if not selection:
+                return
+            iid = selection[0]
+            full_val = iid_to_wrapper.get(iid, "")
+            wrapper_entry.delete(0, tk.END)
+            wrapper_entry.insert(0, full_val)
+            self.state.wrapper = full_val
+
+        tree.bind('<Return>', on_tree_enter)
+
+        # Button handlers
+        def apply_and_close(event=None):
             self.state.wrapper = wrapper_entry.get()
             self.save_wrapper()
             editor.grab_release()
@@ -440,14 +571,66 @@ class WorkflowApp:
             editor.grab_release()
             editor.destroy()
 
+        def add_row():
+            nonlocal presets
+            presets = presets + [{"name": "New Preset", "wrapper": ""}]
+            pm.save(presets)
+            refresh_treeview(select_index=len(presets) - 1)
+            # Begin editing name cell for new row
+            children = tree.get_children()
+            if children:
+                new_iid = children[-1]
+                bbox = tree.bbox(new_iid, '#1')
+                if bbox:
+                    x, y, w, h = bbox
+                    # start editor
+                    nonlocal edit_entry
+                    if edit_entry is None:
+                        edit_entry = tk.Entry(tree, background=THEME["colors"]["canvas_bg"], foreground=THEME["colors"]["text"], insertbackground=THEME["colors"]["text"]) 
+                        edit_entry.place(x=x, y=y, width=w, height=h)
+                        edit_entry.insert(0, "New Preset")
+                        edit_entry.focus_set()
+                        def commit_new(event=None):
+                            nonlocal edit_entry, presets
+                            new_name = edit_entry.get()
+                            presets[-1]['name'] = new_name
+                            pm.save(presets)
+                            refresh_treeview(select_index=len(presets) - 1)
+                            edit_entry.destroy(); edit_entry = None
+                        edit_entry.bind('<Return>', commit_new)
+                        edit_entry.bind('<FocusOut>', commit_new)
+
+        def remove_row():
+            nonlocal presets
+            selection = tree.selection()
+            if not selection:
+                return
+            iid = selection[0]
+            children = tree.get_children()
+            try:
+                idx = children.index(iid)
+            except ValueError:
+                idx = None
+            if idx is not None and 0 <= idx < len(presets):
+                del presets[idx]
+                pm.save(presets)
+                # Select previous index
+                new_idx = max(0, idx - 1) if presets else None
+                refresh_treeview(select_index=new_idx)
+
+        # Buttons row
         btn_frame = tk.Frame(editor, background=THEME["colors"]["canvas_bg"]) 
-        btn_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
-        save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
-        save_btn.pack(side=tk.RIGHT, padx=5)
+        btn_frame.pack(fill=tk.X, padx=10, pady=(8, 10))
+        tk.Button(btn_frame, text="+", width=3, command=add_row).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="-", width=3, command=remove_row).pack(side=tk.LEFT, padx=5)
+
+        apply_btn = tk.Button(btn_frame, text="Apply", command=apply_and_close)
+        apply_btn.pack(side=tk.RIGHT, padx=5)
         cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel_and_close)
         cancel_btn.pack(side=tk.RIGHT, padx=5)
+
         editor.bind('<Escape>', cancel_and_close)
-        wrapper_entry.bind('<Return>', save_and_close)
+        wrapper_entry.bind('<Return>', apply_and_close)
         editor.transient(self.master)
         editor.grab_set()
         wrapper_entry.focus_set()
