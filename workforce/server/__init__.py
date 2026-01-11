@@ -35,6 +35,8 @@ _app = None
 _socketio = None
 _contexts: dict[str, ServerContext] = {}
 _contexts_lock = threading.Lock()
+_bind_host: str | None = None
+_bind_port: int | None = None
 
 
 def get_app():
@@ -52,6 +54,11 @@ def get_app():
         server_sockets.register_socket_handlers(_socketio)
     
     return _app, _socketio
+
+
+def get_bind_info() -> tuple[str | None, int | None]:
+    """Return the host and port the server believes it is bound to."""
+    return _bind_host, _bind_port
 
 
 def get_or_create_context(workspace_id: str, workfile_path: str, increment_client: bool = True) -> ServerContext:
@@ -234,6 +241,10 @@ def start_server(background: bool = True, host: str = "0.0.0.0"):
     # Foreground server
     app, socketio = get_app()
     
+    # Record bind info for diagnostics endpoints
+    global _bind_host, _bind_port
+    _bind_host, _bind_port = host, port
+
     log.info(f"Starting Workforce server on http://{host}:{port}")
     log.info("Server ready. Waiting for client connections...")
     
@@ -309,6 +320,10 @@ def list_servers():
         with urllib.request.urlopen(url, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             workspaces = data.get("workspaces", [])
+            server_info = data.get("server", {})
+            bind_host = server_info.get("host") or found_host
+            bind_port = int(server_info.get("port") or found_port)
+            lan_enabled = bool(server_info.get("lan_enabled", bind_host not in ("127.0.0.1", "localhost")))
             
             # Get local network interfaces
             local_ips = []
@@ -323,33 +338,21 @@ def list_servers():
             except:
                 pass
             
-            # Check what interface the server is bound to
-            try:
-                import subprocess
-                netstat_output = subprocess.run(
-                    ["ss", "-tlnp"], 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=1
-                ).stdout
-                
-                # Look for the port binding
-                bound_to_all = f"0.0.0.0:{found_port}" in netstat_output or f"*:{found_port}" in netstat_output
-            except:
-                bound_to_all = False
+            # Determine if LAN is enabled by configuration rather than platform-specific probing
+            bound_to_all = lan_enabled or bind_host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0")
             
             # Display server info
             print("=" * 80)
-            print(f"Workforce Server on port {found_port}")
+            print(f"Workforce Server on port {bind_port}")
             print("=" * 80)
             
             if bound_to_all and local_ips:
                 print("\n📍 Access URLs:")
-                print(f"  Local:    http://127.0.0.1:{found_port}")
+                print(f"  Local:    http://127.0.0.1:{bind_port}")
                 for ip in local_ips:
-                    print(f"  LAN:      http://{ip}:{found_port}")
+                    print(f"  LAN:      http://{ip}:{bind_port}")
             else:
-                print(f"\n📍 Access URL: http://{found_host}:{found_port}")
+                print(f"\n📍 Access URL: http://{found_host}:{bind_port}")
                 if not bound_to_all:
                     print("   ⚠️  Server bound to localhost only (not accessible from LAN)")
                     print(f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0")
@@ -375,11 +378,11 @@ def list_servers():
                 # Show connection URLs
                 if bound_to_all and local_ips:
                     print(f"  URLs:")
-                    print(f"    Local:   http://127.0.0.1:{found_port}/workspace/{ws_id}")
+                    print(f"    Local:   http://127.0.0.1:{bind_port}/workspace/{ws_id}")
                     for ip in local_ips:
-                        print(f"    LAN:     http://{ip}:{found_port}/workspace/{ws_id}")
+                        print(f"    LAN:     http://{ip}:{bind_port}/workspace/{ws_id}")
                 else:
-                    print(f"  URL:       http://{found_host}:{found_port}/workspace/{ws_id}")
+                    print(f"  URL:       http://{found_host}:{bind_port}/workspace/{ws_id}")
             
             print("\n" + "=" * 80)
             

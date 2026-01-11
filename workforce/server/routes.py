@@ -32,6 +32,10 @@ def register_routes(app):
     @app.route("/workspaces", methods=["GET"])
     def list_workspaces():
         """Diagnostic endpoint: list active workspaces."""
+        # Import inside to avoid circulars at import time
+        from workforce.server import get_bind_info
+        bind_host, bind_port = get_bind_info()
+        lan_enabled = bool(bind_host and bind_host not in ("127.0.0.1", "localhost"))
         workspaces = []
         for ws_id, ctx in _contexts.items():
             workspaces.append({
@@ -40,7 +44,14 @@ def register_routes(app):
                 "client_count": ctx.client_count,
                 "created_at": ctx.created_at,
             })
-        return jsonify({"workspaces": workspaces})
+        return jsonify({
+            "server": {
+                "host": bind_host,
+                "port": bind_port,
+                "lan_enabled": lan_enabled,
+            },
+            "workspaces": workspaces
+        })
     
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
     def get_graph(workspace_id):
