@@ -38,7 +38,7 @@ Some way to quickly open file in node (using default program)
 zoom should be from the center of current canvas view
 Shortcuts on all the buttons plus in help menu
 design to disown on run 
-Sort out the filelock for the gui
+✓ Sort out the filelock for the gui - COMPLETED: File locking removed in favor of queue-based serialization
 Fix initialization so that if there are edges that are 'to_run' then don't start from indegree=0
 click and drag into canvas - wont work for wsl2 sadly but update anyway
 bash updater button in node editos

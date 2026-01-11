@@ -348,9 +348,11 @@ File Loading and Saving
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 * ``load_graph(path)``: Loads GraphML into NetworkX DiGraph
-* ``save_graph(graph, path)``: Writes NetworkX DiGraph to GraphML using atomic temp file
+* ``save_graph(graph, path)``: Writes NetworkX DiGraph to GraphML using atomic temp file + os.replace
 * Graph operations like ``add_node_to_graph()`` automatically save changes
-* All modifications go through atomic file replacement for crash safety
+* **Concurrency Safety**: All graph mutations are serialized through the server's single-threaded queue worker (one per workspace), preventing concurrent writes
+* **Crash Safety**: Atomic file replacement (temp file + os.replace) ensures files are never partially written
+* The singleton server architecture with queue-based serialization eliminates the need for file locking
 
 Network Communication
 ~~~~~~~~~~~~~~~~~~~~~

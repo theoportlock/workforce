@@ -10,7 +10,7 @@
 - REST API: routes in workforce/server/routes.py provide workspace-scoped graph CRUD (URLs: /workspace/{workspace_id}/...), status edits, wrapper updates, node log upload, and /run which seeds run_id and decides roots (failed nodes → otherwise 0 in-degree or selected subset roots).
 - Socket layer: workforce/server/sockets.py registers connect/subscribe and translates domain events to Socket.IO events (graph_update, node_ready, status_change, run_complete). Each workspace has dedicated Socket.IO room for event isolation.
 - Event bus + graph worker: ServerContext holds mod_queue, active_runs, active_node_run, and dedicated worker thread per workspace. start_graph_worker in workforce/server/queue.py processes queued mutations, emits EventBus events, and enforces subset-only propagation: completed nodes mark outgoing edges to_run (only if target in run set); edges reaching all-ready targets set node status to run; RUN_COMPLETE emitted when no nodes left.
-- Graph utilities: workforce/edit/graph.py loads/saves GraphML atomically, adds/removes nodes/edges (UUIDs), edits status/position/labels/wrapper/log. Graph attributes: node.label command, node.status "", run, running, ran, fail; edge.status "", to_run; graph.wrapper command template.
+- Graph utilities: workforce/edit/graph.py loads/saves GraphML atomically (temp file + os.replace), adds/removes nodes/edges (UUIDs), edits status/position/labels/wrapper/log. All mutations serialized through server's single-threaded queue worker per workspace; no file locking needed. Graph attributes: node.label command, node.status "", run, running, ran, fail; edge.status "", to_run; graph.wrapper command template.
 - Runner: workforce/run/client.py connects via Socket.IO, listens for node_ready, marks status running/ran/fail via /edit-status, sends logs via /save-node-log, wraps commands with wrapper ("{}" placeholder required for interpolation).
 - GUI: workforce/gui/app.py launches Tk-based WorkflowApp; GUI background launch spawns python -m workforce gui <url> --foreground.
 
@@ -22,7 +22,7 @@
 - Packaging: Makefile has PyInstaller/deb/pkg targets; not part of normal dev loop.
 
 ## Patterns and cautions
-- Always mutate graphs via server queue (ctx.enqueue/enqueue_status) to keep clients in sync and emit events; direct file writes bypass event bus.
+- Always mutate graphs via server queue (ctx.enqueue/enqueue_status) to keep clients in sync and emit events; direct file writes bypass event bus. The queue's single-threaded worker provides concurrency safety without file locking.
 - Subset runs: ctx.active_runs tracks allowed nodes per run_id; graph worker skips edges/targets outside the subset. Resume logic prioritizes failed nodes when no explicit selection.
 - Status lifecycle: statuses changed via /edit-status; node_ready emits when status set to run; RUN_COMPLETE when no nodes remain run/running for a run_id.
 - Wrapper handling: wrapper strings should include "{}" placeholder; Runner falls back to appending command when placeholder absent.

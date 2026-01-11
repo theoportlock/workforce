@@ -1,110 +1,39 @@
 import networkx as nx
 import os
-import sys
 import tempfile
 import logging
 import uuid
-import time
-from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
-# Cross-platform file locking
-if sys.platform == 'win32':
-    import msvcrt
-    
-    @contextmanager
-    def file_lock(filepath, timeout=10):
-        """Windows file locking using msvcrt."""
-        lock_file = filepath + '.lock'
-        start_time = time.time()
-        
-        while True:
-            try:
-                # Try to create lock file exclusively
-                fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-                try:
-                    # Lock the file descriptor
-                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
-                    yield
-                    break
-                finally:
-                    # Unlock and remove lock file
-                    try:
-                        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-                    except:
-                        pass
-                    os.close(fd)
-                    try:
-                        os.unlink(lock_file)
-                    except:
-                        pass
-            except (OSError, IOError):
-                # Lock file exists or locking failed
-                if time.time() - start_time > timeout:
-                    raise TimeoutError(f"Could not acquire lock on {filepath} after {timeout}s")
-                time.sleep(0.1)
-else:
-    import fcntl
-    
-    @contextmanager
-    def file_lock(filepath, timeout=10):
-        """Unix file locking using fcntl."""
-        lock_file = filepath + '.lock'
-        start_time = time.time()
-        
-        while True:
-            try:
-                fd = os.open(lock_file, os.O_CREAT | os.O_RDWR, 0o644)
-                try:
-                    # Try non-blocking lock first
-                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    yield
-                    break
-                except (IOError, OSError):
-                    # Lock is held by another process
-                    if time.time() - start_time > timeout:
-                        raise TimeoutError(f"Could not acquire lock on {filepath} after {timeout}s")
-                    time.sleep(0.1)
-                finally:
-                    try:
-                        fcntl.flock(fd, fcntl.LOCK_UN)
-                    except:
-                        pass
-                    os.close(fd)
-            except Exception as e:
-                if time.time() - start_time > timeout:
-                    raise TimeoutError(f"Could not acquire lock on {filepath}: {e}")
-                time.sleep(0.1)
-
 def load_graph(path: str) -> nx.DiGraph:
-    """Load graph from file with file locking to prevent concurrent access issues."""
-    if not os.path.exists(path):
-        # Create new graph file with lock
-        with file_lock(path):
-            # Double-check after acquiring lock
-            if not os.path.exists(path):
-                G = nx.DiGraph()
-                nx.write_graphml(G, path)
-                return G
+    """Load graph from file.
     
-    # Read with lock protection
-    with file_lock(path):
-        G = nx.read_graphml(path)
-        return nx.DiGraph(G)
+    Note: Concurrency safety is provided by the server's single-threaded queue worker
+    (see workforce/server/queue.py), which serializes all graph mutations. Direct file
+    access is safe because the singleton server architecture prevents concurrent writes.
+    """
+    if not os.path.exists(path):
+        # Create new empty graph
+        G = nx.DiGraph()
+        nx.write_graphml(G, path)
+        return G
+    
+    # Read existing graph
+    G = nx.read_graphml(path)
+    return nx.DiGraph(G)
 
 def save_graph(G: nx.DiGraph, path: str):
-    """Save graph to file atomically with file locking.
+    """Save graph to file atomically.
     
-    Uses temporary file + os.replace for atomic write,
-    protected by file lock to prevent concurrent writes.
+    Uses temporary file + os.replace for atomic write, which handles crash safety.
+    Concurrency safety is provided by the server's single-threaded queue worker.
     """
-    with file_lock(path):
-        dirpath = os.path.dirname(path)
-        with tempfile.NamedTemporaryFile(dir=dirpath, delete=False, mode='wb') as tmp:
-            tmppath = tmp.name
-        nx.write_graphml(G, tmppath)
-        os.replace(tmppath, path)
+    dirpath = os.path.dirname(path) if os.path.dirname(path) else '.'
+    with tempfile.NamedTemporaryFile(dir=dirpath, delete=False, mode='wb') as tmp:
+        tmppath = tmp.name
+    nx.write_graphml(G, tmppath)
+    os.replace(tmppath, path)
 
 def add_node_to_graph(path, label, x=0.0, y=0.0, status=""):
     G = load_graph(path)
