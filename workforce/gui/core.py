@@ -287,6 +287,17 @@ class WorkflowApp:
         except Exception as e:
             log.error(f"Failed to update node position for {node_id}: {e}")
 
+    def update_node_positions(self, positions: list):
+        """Batch update positions for multiple nodes.
+        
+        Args:
+            positions: List of dicts with keys: node_id, x, y
+        """
+        try:
+            self.server.edit_node_positions(positions)
+        except Exception as e:
+            log.error(f"Failed to batch update node positions: {e}")
+
     def add_node(self):
         def on_save(label):
             if not label.strip():
@@ -822,10 +833,22 @@ class WorkflowApp:
     def on_node_release(self, event):  # Renamed from on_canvas_release to match callback
         if getattr(self.state, "dragging_node", None):
             self.state.dragging_node = None
+            # Collect all positions for batch update
+            positions = []
             for n in list(self.state.selected_nodes):
                 node = next((it for it in self.state.graph.get("nodes", []) if it.get("id") == n), None)
                 if node:
-                    self.update_node_position(n, node.get("x"), node.get("y"))
+                    positions.append({
+                        "node_id": n,
+                        "x": node.get("x"),
+                        "y": node.get("y")
+                    })
+            # Use batch update if multiple nodes, otherwise single update
+            if len(positions) > 1:
+                self.update_node_positions(positions)
+            elif len(positions) == 1:
+                pos = positions[0]
+                self.update_node_position(pos["node_id"], pos["x"], pos["y"])
         if getattr(self.state, '_potential_deselect', False):
             self.clear_selection()
         self.state._potential_deselect = False

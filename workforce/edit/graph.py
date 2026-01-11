@@ -175,6 +175,40 @@ def edit_node_position_in_graph(path, node_id, x, y):
     save_graph(G, path)
     return {"status": "updated"}
 
+def edit_node_positions_in_graph(path, positions):
+    """Batch update positions for multiple nodes.
+    
+    Args:
+        path: Path to graph file
+        positions: List of dicts with keys: node_id, x, y
+        
+    Returns:
+        Dict with status and count of updated nodes
+    """
+    G = load_graph(path)
+    updated = 0
+    missing = []
+    
+    for pos in positions:
+        node_id = pos.get("node_id")
+        x = pos.get("x")
+        y = pos.get("y")
+        
+        if node_id in G:
+            G.nodes[node_id]["x"] = str(x)
+            G.nodes[node_id]["y"] = str(y)
+            updated += 1
+        else:
+            missing.append(node_id)
+    
+    save_graph(G, path)
+    log.info(f"Batch updated positions for {updated} nodes in graph: {path}")
+    
+    result = {"status": "updated", "count": updated}
+    if missing:
+        result["missing_nodes"] = missing
+    return result
+
 def edit_wrapper_in_graph(path, wrapper):
     G = load_graph(path)
     if wrapper is not None:

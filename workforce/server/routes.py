@@ -146,6 +146,26 @@ def register_routes(app):
         )
         return jsonify(result), 202
 
+    @app.route("/workspace/<workspace_id>/edit-node-positions", methods=["POST"])
+    def edit_node_positions(workspace_id):
+        """Batch update positions for multiple nodes."""
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        
+        data = request.get_json(force=True)
+        positions = data.get("positions", [])
+        
+        if not positions:
+            return jsonify({"error": "positions array required"}), 400
+        
+        result = ctx.enqueue(
+            edit.edit_node_positions_in_graph,
+            ctx.workfile_path,
+            positions
+        )
+        return jsonify(result), 202
+
     @app.route("/workspace/<workspace_id>/edit-wrapper", methods=["POST"])
     def edit_wrapper(workspace_id):
         ctx = g.ctx

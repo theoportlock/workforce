@@ -136,6 +136,14 @@ class ServerClient:
     def edit_node_position(self, node_id, x, y):
         return utils._post(self.base_url, "/edit-node-position", {"node_id": node_id, "x": x, "y": y})
 
+    def edit_node_positions(self, positions):
+        """Batch update positions for multiple nodes.
+        
+        Args:
+            positions: List of dicts with keys: node_id, x, y
+        """
+        return utils._post(self.base_url, "/edit-node-positions", {"positions": positions})
+
     def edit_wrapper(self, wrapper):
         return utils._post(self.base_url, "/edit-wrapper", {"wrapper": wrapper})
 
