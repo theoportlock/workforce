@@ -130,9 +130,14 @@ class Runner:
 				stderr=subprocess.PIPE,
 				text=True
 			)
+			
+			# Send PID to server immediately while process is running
+			log.info(f"Process {node_id} started with PID {process.pid}")
+			self.send_node_log(node_id, command, "", "", process.pid, "")
+			
 			stdout, stderr = process.communicate()
 
-			# Send structured execution data with pid and error_code
+			# Send final structured execution data with exit code
 			self.send_node_log(node_id, command, stdout, stderr, process.pid, process.returncode)
 
 			if process.returncode == 0:

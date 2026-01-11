@@ -333,3 +333,94 @@ For running workflows programmatically, connect to the server:
     
     # Runner client connects to workspace URL and waits for node_ready events
     # This is typically done by the run command, not manually
+
+Remote GUI over LAN
+-------------------
+
+You can run the GUI from a different machine and connect to a remote server.
+
+- Start the server with LAN binding on the host machine:
+
+.. code-block:: bash
+
+    wf server stop
+    wf server start --host 0.0.0.0
+
+- List access URLs and share the workspace URL:
+
+.. code-block:: bash
+
+    wf server ls
+
+This shows both Local and LAN URLs. Use the LAN URL format:
+
+.. code-block:: text
+
+    http://<server_ip>:<port>/workspace/<workspace_id>
+
+- From the remote machine, launch the GUI directly to that URL:
+
+.. code-block:: bash
+
+    wf gui http://<server_ip>:<port>/workspace/<workspace_id>
+
+Notes:
+
+- Do not use any 127.* addresses across machines; those are loopback only.
+- macOS: Allow the Python process through the firewall when prompted.
+- Termux/Android: Ensure the app has network permissions and the device is on the same subnet.
+
+WSL (Windows Subsystem for Linux)
+---------------------------------
+
+WSL2 uses NAT and assigns a private IP to the Linux VM. Services bound inside WSL are reachable from the Windows host, but not automatically from other LAN machines.
+
+Options to access the Workforce server from other machines:
+
+1) Run the server on Windows (outside WSL)
+
+.. code-block:: bash
+
+    # In Windows Python environment
+    wf server start --host 0.0.0.0
+
+Then use the Windows host LAN IP in the URL.
+
+2) Port forward from Windows host to WSL
+
+- Find the current WSL IP (inside WSL):
+
+.. code-block:: bash
+
+    ip addr | grep 'inet '
+
+- Add a Windows port proxy to forward port 5000 to WSL (run in an elevated PowerShell or cmd):
+
+.. code-block:: text
+
+    netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=5000 connectaddress=<WSL_IP> connectport=5000
+
+- Open firewall for inbound TCP 5000:
+
+.. code-block:: text
+
+    netsh advfirewall firewall add rule name="Workforce 5000" dir=in action=allow protocol=TCP localport=5000
+
+- Verify:
+
+.. code-block:: text
+
+    netsh interface portproxy show all
+
+- Use the Windows host LAN IP in the GUI URL:
+
+.. code-block:: bash
+
+    wf gui http://<windows_host_ip>:5000/workspace/<workspace_id>
+
+Note: WSL IP can change after restart. Recreate the portproxy if needed.
+
+Security
+--------
+
+For LAN use, Workforce enables CORS for Socket.IO in development. If exposing beyond LAN, use a reverse proxy (e.g., Nginx) with TLS and restrict allowed origins.

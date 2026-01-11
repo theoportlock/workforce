@@ -1,6 +1,7 @@
 import uuid
 import logging
 import os
+import signal
 from flask import current_app, request, g, jsonify
 from workforce import edit
 
@@ -349,6 +350,48 @@ def register_routes(app):
         except Exception as e:
             log.exception("Error in /run endpoint")
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route("/workspace/<workspace_id>/stop", methods=["POST"])
+    def stop_runs(workspace_id):
+        """Stop all active runs: kill running processes and mark nodes as failed."""
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        try:
+            G = edit.load_graph(ctx.workfile_path)
+            running_nodes = []
+            killed = 0
+            errors = []
+
+            # Attempt to kill processes for nodes marked as running
+            for node_id, attrs in G.nodes(data=True):
+                if attrs.get("status") == "running":
+                    running_nodes.append(node_id)
+                    pid_raw = attrs.get("pid", "")
+                    pid_str = str(pid_raw).strip() if pid_raw is not None else ""
+                    if pid_str.isdigit():
+                        try:
+                            os.kill(int(pid_str), signal.SIGKILL)
+                            killed += 1
+                        except Exception as e:
+                            errors.append(f"{node_id}:{pid_str}:{e}")
+
+            # Mark all running nodes as failed (enqueue through worker)
+            # This will prevent edge propagation since failed nodes don't mark outgoing edges
+            for node_id in running_nodes:
+                # Get the run_id for this node if it's being tracked
+                run_id = ctx.active_node_run.get(node_id)
+                ctx.enqueue_status(ctx.workfile_path, "node", node_id, "fail", run_id)
+
+            log.info(f"Stop runs: killed {killed} processes, stopped {len(running_nodes)} nodes")
+            return jsonify({
+                "killed": killed,
+                "errors": errors,
+                "stopped_nodes": running_nodes
+            }), 200
+        except Exception as e:
+            log.exception("Error in /stop endpoint")
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])
     def save_as(workspace_id):

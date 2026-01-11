@@ -95,6 +95,7 @@ class WorkflowApp:
         run_menu = tk.Menu(menubar, tearoff=0)
         run_menu.add_command(label="Run", command=self.run, accelerator="r")
         run_menu.add_command(label="View Log", command=self.show_node_log, accelerator="S")
+        run_menu.add_command(label="Stop All", command=self.stop_all_runs, accelerator="Ctrl+C")
         menubar.add_cascade(label="Run", menu=run_menu)
 
         # Tools menu
@@ -148,6 +149,7 @@ class WorkflowApp:
         self.master.bind('o', lambda e: self.open_file_dialog())
         self.master.bind('<Control-s>', lambda e: self._save_graph_on_server())
         self.master.bind('<Control-Shift-S>', lambda e: self.save_as_dialog())
+        self.master.bind('<Control-c>', lambda e: self.stop_all_runs())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
 
@@ -878,6 +880,28 @@ class WorkflowApp:
         except Exception as e:
             log.exception(f"Run Error: {e}")
             messagebox.showerror("Run Error", f"Failed to trigger run: {e}")
+
+    def stop_all_runs(self):
+        """Stop all runs in this workspace by calling the server /stop endpoint."""
+        try:
+            url = self._url("/stop")
+            r = requests.post(url, json={}, timeout=5.0)
+            try:
+                data = r.json()
+            except Exception:
+                data = {}
+            if r.status_code == 200:
+                killed = data.get("killed", 0)
+                stopped_nodes = data.get("stopped_nodes", [])
+                log.info(f"Stopped {len(stopped_nodes)} nodes. Killed {killed} process(es).")
+                # Graph updates will arrive via SocketIO as node statuses change to 'fail'
+            else:
+                err = data.get("error") or r.text
+                log.error(f"Stop All failed: {err}")
+                messagebox.showerror("Stop All Failed", str(err))
+        except Exception as e:
+            log.exception("Error calling /stop")
+            messagebox.showerror("Stop All Failed", str(e))
 
     def clear_selected_status(self):
         for nid in list(self.state.selected_nodes):

@@ -197,11 +197,15 @@ def test_execute_node_success(mock_popen):
     runner.set_node_status.assert_any_call("node1", "running")
     runner.set_node_status.assert_any_call("node1", "ran")
     
-    # Verify log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
-    runner.send_node_log.assert_called_once()
-    call_args = runner.send_node_log.call_args[0]
-    stdout = call_args[2]
-    stderr = call_args[3]
+    # Verify log capture - called twice: once with PID at start, once with output at end
+    assert runner.send_node_log.call_count == 2
+    # Check first call (PID capture)
+    first_call_args = runner.send_node_log.call_args_list[0][0]
+    assert first_call_args[4] == 12345  # pid
+    # Check second call (final output)
+    final_call_args = runner.send_node_log.call_args_list[1][0]
+    stdout = final_call_args[2]
+    stderr = final_call_args[3]
     assert "output line 1" in stdout
     assert "warning message" in stderr
 
@@ -225,11 +229,12 @@ def test_execute_node_failure(mock_popen):
     runner.set_node_status.assert_any_call("node1", "running")
     runner.set_node_status.assert_any_call("node1", "fail")
     
-    # Verify error log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
-    runner.send_node_log.assert_called_once()
-    call_args = runner.send_node_log.call_args[0]
-    stderr = call_args[3]
-    error_code = call_args[5]
+    # Verify error log capture - called twice
+    assert runner.send_node_log.call_count == 2
+    # Check second call (final output with error_code)
+    final_call_args = runner.send_node_log.call_args_list[1][0]
+    stderr = final_call_args[3]
+    error_code = final_call_args[5]
     assert "error message" in stderr
     assert error_code == 1
 
@@ -248,7 +253,7 @@ def test_execute_node_exception(mock_popen):
     # Verify failure status
     runner.set_node_status.assert_called_with("node1", "fail")
     
-    # Verify error log capture (new signature: node_id, command, stdout, stderr, pid, error_code)
+    # Verify exception log capture - called once (exception before process starts)
     runner.send_node_log.assert_called_once()
     call_args = runner.send_node_log.call_args[0]
     stderr = call_args[3]
@@ -886,6 +891,59 @@ def test_failed_node_doesnt_trigger_cascade(temp_graph_file, mock_server_context
     time.sleep(0.1)
     
     # Neither B nor C should be triggered
+    G = edit.load_graph(temp_graph_file)
+    assert G.nodes[nodes["b"]]["status"] == ""
+    assert G.nodes[nodes["c"]]["status"] == ""
+
+
+def test_stop_run_kills_running_node_and_prevents_continuation(temp_graph_file, mock_server_context):
+    """Test that stopping a running node marks it failed and prevents downstream nodes from running."""
+    nodes = create_simple_linear_graph(temp_graph_file)
+    ctx = mock_server_context
+    
+    start_graph_worker(ctx)
+    time.sleep(0.1)
+    
+    run_id = str(uuid.uuid4())
+    ctx.active_runs[run_id] = {"nodes": set(nodes.values()), "subset_only": False}
+    
+    # Start node A - set it to "running"
+    ctx.active_node_run[nodes["a"]] = run_id
+    ctx.enqueue_status(temp_graph_file, "node", nodes["a"], "run", run_id)
+    ctx.mod_queue.join()
+    time.sleep(0.1)
+    
+    # Verify A is in "run" state
+    G = edit.load_graph(temp_graph_file)
+    assert G.nodes[nodes["a"]]["status"] == "run"
+    
+    # Simulate node A being executed (set to "running", give it a pid)
+    G = edit.load_graph(temp_graph_file)
+    G.nodes[nodes["a"]]["status"] = "running"
+    G.nodes[nodes["a"]]["pid"] = str(os.getpid())  # Use a valid PID
+    edit.save_graph(G, temp_graph_file)
+    time.sleep(0.1)
+    
+    # Now simulate a stop: mark A as failed
+    ctx.enqueue_status(temp_graph_file, "node", nodes["a"], "fail", run_id)
+    ctx.mod_queue.join()
+    time.sleep(0.1)
+    
+    # Verify A is failed
+    G = edit.load_graph(temp_graph_file)
+    assert G.nodes[nodes["a"]]["status"] == "fail"
+    
+    # Verify B was never triggered (no outgoing edges marked to_run from failed A)
+    assert G.nodes[nodes["b"]]["status"] == ""
+    # Verify C was never triggered
+    assert G.nodes[nodes["c"]]["status"] == ""
+    
+    # Now clear run tracking (as stop endpoint does)
+    ctx.active_runs.clear()
+    ctx.active_node_run.clear()
+    time.sleep(0.1)
+    
+    # B and C should still be empty
     G = edit.load_graph(temp_graph_file)
     assert G.nodes[nodes["b"]]["status"] == ""
     assert G.nodes[nodes["c"]]["status"] == ""
