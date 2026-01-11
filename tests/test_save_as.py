@@ -232,27 +232,30 @@ def test_save_as_absolute_path_handling(test_app, mock_context, temp_workfiles):
     original_file, new_file = temp_workfiles
     test_app.test_ctx_map = {mock_context.workspace_id: mock_context}
     
-    # Use a relative path for testing
-    relative_path = "test_relative_save.wf"
-    expected_absolute = os.path.abspath(relative_path)
-    
-    try:
-        with test_app.test_client() as client:
-            response = client.post(
-                f"/workspace/{mock_context.workspace_id}/save-as",
-                json={"new_path": relative_path}
-            )
+    # Use a temp directory for the relative path test
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Change to temp directory so relative path is created there
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmpdir)
+            relative_path = "test_relative_save.wf"
+            expected_absolute = os.path.abspath(relative_path)
             
-            assert response.status_code == 200
-            data = response.get_json()
-            
-            # Verify the returned path is absolute
-            assert os.path.isabs(data["new_path"])
-            assert data["new_path"] == expected_absolute
-    finally:
-        # Clean up any file created in current working directory
-        if os.path.exists(expected_absolute):
-            os.remove(expected_absolute)
+            with test_app.test_client() as client:
+                response = client.post(
+                    f"/workspace/{mock_context.workspace_id}/save-as",
+                    json={"new_path": relative_path}
+                )
+                
+                assert response.status_code == 200
+                data = response.get_json()
+                
+                # Verify the returned path is absolute
+                assert os.path.isabs(data["new_path"])
+                assert data["new_path"] == expected_absolute
+        finally:
+            # Restore original working directory
+            os.chdir(original_cwd)
 
 
 def test_save_as_integration_with_gui_client():

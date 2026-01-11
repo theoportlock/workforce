@@ -344,6 +344,12 @@ STDERR:</data>
       <data key="d9">78626</data>
       <data key="d10">0</data>
     </node>
+    <node id="aa76a115-4a4e-44ec-899f-8eb872e48ebe">
+      <data key="d1">ls</data>
+      <data key="d2">762.0</data>
+      <data key="d3">421.0</data>
+      <data key="d4" />
+    </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d11">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
       <data key="d12" />

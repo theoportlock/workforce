@@ -385,10 +385,12 @@ class WorkflowApp:
             new_label = text_widget.get("1.0", "end-1c")
             on_save(new_label)
             editor.grab_release()
+            editor.update_idletasks()
             editor.destroy()
 
         def cancel_and_close(event=None):
             editor.grab_release()
+            editor.update_idletasks()
             editor.destroy()
 
         btn_frame = tk.Frame(editor)
@@ -567,10 +569,12 @@ class WorkflowApp:
             self.state.wrapper = wrapper_entry.get()
             self.save_wrapper()
             editor.grab_release()
+            editor.update_idletasks()
             editor.destroy()
 
         def cancel_and_close(event=None):
             editor.grab_release()
+            editor.update_idletasks()
             editor.destroy()
 
         def add_row():
