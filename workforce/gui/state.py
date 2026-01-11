@@ -1,6 +1,27 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
+# Centralized GUI theme colors (cross-platform, Tk-compatible hex values)
+THEME: Dict[str, Dict[str, Any]] = {
+    "colors": {
+        "canvas_bg": "#0D0D18",           # Darker blue-gray background for better contrast
+        "text": "#FFFFFF",                # White text
+        "node": {
+            "running": "#0D47A1",        # Darker deep blue (better contrast)
+            "ran": "#1B5E20",            # Darker forest green
+            "fail": "#B71C1C",           # Darker crimson red
+            "run": "#0D47A1",            # Use darker blue for 'run' readiness
+            "default": "#37474F",        # Darker blue-gray for default nodes
+            "selected_outline": "#FFFFFF" # White outline on selection
+        },
+        "edge": {
+            "line": "#607D8B",           # Medium blue-gray for edges/arrows
+            "drag_preview": "#607D8B",   # Temporary edge while dragging
+            "select_rect": "#607D8B"     # Selection rectangle outline
+        }
+    }
+}
+
 @dataclass
 class GUIState:
     graph: Dict[str, Any] = field(default_factory=lambda: {"nodes": [], "links": []})

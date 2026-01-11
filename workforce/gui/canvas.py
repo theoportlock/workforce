@@ -1,6 +1,7 @@
 import tkinter as tk
 from typing import Callable, Dict, Any
 import uuid
+from .state import THEME
 
 class GraphCanvas:
     def __init__(self, tk_canvas: tk.Canvas, state, callbacks: Dict[str, Callable]):
@@ -34,11 +35,11 @@ class GraphCanvas:
         y = (vy * self.state.scale) + self.state.pan_y
         label = data.get("label", node_id)
         status = data.get("status", "").lower()
-        status_colors = {'running': 'lightblue', 'run': 'lightcyan', 'ran': 'lightgreen', 'fail': 'lightcoral'}
-        fill = status_colors.get(status, "lightgray")
+        status_map = THEME["colors"]["node"]
+        fill = status_map.get(status, status_map.get("default"))
 
         font_size = font_size or max(1, int(self.state.base_font_size * self.state.scale))
-        temp = self.canvas.create_text(0, 0, text=label, anchor="nw", font=("TkDefaultFont", font_size))
+        temp = self.canvas.create_text(0, 0, text=label, anchor="nw", font=("TkDefaultFont", font_size), fill=THEME["colors"]["text"]) 
         bbox = self.canvas.bbox(temp) or (0, 0, 60, 20)
         self.canvas.delete(temp)
         text_w = bbox[2] - bbox[0]
@@ -46,9 +47,9 @@ class GraphCanvas:
         pad_x, pad_y = 10 * self.state.scale, 6 * self.state.scale
         w = text_w + 2 * pad_x
         h = text_h + 2 * pad_y
-        outline_color = "black" if selected else ""
+        outline_color = THEME["colors"]["node"]["selected_outline"] if selected else ""
         rect = self.canvas.create_rectangle(x, y, x + w, y + h, fill=fill, outline=outline_color, width=1 if selected else 0)
-        txt = self.canvas.create_text(x + pad_x, y + pad_y, text=label, anchor="nw", font=("TkDefaultFont", font_size))
+        txt = self.canvas.create_text(x + pad_x, y + pad_y, text=label, anchor="nw", font=("TkDefaultFont", font_size), fill=THEME["colors"]["text"]) 
         self.node_widgets[node_id] = (rect, txt)
 
         # Bind events to callbacks provided by WorkflowApp
@@ -76,7 +77,7 @@ class GraphCanvas:
         tgt_box = self.get_node_bounds(tgt)
         x1a, y1a = self.clip_line_to_box(x1, y1, x2, y2, src_box)
         x2a, y2a = self.clip_line_to_box(x2, y2, x1, y1, tgt_box)
-        line = self.canvas.create_line(x1a, y1a, x2a, y2a, arrow=tk.LAST, fill='lightgray', tags="edge", width=self.state.base_edge_width * self.state.scale)
+        line = self.canvas.create_line(x1a, y1a, x2a, y2a, arrow=tk.LAST, fill=THEME["colors"]["edge"]["line"], tags="edge", width=self.state.base_edge_width * self.state.scale)
         self.canvas.tag_lower(line)
 
     def get_node_bounds(self, node_id):

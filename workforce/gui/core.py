@@ -8,7 +8,7 @@ import requests
 import atexit
 
 from workforce import utils
-from .state import GUIState
+from .state import GUIState, THEME
 from .client import ServerClient
 from .canvas import GraphCanvas
 from .recent import RecentFileManager
@@ -35,7 +35,7 @@ class WorkflowApp:
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=0)
 
-        self.canvas = tk.Canvas(master, width=1000, height=600, bg="white")
+        self.canvas = tk.Canvas(master, width=1000, height=600, bg=THEME["colors"]["canvas_bg"]) 
         self.canvas.grid(row=1, column=0, sticky="nsew")
 
         # --- Zoom slider on the right ---
@@ -352,10 +352,19 @@ class WorkflowApp:
 
     def node_label_popup(self, initial_value, on_save):
         editor = tk.Toplevel(self.master)
+        editor.configure(background=THEME["colors"]["canvas_bg"]) 
         editor.title("Node Label")
         editor.geometry("600x300")
         editor.minsize(600, 300)
-        text_widget = tk.Text(editor, wrap='word', font=("TkDefaultFont", 10), height=6)
+        text_widget = tk.Text(
+            editor,
+            wrap='word',
+            font=("TkDefaultFont", 10),
+            height=6,
+            background=THEME["colors"]["canvas_bg"],
+            foreground=THEME["colors"]["text"],
+            insertbackground=THEME["colors"]["text"]
+        )
         text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 0))
         text_widget.insert("1.0", initial_value)
 
@@ -385,14 +394,25 @@ class WorkflowApp:
 
     def wrapper_popup(self):
         editor = tk.Toplevel(self.master)
+        editor.configure(background=THEME["colors"]["canvas_bg"]) 
         editor.title("Command Wrapper")
         editor.geometry("600x150")
         editor.minsize(400, 150)
-        frame = tk.Frame(editor)
+        frame = tk.Frame(editor, background=THEME["colors"]["canvas_bg"]) 
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        label = tk.Label(frame, text="Enter the command wrapper. Use {} as a placeholder for the node's command.")
+        label = tk.Label(
+            frame,
+            text="Enter the command wrapper. Use {} as a placeholder for the node's command.",
+            background=THEME["colors"]["canvas_bg"],
+            foreground=THEME["colors"]["text"]
+        )
         label.pack(pady=(0, 5), anchor="w")
-        wrapper_entry = tk.Entry(frame, font=("TkDefaultFont", 10))
+        wrapper_entry = tk.Entry(
+            frame,
+            font=("TkDefaultFont", 10),
+            background=THEME["colors"]["canvas_bg"],
+            foreground=THEME["colors"]["text"],
+        )
         wrapper_entry.pack(fill=tk.X, expand=True)
         wrapper_entry.insert(0, self.state.wrapper)
         frame.columnconfigure(0, weight=1)
@@ -405,7 +425,7 @@ class WorkflowApp:
         def cancel_and_close(event=None):
             editor.destroy()
 
-        btn_frame = tk.Frame(editor)
+        btn_frame = tk.Frame(editor, background=THEME["colors"]["canvas_bg"]) 
         btn_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
         save_btn = tk.Button(btn_frame, text="Save", command=save_and_close)
         save_btn.pack(side=tk.RIGHT, padx=5)
@@ -601,12 +621,19 @@ class WorkflowApp:
             return
         node_label = node_data.get("label", node_id)
         log_window = tk.Toplevel(self.master)
+        log_window.configure(background=THEME["colors"]["canvas_bg"]) 
         log_window.title(f"Log for: {node_label}")
         log_window.geometry("800x600")
         log_window.minsize(400, 200)
         log_window.bind('<Escape>', lambda e: log_window.destroy())
         log_window.bind('s', lambda e: log_window.destroy())
-        log_display = ScrolledText(log_window, wrap='word', font=("TkFixedFont", 10))
+        log_display = ScrolledText(
+            log_window,
+            wrap='word',
+            font=("TkFixedFont", 10),
+            background=THEME["colors"]["canvas_bg"],
+            foreground=THEME["colors"]["text"]
+        )
         log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         log_display.insert(tk.END, "Loading log...")
         log_display.config(state=tk.DISABLED)
@@ -834,7 +861,7 @@ class WorkflowApp:
                 cx = (coords[0] + coords[2]) / 2
                 cy = (coords[1] + coords[3]) / 2
                 self._edge_line = self.canvas.create_line(
-                    cx, cy, cx, cy, dash=(3, 2), fill="gray"
+                    cx, cy, cx, cy, dash=(3, 2), fill=THEME["colors"]["edge"]["drag_preview"]
                 )
                 return
         self.state.edge_start = None
@@ -913,7 +940,7 @@ class WorkflowApp:
             screen_y,
             screen_x,
             screen_y,
-            outline="gray",
+            outline=THEME["colors"]["edge"]["select_rect"],
             dash=(2, 2),
             width=1,
             tags="select_rect"
@@ -944,7 +971,7 @@ class WorkflowApp:
             if not (rx2 < x_min or rx1 > x_max or ry2 < y_min or ry1 > y_max):
                 if node_id not in self.state.selected_nodes:
                     self.state.selected_nodes.append(node_id)
-                    self.canvas.itemconfig(rect, outline="black", width=1)
+                    self.canvas.itemconfig(rect, outline=THEME["colors"]["node"]["selected_outline"], width=1)
         self.canvas.delete(self.state._select_rect_id)
         self.state._select_rect_id = None
         self.state._select_rect_start = None
