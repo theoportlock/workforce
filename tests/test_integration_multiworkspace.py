@@ -13,6 +13,7 @@ import os
 import tempfile
 import time
 import uuid
+import logging
 import requests
 import pytest
 import networkx as nx
@@ -20,6 +21,8 @@ import networkx as nx
 from workforce import utils, edit
 from workforce.server import start_server
 from workforce.server.context import ServerContext
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -154,6 +157,7 @@ class TestClientLifecycle:
         # Cleanup
         endpoint = f"{base_url}/client-disconnect"
         requests.post(endpoint, json={})
+        time.sleep(0.2)  # Wait for context to be destroyed
     
     def test_context_destroyed_on_last_client_disconnect(self, server_url, temp_workfile):
         """Verify workspace context is destroyed when last client disconnects."""

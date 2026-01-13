@@ -33,6 +33,9 @@ class ServerContext:
     active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool}
     active_node_run: Dict[str, str] = field(default_factory=dict)    # node_id -> run_id
     
+    # In-memory graph cache
+    cached_graph: Any = None  # NetworkX DiGraph, loaded on first access
+    
     # Request deduplication (idempotency)
     processed_requests: deque = field(default_factory=lambda: deque(maxlen=1000))  # Track last 1000 request IDs
     request_lock: threading.Lock = field(default_factory=threading.Lock)  # Protect processed_requests

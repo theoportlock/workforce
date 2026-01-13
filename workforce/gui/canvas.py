@@ -111,6 +111,79 @@ class GraphCanvas:
         x_edge = x0 + (y_edge - y0) / slope
         return x_edge, y_edge
 
+    def update_node_position(self, node_id, node_data):
+        """Update a single node's position without full redraw."""
+        if node_id not in self.node_widgets:
+            # Node doesn't exist yet, do full draw
+            self.draw_node(node_id, node_data=node_data)
+            return
+        
+        rect, txt = self.node_widgets[node_id]
+        
+        # Calculate new screen coordinates
+        vx = float(node_data.get("x", 100))
+        vy = float(node_data.get("y", 100))
+        x = (vx * self.state.scale) + self.state.pan_x
+        y = (vy * self.state.scale) + self.state.pan_y
+        
+        # Get current dimensions
+        x1, y1, x2, y2 = self.canvas.coords(rect)
+        w = x2 - x1
+        h = y2 - y1
+        
+        # Update rectangle position
+        self.canvas.coords(rect, x, y, x + w, y + h)
+        
+        # Update text position
+        pad_x, pad_y = 10 * self.state.scale, 6 * self.state.scale
+        self.canvas.coords(txt, x + pad_x, y + pad_y)
+    
+    def update_node_status(self, node_id, node_data):
+        """Update a single node's status (color) without full redraw."""
+        if node_id not in self.node_widgets:
+            # Node doesn't exist yet, do full draw
+            self.draw_node(node_id, node_data=node_data)
+            return
+        
+        rect, txt = self.node_widgets[node_id]
+        
+        # Update fill color based on status
+        status = node_data.get("status", "").lower()
+        status_map = THEME["colors"]["node"]
+        fill = status_map.get(status, status_map.get("default"))
+        self.canvas.itemconfig(rect, fill=fill)
+    
+    def update_node_label(self, node_id, node_data):
+        """Update a single node's label without full redraw."""
+        if node_id not in self.node_widgets:
+            # Node doesn't exist yet, do full draw
+            self.draw_node(node_id, node_data=node_data)
+            return
+        
+        rect, txt = self.node_widgets[node_id]
+        label = node_data.get("label", node_id)
+        
+        # Update text content
+        font_size = max(1, int(self.state.base_font_size * self.state.scale))
+        self.canvas.itemconfig(txt, text=label, font=("TkDefaultFont", font_size))
+        
+        # Recalculate size and update rectangle
+        temp = self.canvas.create_text(0, 0, text=label, anchor="nw", font=("TkDefaultFont", font_size), fill=THEME["colors"]["text"])
+        bbox = self.canvas.bbox(temp) or (0, 0, 60, 20)
+        self.canvas.delete(temp)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        pad_x, pad_y = 10 * self.state.scale, 6 * self.state.scale
+        w = text_w + 2 * pad_x
+        h = text_h + 2 * pad_y
+        
+        # Update rectangle size
+        x1, y1, _, _ = self.canvas.coords(rect)
+        self.canvas.coords(rect, x1, y1, x1 + w, y1 + h)
+        
+        # Update text position
+        self.canvas.coords(txt, x1 + pad_x, y1 + pad_y)
+
 class Canvas:
     """
     Light compatibility wrapper used by tests: simple add_node + nodes store.

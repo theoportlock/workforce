@@ -1476,27 +1476,88 @@ class WorkflowApp:
         def apply_update():
             """Apply update in main thread with lock protection."""
             with self._state_lock:
-                # Handle partial status_change events (lightweight update)
-                if "node_id" in data and "status" in data:
-                    # Partial update: only update node status
+                # Check for operation-specific updates
+                op = data.get("op")
+                
+                if op == "position":
+                    # Position update: only update positions, no full redraw
+                    log.debug(f"Position update for {len(data.get('nodes', []))} nodes")
+                    for node_update in data.get("nodes", []):
+                        node_id = node_update.get("id")
+                        for node in self.state.graph.get("nodes", []):
+                            if node.get("id") == node_id:
+                                node["x"] = node_update.get("x", node.get("x"))
+                                node["y"] = node_update.get("y", node.get("y"))
+                                # Selective update
+                                if hasattr(self, "canvas_view") and self.canvas_view:
+                                    self.canvas_view.update_node_position(node_id, node)
+                                break
+                    return  # Don't do full redraw
+                
+                elif op == "status":
+                    # Status update: only update status, no full redraw
+                    log.debug(f"Status update for {len(data.get('nodes', []))} nodes")
+                    for node_update in data.get("nodes", []):
+                        node_id = node_update.get("id")
+                        status = node_update.get("status")
+                        for node in self.state.graph.get("nodes", []):
+                            if node.get("id") == node_id:
+                                node["status"] = status
+                                # Selective update
+                                if hasattr(self, "canvas_view") and self.canvas_view:
+                                    self.canvas_view.update_node_status(node_id, node)
+                                break
+                    return  # Don't do full redraw
+                
+                elif op == "label":
+                    # Label update: only update label, selective redraw
+                    log.debug(f"Label update for {len(data.get('nodes', []))} nodes")
+                    for node_update in data.get("nodes", []):
+                        node_id = node_update.get("id")
+                        label = node_update.get("label")
+                        for node in self.state.graph.get("nodes", []):
+                            if node.get("id") == node_id:
+                                node["label"] = label
+                                # Selective update (requires edge redraw too)
+                                if hasattr(self, "canvas_view") and self.canvas_view:
+                                    self.canvas_view.update_node_label(node_id, node)
+                                break
+                    return  # Don't do full redraw
+                
+                elif op == "wrapper":
+                    # Wrapper update: only update cached wrapper
+                    log.debug("Wrapper update received")
+                    wrapper = data.get("graph", {}).get("wrapper")
+                    if wrapper is not None:
+                        self.state.wrapper = wrapper
+                    return  # No redraw needed
+                
+                elif "node_id" in data and "status" in data:
+                    # Legacy status_change event format (from NODE_STARTED/FINISHED/FAILED)
                     node_id = data.get("node_id")
                     status = data.get("status")
-                    log.debug(f"Status update: node_id={node_id}, status={status}")
+                    log.debug(f"Legacy status update: node_id={node_id}, status={status}")
                     for node in self.state.graph.get("nodes", []):
                         if node.get("id") == node_id:
-                            log.debug(f"Found node {node_id}, updating status from {node.get('status')} to {status}")
                             node["status"] = status
+                            # Selective update
+                            if hasattr(self, "canvas_view") and self.canvas_view:
+                                self.canvas_view.update_node_status(node_id, node)
                             break
+                    return  # Don't do full redraw
+                
                 elif "nodes" in data or "links" in data:
-                    # Full graph update from server
-                    log.info(f"Full graph update received via SocketIO with {len(data.get('nodes', []))} nodes")
-                    log.debug(f"Updated node labels: {[(n.get('id'), n.get('label')) for n in data.get('nodes', [])]}")
+                    # Full graph update (structure change or initial load)
+                    log.info(f"Full graph update received with {len(data.get('nodes', []))} nodes")
                     self.state.graph = data
+                    # Extract and cache wrapper if present
+                    if "graph" in data and "wrapper" in data["graph"]:
+                        self.state.wrapper = data["graph"]["wrapper"]
                 else:
                     log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")
                     return  # Don't redraw if we didn't update anything
             
-            # Redraw after releasing lock
+            # Full redraw after releasing lock (only for structure changes)
             self._redraw_graph()
         
         # Queue update to main thread

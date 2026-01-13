@@ -109,6 +109,12 @@ def start_graph_worker(ctx):
 
     def worker():
         log.info(f"Graph worker thread started for workspace {ctx.workspace_id}.")
+        
+        # Load graph into cache on first run
+        if ctx.cached_graph is None:
+            ctx.cached_graph = edit.load_graph(ctx.workfile_path)
+            log.info(f"Loaded graph into cache for workspace {ctx.workspace_id}")
+        
         while True:
             item = ctx.mod_queue.get()
             
@@ -119,20 +125,94 @@ def start_graph_worker(ctx):
             
             func, args, kwargs = item
             try:
+                # Execute mutation
                 func(*args, **kwargs)
-
-                # Broadcast latest graph
-                G = edit.load_graph(ctx.workfile_path)
-                data = nx.node_link_data(G, edges="links")
-                data["graph"] = G.graph
+                
+                # Reload cached graph from disk after mutation
+                ctx.cached_graph = edit.load_graph(ctx.workfile_path)
+                G = ctx.cached_graph
+                
+                # Extract operation metadata
+                name = getattr(func, "__name__", "")
+                operation = None
+                changed_nodes = []
+                changed_edges = []
+                
+                if name == "edit_node_position_in_graph":
+                    operation = "position"
+                    # args: (path, node_id, x, y)
+                    changed_nodes = [args[1]] if len(args) > 1 else []
+                elif name == "edit_node_positions_in_graph":
+                    operation = "position"
+                    # args: (path, positions_list) where positions_list = [(node_id, x, y), ...]
+                    changed_nodes = [pos[0] for pos in args[1]] if len(args) > 1 else []
+                elif name == "edit_status_in_graph":
+                    operation = "status"
+                    # args: (path, element_type, element_id, status)
+                    el_type = args[1] if len(args) > 1 else None
+                    el_id = args[2] if len(args) > 2 else None
+                    if el_type == "node":
+                        changed_nodes = [el_id]
+                    elif el_type == "edge":
+                        changed_edges = [el_id]
+                elif name == "edit_node_label_in_graph":
+                    operation = "label"
+                    # args: (path, node_id, label)
+                    changed_nodes = [args[1]] if len(args) > 1 else []
+                elif name == "edit_wrapper_in_graph":
+                    operation = "wrapper"
+                elif name in ("add_node_to_graph", "remove_node_from_graph", "add_edge_to_graph", "remove_edge_from_graph"):
+                    operation = "structure"
+                else:
+                    operation = "other"
+                
+                # Prepare event payload based on operation
+                from workforce.server.routes import serialize_graph_lightweight
+                
+                if operation in ("position", "status", "label"):
+                    # Lightweight update: only send changed node/edge data
+                    data = {"op": operation}
+                    
+                    if changed_nodes:
+                        data["nodes"] = []
+                        for node_id in changed_nodes:
+                            if node_id in G.nodes:
+                                node_data = {"id": node_id}
+                                node_data.update(G.nodes[node_id])
+                                # Strip heavyweight attributes
+                                heavyweight_attrs = {"log", "stdout", "stderr", "pid", "command", "error_code"}
+                                for attr in heavyweight_attrs:
+                                    node_data.pop(attr, None)
+                                data["nodes"].append(node_data)
+                    
+                    if changed_edges:
+                        data["links"] = []
+                        for u, v, edge_data in G.edges(data=True):
+                            if edge_data.get("id") in changed_edges:
+                                link_data = {"source": u, "target": v}
+                                link_data.update(edge_data)
+                                data["links"].append(link_data)
+                    
+                    data["graph"] = {}
+                elif operation == "wrapper":
+                    # Wrapper update: send only wrapper
+                    data = {"op": "wrapper", "graph": {"wrapper": G.graph.get("wrapper", "{}")}}
+                else:
+                    # Structure change: send full lightweight graph
+                    data = serialize_graph_lightweight(G)
+                    data["op"] = operation
                 
                 # Emit domain event
                 from workforce.server.events import Event
-                log.info(f"Emitting GRAPH_UPDATED event for workspace {ctx.workspace_id} with {len(data.get('nodes', []))} nodes")
+                log.info(f"Emitting GRAPH_UPDATED event for workspace {ctx.workspace_id} with operation={operation}")
+                ctx.events.emit(Event(type="GRAPH_UPDATED", payload=data))
+
+                # Emit domain event
+                from workforce.server.events import Event
+                log.info(f"Emitting GRAPH_UPDATED event for workspace {ctx.workspace_id} with operation={operation}")
                 ctx.events.emit(Event(type="GRAPH_UPDATED", payload=data))
 
                 # Lifecycle handling for status changes
-                name = getattr(func, "__name__", "")
                 if name in ("edit_status_in_graph",):
                     _, el_type, el_id, status = args
                     
@@ -199,7 +279,10 @@ def start_graph_worker(ctx):
                 if ctx.mod_queue.empty():
                     def _check_complete():
                         try:
-                            G_local = edit.load_graph(ctx.workfile_path)
+                            # Use cached graph instead of reloading
+                            G_local = ctx.cached_graph
+                            if G_local is None:
+                                G_local = edit.load_graph(ctx.workfile_path)
                         except Exception:
                             return
                         

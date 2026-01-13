@@ -5,8 +5,30 @@ import signal
 import threading
 from flask import current_app, request, g, jsonify
 from workforce import edit
+import networkx as nx
 
 log = logging.getLogger(__name__)
+
+def serialize_graph_lightweight(G):
+    """Serialize graph excluding heavyweight attributes (logs, wrapper).
+    
+    Returns node-link format with only essential rendering data:
+    - nodes: id, label, x, y, status (excludes log, stdout, stderr, pid, etc.)
+    - links: source, target, id, status
+    - graph: empty dict (no wrapper)
+    """
+    data = nx.node_link_data(G, edges="links")
+    
+    # Strip heavyweight attributes from nodes
+    heavyweight_attrs = {"log", "stdout", "stderr", "pid", "command", "error_code"}
+    for node in data.get("nodes", []):
+        for attr in heavyweight_attrs:
+            node.pop(attr, None)
+    
+    # Remove wrapper from graph metadata
+    data["graph"] = {}
+    
+    return data
 
 def register_routes(app):
     """Register all routes with workspace routing middleware."""
@@ -62,7 +84,15 @@ def register_routes(app):
             return jsonify({"error": "Workspace not found"}), 404
         
         G = edit.load_graph(ctx.workfile_path)
-        data = __import__("networkx").node_link_data(G, edges="links")
+        data = nx.node_link_data(G, edges="links")
+        
+        # Strip heavyweight attributes from nodes (logs)
+        heavyweight_attrs = {"log", "stdout", "stderr", "pid", "command", "error_code"}
+        for node in data.get("nodes", []):
+            for attr in heavyweight_attrs:
+                node.pop(attr, None)
+        
+        # Include wrapper in initial load
         data["graph"] = G.graph
         data["graph"].setdefault("wrapper", "{}")
         return jsonify(data)
