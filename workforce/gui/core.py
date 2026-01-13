@@ -839,6 +839,11 @@ class WorkflowApp:
         log_window.minsize(400, 200)
         log_window.bind('<Escape>', lambda e: log_window.destroy())
         log_window.bind('s', lambda e: log_window.destroy())
+        
+        # Create frame for buttons (pack first to appear at bottom)
+        button_frame = tk.Frame(log_window, background=THEME["colors"]["canvas_bg"])
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        
         log_display = ScrolledText(
             log_window,
             wrap='word',
@@ -846,9 +851,52 @@ class WorkflowApp:
             background=THEME["colors"]["canvas_bg"],
             foreground=THEME["colors"]["text"]
         )
-        log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 0))
         log_display.insert(tk.END, "Loading log...")
         log_display.config(state=tk.DISABLED)
+        
+        # Bind Ctrl+A to select all text
+        def select_all(event=None):
+            log_display.tag_add(tk.SEL, "1.0", tk.END)
+            log_display.mark_set(tk.INSERT, "1.0")
+            log_display.see(tk.INSERT)
+            return "break"  # Prevent default behavior
+        
+        log_display.bind('<Control-a>', select_all)
+        log_display.bind('<Command-a>', select_all)  # For macOS
+        
+        # Copy button to copy text to clipboard
+        def copy_to_clipboard():
+            try:
+                log_text = log_display.get("1.0", tk.END)
+                log_window.clipboard_clear()
+                log_window.clipboard_append(log_text)
+                log_window.update()  # Keep clipboard after window closes
+                
+                # Turn button green to indicate success
+                copy_button.config(background=THEME["colors"]["node"]["ran"])
+                
+                # Reset color after 1 second
+                def reset_color():
+                    copy_button.config(background=THEME["colors"]["node"]["default"])
+                log_window.after(1000, reset_color)
+            except Exception as e:
+                # On error, turn button red
+                copy_button.config(background=THEME["colors"]["node"]["fail"])
+                messagebox.showerror("Copy Failed", f"Failed to copy to clipboard: {e}", parent=log_window)
+        
+        # Bind Enter key to copy to clipboard
+        log_window.bind('<Return>', lambda e: copy_to_clipboard())
+        
+        copy_button = tk.Button(
+            button_frame,
+            text="Copy to Clipboard",
+            command=copy_to_clipboard,
+            background=THEME["colors"]["node"]["default"],
+            foreground=THEME["colors"]["text"],
+            activebackground=THEME["colors"]["node"]["running"]
+        )
+        copy_button.pack(side=tk.LEFT, padx=5)
 
         def fetch_log_worker():
             try:
