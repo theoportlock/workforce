@@ -9,6 +9,7 @@ import socket
 import sys
 import logging
 import threading
+import atexit
 
 import platformdirs
 from flask import Flask
@@ -146,6 +147,92 @@ def destroy_context(workspace_id: str):
     log.info(f"Destroyed workspace context: {workspace_id}")
 
 
+def _stop_nodes_for_workspace(workspace_id: str) -> dict:
+    """Kill running processes for a workspace. Extracted logic from routes /stop endpoint.
+    
+    Returns:
+        dict with keys: killed (count), errors (list), stopped_nodes (list)
+    """
+    from workforce import edit
+    
+    ctx = get_context(workspace_id)
+    if not ctx:
+        return {"killed": 0, "errors": [], "stopped_nodes": []}
+    
+    try:
+        G = edit.load_graph(ctx.workfile_path)
+        running_nodes = []
+        killed = 0
+        errors = []
+
+        # Attempt to kill processes for nodes marked as running
+        for node_id, attrs in G.nodes(data=True):
+            if attrs.get("status") == "running":
+                running_nodes.append(node_id)
+                pid_raw = attrs.get("pid", "")
+                pid_str = str(pid_raw).strip() if pid_raw is not None else ""
+                if pid_str.isdigit():
+                    try:
+                        os.kill(int(pid_str), signal.SIGKILL)
+                        killed += 1
+                    except Exception as e:
+                        errors.append(f"{node_id}:{pid_str}:{e}")
+
+        # Mark all running nodes as failed (enqueue through worker)
+        for node_id in running_nodes:
+            run_id = ctx.active_node_run.get(node_id)
+            ctx.enqueue_status(ctx.workfile_path, "node", node_id, "fail", run_id)
+
+        return {"killed": killed, "errors": errors, "stopped_nodes": running_nodes}
+    except Exception as e:
+        log.exception(f"Error stopping nodes for {workspace_id}")
+        return {"killed": 0, "errors": [str(e)], "stopped_nodes": []}
+
+
+def graceful_shutdown():
+    """Stop all running processes and exit the server gracefully."""
+    log.info("========== GRACEFUL SERVER SHUTDOWN ==========")
+    log.info("Stopping all running nodes across all workspaces...")
+    
+    with _contexts_lock:
+        workspace_ids = list(_contexts.keys())
+    
+    # Stop all running nodes in each workspace
+    total_killed = 0
+    for workspace_id in workspace_ids:
+        log.info(f"Stopping nodes for workspace: {workspace_id}")
+        result = _stop_nodes_for_workspace(workspace_id)
+        total_killed += result["killed"]
+        if result["errors"]:
+            log.warning(f"Errors stopping {workspace_id}: {result['errors']}")
+        log.info(f"Workspace {workspace_id}: killed {result['killed']} processes, stopped {len(result['stopped_nodes'])} nodes")
+    
+    log.info(f"Total processes killed: {total_killed}")
+    log.info("Exiting server process...")
+    
+    # Stop socketio if it's running (skip if not in request context)
+    if _socketio:
+        try:
+            _socketio.stop()
+        except RuntimeError as e:
+            # Ignore "Working outside of request context" errors
+            if "Working outside of request context" not in str(e):
+                log.warning(f"Error stopping socketio: {e}")
+        except Exception as e:
+            log.warning(f"Error stopping socketio: {e}")
+    
+    # Exit the process
+    os._exit(0)
+
+
+def _signal_handler(signum, frame):
+    """Handle shutdown signals (SIGTERM, SIGINT)."""
+    sig_name = signal.Signals(signum).name
+    log.info(f"Received signal {sig_name} ({signum}), triggering graceful shutdown")
+    # Call graceful_shutdown directly to kill processes and exit
+    graceful_shutdown()
+
+
 def get_context(workspace_id: str) -> ServerContext | None:
     """Retrieve existing context, do not create."""
     with _contexts_lock:
@@ -245,13 +332,18 @@ def start_server(background: bool = True, host: str = "0.0.0.0"):
     global _bind_host, _bind_port
     _bind_host, _bind_port = host, port
 
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
+
     log.info(f"Starting Workforce server on http://{host}:{port}")
     log.info("Server ready. Waiting for client connections...")
     
     try:
         socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
-        log.info("Server shutting down...")
+        log.info("Server interrupted, triggering graceful shutdown...")
+        graceful_shutdown()
     finally:
         log.info("Server shutdown complete.")
 

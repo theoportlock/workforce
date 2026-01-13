@@ -18,7 +18,7 @@
       <data key="d1">echo asdfad</data>
       <data key="d2">649.9523809523811</data>
       <data key="d3">313.2380952380952</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 asdfad
 
@@ -27,14 +27,14 @@ STDERR:</data>
       <data key="d7">asdfad
 </data>
       <data key="d8" />
-      <data key="d9">76436</data>
+      <data key="d9">11035</data>
       <data key="d10">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
       <data key="d2">534.6666666666666</data>
       <data key="d3">364.33333333333326</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 AUTHORS.rst
 build
@@ -65,7 +65,6 @@ STDERR:</data>
 build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-demo_batch_positions.py
 docs
 env.sh
 HISTORY.rst
@@ -76,7 +75,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-test_relative_save.wf.lock
 tests
 todo.md
 venv
@@ -86,7 +84,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d8" />
-      <data key="d9">75192</data>
+      <data key="d9">11087</data>
       <data key="d10">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
@@ -144,7 +142,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d8" />
-      <data key="d9">78566</data>
+      <data key="d9">10872</data>
       <data key="d10">0</data>
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
@@ -160,7 +158,7 @@ STDERR:</data>
       <data key="d7">test
 </data>
       <data key="d8" />
-      <data key="d9">76738</data>
+      <data key="d9">10877</data>
       <data key="d10">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -176,7 +174,7 @@ STDERR:</data>
       <data key="d7">/home/tpor598/workforce
 </data>
       <data key="d8" />
-      <data key="d9">78142</data>
+      <data key="d9">11026</data>
       <data key="d10">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
@@ -192,7 +190,7 @@ STDERR:</data>
       <data key="d7">/home/tpor598/workforce
 </data>
       <data key="d8" />
-      <data key="d9">76743</data>
+      <data key="d9">10888</data>
       <data key="d10">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
@@ -201,7 +199,7 @@ ls
 ls</data>
       <data key="d2">765.6271216705998</data>
       <data key="d3">47.29018324670528</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 teststet
 AUTHORS.rst
@@ -258,7 +256,6 @@ AUTHORS.rst
 build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-demo_batch_positions.py
 docs
 env.sh
 HISTORY.rst
@@ -269,8 +266,8 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-test_relative_save.wf.lock
 tests
+tmpvove1zrr
 todo.md
 venv
 Workfile
@@ -281,7 +278,6 @@ AUTHORS.rst
 build
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
-demo_batch_positions.py
 docs
 env.sh
 HISTORY.rst
@@ -292,9 +288,7 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-test_relative_save.wf.lock
 tests
-tmpzgbgh391
 todo.md
 venv
 Workfile
@@ -303,14 +297,14 @@ workforce
 workforce.egg-info
 </data>
       <data key="d8" />
-      <data key="d9">76351</data>
+      <data key="d9">10909</data>
       <data key="d10">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
       <data key="d1">pwd</data>
       <data key="d2">579.3333333333333</data>
       <data key="d3">480.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
       <data key="d5">STDOUT:
 /home/tpor598/workforce
 
@@ -319,7 +313,7 @@ STDERR:</data>
       <data key="d7">/home/tpor598/workforce
 </data>
       <data key="d8" />
-      <data key="d9">75236</data>
+      <data key="d9">11120</data>
       <data key="d10">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -330,7 +324,7 @@ STDERR:</data>
       <data key="d6">bash -c 'sleep 1; sleep 5'</data>
       <data key="d7" />
       <data key="d8" />
-      <data key="d9">78596</data>
+      <data key="d9">11000</data>
       <data key="d10">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
@@ -341,14 +335,40 @@ STDERR:</data>
       <data key="d6">bash -c 'sleep 1; sleep 5'</data>
       <data key="d7" />
       <data key="d8" />
-      <data key="d9">78626</data>
+      <data key="d9">11167</data>
       <data key="d10">0</data>
     </node>
     <node id="aa76a115-4a4e-44ec-899f-8eb872e48ebe">
       <data key="d1">ls</data>
       <data key="d2">762.0</data>
       <data key="d3">421.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d6">bash -c 'sleep 1; ls'</data>
+      <data key="d7">AUTHORS.rst
+build
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d8" />
+      <data key="d9">10910</data>
+      <data key="d10">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d11">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
@@ -364,7 +384,7 @@ STDERR:</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d11">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
-      <data key="d12">to_run</data>
+      <data key="d12" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d11">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>

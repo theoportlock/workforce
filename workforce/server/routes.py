@@ -2,6 +2,7 @@ import uuid
 import logging
 import os
 import signal
+import threading
 from flask import current_app, request, g, jsonify
 from workforce import edit
 
@@ -276,6 +277,20 @@ def register_routes(app):
             if ctx.should_destroy():
                 destroy_context(workspace_id)
                 log.info(f"Destroyed context for {workspace_id} (no clients)")
+                
+                # Check if all workspaces are now empty (no clients)
+                # If so, trigger graceful server shutdown
+                from workforce.server import _contexts, _contexts_lock, graceful_shutdown
+                
+                with _contexts_lock:
+                    all_empty = all(ctx.client_count == 0 for ctx in _contexts.values())
+                    remaining_workspaces = len(_contexts)
+                
+                if all_empty and remaining_workspaces == 0:
+                    log.info("Last client disconnected from last workspace. Triggering graceful shutdown...")
+                    # Spawn shutdown in background thread to avoid blocking this request
+                    shutdown_thread = threading.Thread(target=graceful_shutdown, daemon=False)
+                    shutdown_thread.start()
             
             return jsonify({"status": "disconnected", "workspace_id": workspace_id}), 200
         except Exception as e:
