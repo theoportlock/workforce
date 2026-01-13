@@ -137,7 +137,9 @@ class WorkflowApp:
         # After setting up menus and canvas, add logging for bindings
         self.master.bind('q', lambda e: self.save_and_exit())
         self.master.bind('r', lambda e: self.run())
+        # Bind both Shift+C and Shift+c for cross-platform compatibility
         self.master.bind('<Shift-C>', lambda e: self.clear_all())
+        self.master.bind('<Shift-c>', lambda e: self.clear_all())
         self.master.bind('d', lambda e: self.remove_node())
         self.master.bind('<Delete>', lambda e: self.remove_node())
         self.master.bind('<BackSpace>', lambda e: self.remove_node())
@@ -152,6 +154,14 @@ class WorkflowApp:
         self.master.bind('<Control-c>', lambda e: self.stop_all_runs())
         self.master.bind('<Control-Up>', lambda e: self.zoom_in())
         self.master.bind('<Control-Down>', lambda e: self.zoom_out())
+
+        # Also bind on canvas to ensure keys are captured even when canvas has focus
+        self.canvas.bind('<Shift-C>', lambda e: self.clear_all())
+        self.canvas.bind('<Shift-c>', lambda e: self.clear_all())
+        self.canvas.bind('c', lambda e: self.clear_selected_status())
+        self.canvas.bind('d', lambda e: self.remove_node())
+        self.canvas.bind('e', lambda e: self.connect_nodes())
+        self.canvas.bind('E', lambda e: self.delete_edges_from_selected())
 
         # Canvas bindings for interaction
         self.canvas.bind("<MouseWheel>", self.on_zoom)
@@ -964,37 +974,69 @@ class WorkflowApp:
             messagebox.showerror("Stop All Failed", str(e))
 
     def clear_selected_status(self):
-        for nid in list(self.state.selected_nodes):
-            try:
-                utils._post(
-                    self.base_url,
-                    "/edit-status",
-                    {"element_type": "node", "element_id": nid, "value": ""}
-                )
-            except Exception:
-                pass
+        """Clear status and logs from selected nodes (keyboard: 'c')."""
+        log.info("clear_selected_status() called")
+        selected_ids = list(self.state.selected_nodes)
+        if not selected_ids:
+            log.info("No selected nodes")
+            return
+        
+        log.info(f"Clearing status and logs for {len(selected_ids)} selected nodes")
+        
+        # Build batch status updates
+        updates = [{"element_type": "node", "element_id": nid, "value": ""} 
+                   for nid in selected_ids]
+        
+        # Clear statuses
+        try:
+            log.info(f"Posting /edit-statuses with {len(updates)} updates")
+            utils._post(self.base_url, "/edit-statuses", {"updates": updates})
+        except Exception as e:
+            log.error(f"Failed to clear selected statuses: {e}")
+        
+        # Clear logs
+        try:
+            log.info(f"Posting /remove-node-logs for {len(selected_ids)} nodes")
+            utils._post(self.base_url, "/remove-node-logs", {"node_ids": selected_ids})
+        except Exception as e:
+            log.error(f"Failed to clear selected logs: {e}")
 
     def clear_all(self):
+        """Clear all statuses and logs (keyboard: Shift+C)."""
+        log.info("clear_all() called")
+        # Build batch status updates for all nodes and edges
+        updates = []
+        node_ids = []
+        
         for n in self.state.graph.get("nodes", []):
-            try:
-                utils._post(
-                    self.base_url,
-                    "/edit-status",
-                    {"element_type": "node", "element_id": n.get("id"), "value": ""}
-                )
-            except Exception:
-                pass
+            node_id = n.get("id")
+            if node_id:
+                updates.append({"element_type": "node", "element_id": node_id, "value": ""})
+                node_ids.append(node_id)
+        
         for link in self.state.graph.get("links", []):
-            eid = link.get("id")
-            if eid:
-                try:
-                    utils._post(
-                        self.base_url,
-                        "/edit-status",
-                        {"element_type": "edge", "element_id": eid, "value": ""}
-                    )
-                except Exception:
-                    pass
+            edge_id = link.get("id")
+            if edge_id:
+                updates.append({"element_type": "edge", "element_id": edge_id, "value": ""})
+        
+        log.info(f"Clearing {len(updates)} elements (nodes/edges) and {len(node_ids)} nodes")
+        
+        # Clear all statuses
+        if updates:
+            try:
+                log.info(f"Posting /edit-statuses with {len(updates)} updates")
+                utils._post(self.base_url, "/edit-statuses", {"updates": updates})
+            except Exception as e:
+                log.error(f"Failed to clear all statuses: {e}")
+        
+        # Clear all logs
+        if node_ids:
+            try:
+                log.info(f"Posting /remove-node-logs for {len(node_ids)} nodes")
+                utils._post(self.base_url, "/remove-node-logs", {"node_ids": node_ids})
+            except Exception as e:
+                log.error(f"Failed to clear all logs: {e}")
+        
         # Server will emit graph_update via SocketIO, no need to fetch here
 
     # ----------------------

@@ -144,6 +144,22 @@ class ServerClient:
         """
         return utils._post(self.base_url, "/edit-node-positions", {"positions": positions})
 
+    def edit_statuses(self, updates):
+        """Batch update statuses for multiple elements (nodes/edges).
+        
+        Args:
+            updates: List of dicts with keys: element_type, element_id, value
+        """
+        return utils._post(self.base_url, "/edit-statuses", {"updates": updates})
+
+    def remove_node_logs(self, node_ids):
+        """Remove execution logs from multiple nodes.
+        
+        Args:
+            node_ids: List of node IDs to clear logs from
+        """
+        return utils._post(self.base_url, "/remove-node-logs", {"node_ids": node_ids})
+
     def edit_wrapper(self, wrapper):
         return utils._post(self.base_url, "/edit-wrapper", {"wrapper": wrapper})
 

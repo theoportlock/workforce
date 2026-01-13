@@ -190,3 +190,92 @@ def save_node_execution_data_in_graph(path, node_id, command, stdout, stderr, pi
     save_graph(G, path)
     log.info(f"Saved execution data for node {node_id} in graph: {path}")
     return {"status": "updated"}
+
+def edit_statuses_in_graph(path, updates):
+    """Batch update statuses for multiple elements (nodes/edges).
+    
+    Args:
+        path: Path to graph file
+        updates: List of dicts with keys: element_type, element_id, value
+        
+    Returns:
+        Dict with status and count of updated elements
+        
+    Raises:
+        Returns error if any element is not found (fail-fast)
+    """
+    G = load_graph(path)
+    
+    # Validate all elements exist first (fail-fast)
+    for update in updates:
+        element_type = update.get("element_type")
+        element_id = update.get("element_id")
+        
+        if element_type == "node":
+            if element_id not in G:
+                return {"error": f"Node not found: {element_id}"}
+        elif element_type == "edge":
+            found = False
+            for u, v, data in G.edges(data=True):
+                if str(data.get("id")) == str(element_id):
+                    found = True
+                    break
+            if not found:
+                return {"error": f"Edge not found: {element_id}"}
+        else:
+            return {"error": f"Invalid element_type: {element_type}"}
+    
+    # All elements exist, perform updates
+    updated = 0
+    for update in updates:
+        element_type = update.get("element_type")
+        element_id = update.get("element_id")
+        value = update.get("value", "")
+        
+        if element_type == "node":
+            G.nodes[element_id]["status"] = value
+            updated += 1
+        elif element_type == "edge":
+            for u, v, data in G.edges(data=True):
+                if str(data.get("id")) == str(element_id):
+                    data["status"] = value
+                    updated += 1
+                    break
+    
+    save_graph(G, path)
+    log.info(f"Batch updated statuses for {updated} elements in graph: {path}")
+    return {"status": "updated", "count": updated}
+
+def remove_node_logs_in_graph(path, node_ids):
+    """Remove execution logs from multiple nodes.
+    
+    Args:
+        path: Path to graph file
+        node_ids: List of node IDs to clear logs from
+        
+    Returns:
+        Dict with status and count of cleared nodes
+        
+    Raises:
+        Returns error if any node is not found (fail-fast)
+    """
+    G = load_graph(path)
+    
+    # Validate all nodes exist first (fail-fast)
+    for node_id in node_ids:
+        if node_id not in G:
+            return {"error": f"Node not found: {node_id}"}
+    
+    # All nodes exist, clear logs
+    log_fields = ["log", "command", "stdout", "stderr", "pid", "error_code"]
+    cleared = 0
+    
+    for node_id in node_ids:
+        for field in log_fields:
+            if field in G.nodes[node_id]:
+                del G.nodes[node_id][field]
+        cleared += 1
+    
+    save_graph(G, path)
+    log.info(f"Cleared logs from {cleared} nodes in graph: {path}")
+    return {"status": "cleared", "count": cleared}

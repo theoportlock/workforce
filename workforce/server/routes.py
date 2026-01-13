@@ -161,6 +161,47 @@ def register_routes(app):
         )
         return jsonify(result), 202
 
+    @app.route("/workspace/<workspace_id>/edit-statuses", methods=["POST"])
+    def edit_statuses(workspace_id):
+        """Batch update statuses for multiple elements (nodes/edges)."""
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        
+        data = request.get_json(force=True)
+        updates = data.get("updates", [])
+        
+        if not updates:
+            return jsonify({"error": "updates array required"}), 400
+        
+        # Queue batch operation (no run tracking for batch clears)
+        result = ctx.enqueue(
+            edit.edit_statuses_in_graph,
+            ctx.workfile_path,
+            updates
+        )
+        return jsonify(result), 202
+
+    @app.route("/workspace/<workspace_id>/remove-node-logs", methods=["POST"])
+    def remove_node_logs(workspace_id):
+        """Remove execution logs from multiple nodes."""
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        
+        data = request.get_json(force=True)
+        node_ids = data.get("node_ids", [])
+        
+        if not node_ids:
+            return jsonify({"error": "node_ids array required"}), 400
+        
+        result = ctx.enqueue(
+            edit.remove_node_logs_in_graph,
+            ctx.workfile_path,
+            node_ids
+        )
+        return jsonify(result), 202
+
     @app.route("/workspace/<workspace_id>/edit-node-position", methods=["POST"])
     def edit_node_position(workspace_id):
         ctx = g.ctx

@@ -1,13 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d12" for="edge" attr.name="status" attr.type="string" />
-  <key id="d11" for="edge" attr.name="id" attr.type="string" />
-  <key id="d10" for="node" attr.name="error_code" attr.type="string" />
-  <key id="d9" for="node" attr.name="pid" attr.type="string" />
-  <key id="d8" for="node" attr.name="stderr" attr.type="string" />
-  <key id="d7" for="node" attr.name="stdout" attr.type="string" />
-  <key id="d6" for="node" attr.name="command" attr.type="string" />
-  <key id="d5" for="node" attr.name="log" attr.type="string" />
+  <key id="d6" for="edge" attr.name="status" attr.type="string" />
+  <key id="d5" for="edge" attr.name="id" attr.type="string" />
   <key id="d4" for="node" attr.name="status" attr.type="string" />
   <key id="d3" for="node" attr.name="y" attr.type="string" />
   <key id="d2" for="node" attr.name="x" attr.type="string" />
@@ -19,179 +13,36 @@
       <data key="d2">649.9523809523811</data>
       <data key="d3">313.2380952380952</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-asdfad
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; echo asdfad'</data>
-      <data key="d7">asdfad
-</data>
-      <data key="d8" />
-      <data key="d9">11035</data>
-      <data key="d10">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
       <data key="d2">534.6666666666666</data>
       <data key="d3">364.33333333333326</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-test_relative_save.wf.lock
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; ls'</data>
-      <data key="d7">AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d8" />
-      <data key="d9">11087</data>
-      <data key="d10">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d1">ls</data>
       <data key="d2">473.0</data>
       <data key="d3">109.33333333333334</data>
-      <data key="d4">ran</data>
-      <data key="d5">STDOUT:
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-demo_batch_positions.py
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-test_relative_save.wf.lock
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; ls'</data>
-      <data key="d7">AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d8" />
-      <data key="d9">13998</data>
-      <data key="d10">0</data>
+      <data key="d4" />
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
       <data key="d1">echo test</data>
       <data key="d2">300.5151515151516</data>
       <data key="d3">46.20202020202025</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-test
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; echo test'</data>
-      <data key="d7">test
-</data>
-      <data key="d8" />
-      <data key="d9">10877</data>
-      <data key="d10">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d1">pwd</data>
       <data key="d2">196.66666666666669</data>
       <data key="d3">267.66666666666674</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-/home/tpor598/workforce
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; pwd'</data>
-      <data key="d7">/home/tpor598/workforce
-</data>
-      <data key="d8" />
-      <data key="d9">11026</data>
-      <data key="d10">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
       <data key="d2">37.88888888888894</data>
       <data key="d3">46.55555555555563</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-/home/tpor598/workforce
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; pwd'</data>
-      <data key="d7">/home/tpor598/workforce
-</data>
-      <data key="d8" />
-      <data key="d9">10888</data>
-      <data key="d10">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
       <data key="d1">echo "teststet"
@@ -200,211 +51,66 @@ ls</data>
       <data key="d2">765.6271216705998</data>
       <data key="d3">47.29018324670528</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-teststet
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-test_relative_save.wf.lock
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-test_relative_save.wf.lock
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; echo "teststet"
-ls
-ls'</data>
-      <data key="d7">teststet
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-tmpvove1zrr
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d8" />
-      <data key="d9">10909</data>
-      <data key="d10">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
       <data key="d1">pwd</data>
       <data key="d2">579.3333333333333</data>
       <data key="d3">480.0</data>
       <data key="d4" />
-      <data key="d5">STDOUT:
-/home/tpor598/workforce
-
-STDERR:</data>
-      <data key="d6">bash -c 'sleep 1; pwd'</data>
-      <data key="d7">/home/tpor598/workforce
-</data>
-      <data key="d8" />
-      <data key="d9">11120</data>
-      <data key="d10">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
       <data key="d2">293.0</data>
       <data key="d3">308.0</data>
       <data key="d4" />
-      <data key="d6">bash -c 'sleep 1; sleep 5'</data>
-      <data key="d7" />
-      <data key="d8" />
-      <data key="d9">11000</data>
-      <data key="d10">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
       <data key="d1">sleep 5</data>
       <data key="d2">409.0</data>
       <data key="d3">385.0</data>
       <data key="d4" />
-      <data key="d6">bash -c 'sleep 1; sleep 5'</data>
-      <data key="d7" />
-      <data key="d8" />
-      <data key="d9">11167</data>
-      <data key="d10">0</data>
     </node>
     <node id="aa76a115-4a4e-44ec-899f-8eb872e48ebe">
       <data key="d1">ls</data>
       <data key="d2">762.0</data>
       <data key="d3">421.0</data>
       <data key="d4" />
-      <data key="d6">bash -c 'sleep 1; ls'</data>
-      <data key="d7">AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d8" />
-      <data key="d9">10910</data>
-      <data key="d10">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
-      <data key="d11">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
-      <data key="d12" />
+      <data key="d5">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
+      <data key="d6" />
     </edge>
     <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
-      <data key="d11">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
-      <data key="d12" />
+      <data key="d5">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
+      <data key="d6" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d11">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
-      <data key="d12" />
+      <data key="d5">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
+      <data key="d6" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d11">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
-      <data key="d12" />
+      <data key="d5">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
+      <data key="d6" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
-      <data key="d11">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>
-      <data key="d12" />
+      <data key="d5">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>
+      <data key="d6" />
     </edge>
     <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d11">84042702-2846-4077-8815-eb0ce8c318dc</data>
-      <data key="d12" />
+      <data key="d5">84042702-2846-4077-8815-eb0ce8c318dc</data>
+      <data key="d6" />
     </edge>
     <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d11">8ae2e181-2a4c-4711-98ec-3722faa3f7af</data>
-      <data key="d12" />
+      <data key="d5">8ae2e181-2a4c-4711-98ec-3722faa3f7af</data>
+      <data key="d6" />
     </edge>
     <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d11">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
-      <data key="d12" />
+      <data key="d5">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
+      <data key="d6" />
     </edge>
     <edge source="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71" target="d360ce50-d72e-41e4-9781-eef28404d72a">
-      <data key="d11">62a52192-15ee-4d53-b24c-b0927ad1c3cf</data>
-      <data key="d12" />
+      <data key="d5">62a52192-15ee-4d53-b24c-b0927ad1c3cf</data>
+      <data key="d6" />
     </edge>
     <data key="d0">bash -c 'sleep 1; {}'</data>
   </graph>
