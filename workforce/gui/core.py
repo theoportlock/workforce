@@ -444,16 +444,23 @@ class WorkflowApp:
         pm = PresetManager()
         presets = pm.list()
 
-        # Wrapper editor entry above the Treeview
-        wrapper_entry = tk.Entry(
-            frame,
+        # Wrapper editor textbox above the Treeview (multi-line with scrollbar)
+        wrapper_container = tk.Frame(frame, background=THEME["colors"]["canvas_bg"]) 
+        wrapper_container.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
+        wrapper_entry = tk.Text(
+            wrapper_container,
             font=("TkDefaultFont", 10),
+            height=5,
+            wrap="word",
             background=THEME["colors"]["canvas_bg"],
             foreground=THEME["colors"]["text"],
             insertbackground=THEME["colors"]["text"],
         )
-        wrapper_entry.pack(fill=tk.X, expand=True, pady=(0, 8))
-        wrapper_entry.insert(0, self.state.wrapper)
+        wrapper_scrollbar = tk.Scrollbar(wrapper_container, command=wrapper_entry.yview)
+        wrapper_entry.configure(yscrollcommand=wrapper_scrollbar.set)
+        wrapper_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        wrapper_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        wrapper_entry.insert("1.0", self.state.wrapper)
         frame.columnconfigure(0, weight=1)
 
         # Treeview: two columns, multi-line, scrollable
@@ -558,15 +565,15 @@ class WorkflowApp:
                 return
             iid = selection[0]
             full_val = iid_to_wrapper.get(iid, "")
-            wrapper_entry.delete(0, tk.END)
-            wrapper_entry.insert(0, full_val)
+            wrapper_entry.delete("1.0", tk.END)
+            wrapper_entry.insert("1.0", full_val)
             self.state.wrapper = full_val
 
         tree.bind('<Return>', on_tree_enter)
 
         # Button handlers
         def apply_and_close(event=None):
-            self.state.wrapper = wrapper_entry.get()
+            self.state.wrapper = wrapper_entry.get("1.0", "end-1c")
             self.save_wrapper()
             editor.grab_release()
             editor.update_idletasks()
@@ -636,7 +643,8 @@ class WorkflowApp:
         cancel_btn.pack(side=tk.RIGHT, padx=5)
 
         editor.bind('<Escape>', cancel_and_close)
-        wrapper_entry.bind('<Return>', apply_and_close)
+        wrapper_entry.bind('<Control-Return>', apply_and_close)
+        wrapper_entry.bind('<Control-KP_Enter>', apply_and_close)
         editor.transient(self.master)
         editor.grab_set()
         wrapper_entry.focus_set()
