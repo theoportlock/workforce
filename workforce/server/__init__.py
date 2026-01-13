@@ -118,31 +118,44 @@ def destroy_context(workspace_id: str):
     """Destroy and cleanup a workspace context."""
     global _contexts
     
+    # Get context but DON'T remove from registry yet
     with _contexts_lock:
         if workspace_id not in _contexts:
             return
-        
-        ctx = _contexts.pop(workspace_id)
+        ctx = _contexts[workspace_id]
     
-    # Stop worker outside lock to avoid deadlock
+    # Stop worker FIRST (outside lock to avoid deadlock)
+    # This ensures worker fully stops before context removed from registry
     if ctx.worker_thread and ctx.worker_thread.is_alive():
         log.info(f"Stopping worker thread for {workspace_id}")
         # Signal queue to stop (None sentinel)
         ctx.mod_queue.put(None)
         
-        # Wait for thread with timeout
-        ctx.worker_thread.join(timeout=5)
+        # Wait for thread with increased timeout (10s instead of 5s)
+        # Slow CI systems may need more time for graceful shutdown
+        ctx.worker_thread.join(timeout=10)
         
         if ctx.worker_thread.is_alive():
-            log.error(f"Worker thread for {workspace_id} did not stop within 5 seconds - may be stuck in I/O or deadlocked")
+            log.error(f"Worker thread for {workspace_id} did not stop within 10 seconds - may be stuck in I/O or deadlocked")
             # Thread will become orphaned but at least we warned about it
             # In production, could consider thread.daemon=True or more aggressive termination
         else:
             log.info(f"Worker thread for {workspace_id} stopped cleanly")
     
+    # Clear EventBus subscriptions to prevent lingering references
+    if hasattr(ctx, 'events') and ctx.events:
+        # EventBus will be garbage collected, but explicitly clear subscriptions
+        ctx.events._subscribers.clear()
+        log.debug(f"Cleared EventBus subscriptions for {workspace_id}")
+    
     # Clear run tracking
     ctx.active_runs.clear()
     ctx.active_node_run.clear()
+    
+    # NOW remove from registry (AFTER worker stopped and cleanup complete)
+    # This ensures registry accurately reflects cleanup state
+    with _contexts_lock:
+        _contexts.pop(workspace_id, None)
     
     log.info(f"Destroyed workspace context: {workspace_id}")
 

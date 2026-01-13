@@ -28,6 +28,9 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def server_url():
     """Start server once per test module and return its URL."""
+    # Disable auto-shutdown for testing so server stays alive between tests
+    os.environ["WORKFORCE_NO_AUTO_SHUTDOWN"] = "1"
+    
     # Use resolve_server to find or start server
     try:
         server = utils.resolve_server()
@@ -176,13 +179,22 @@ class TestClientLifecycle:
         
         # Disconnect client
         requests.post(f"{base_url}/client-disconnect", json={})
-        time.sleep(0.2)  # Brief delay for context destruction
+        
+        # Wait with verification loop (up to 10 seconds) for worker thread cleanup
+        # Worker thread must fully stop before context removed from registry
+        # This prevents race condition where fixed sleep was insufficient
+        context_destroyed = False
+        for attempt in range(50):  # 50 attempts * 200ms = 10 seconds max
+            time.sleep(0.2)
+            resp = requests.get(f"{server_url}/workspaces")
+            workspaces = resp.json()["workspaces"]
+            ws_ids = [ws["workspace_id"] for ws in workspaces]
+            if workspace_id not in ws_ids:
+                context_destroyed = True
+                break
         
         # Verify context is destroyed
-        resp = requests.get(f"{server_url}/workspaces")
-        workspaces = resp.json()["workspaces"]
-        ws_ids = [ws["workspace_id"] for ws in workspaces]
-        assert workspace_id not in ws_ids
+        assert context_destroyed, f"Context {workspace_id} still exists after 10 seconds"
 
 
 class TestMultipleWorkspaces:

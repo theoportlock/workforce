@@ -357,11 +357,17 @@ def register_routes(app):
                     all_empty = all(ctx.client_count == 0 for ctx in _contexts.values())
                     remaining_workspaces = len(_contexts)
                 
+                # Check if auto-shutdown is disabled (e.g., during testing)
+                auto_shutdown_disabled = os.environ.get("WORKFORCE_NO_AUTO_SHUTDOWN", "").lower() in ("1", "true", "yes")
+                
                 if all_empty and remaining_workspaces == 0:
-                    log.info("Last client disconnected from last workspace. Triggering graceful shutdown...")
-                    # Spawn shutdown in background thread to avoid blocking this request
-                    shutdown_thread = threading.Thread(target=graceful_shutdown, daemon=False)
-                    shutdown_thread.start()
+                    if auto_shutdown_disabled:
+                        log.info("Last client disconnected from last workspace, but auto-shutdown is disabled (WORKFORCE_NO_AUTO_SHUTDOWN set)")
+                    else:
+                        log.info("Last client disconnected from last workspace. Triggering graceful shutdown...")
+                        # Spawn shutdown in background thread to avoid blocking this request
+                        shutdown_thread = threading.Thread(target=graceful_shutdown, daemon=False)
+                        shutdown_thread.start()
             
             return jsonify({"status": "disconnected", "workspace_id": workspace_id}), 200
         except Exception as e:
