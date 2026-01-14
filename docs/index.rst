@@ -11,6 +11,7 @@ Welcome to workforce's documentation!
    usage
    architecture
    api
+   glossary
    contributing
    authors
    history

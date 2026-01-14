@@ -33,6 +33,7 @@ Features
 * **Multiuser support**: Multiple clients can interact with the same workflow simultaneously
 * **Server-based architecture**: Workflows are served via Flask API with unique URLs
 * **Event-driven execution**: Dependency-aware scheduling with real-time status updates
+* **Flexible edge types**: Use blocking edges for strict dependencies or non-blocking edges for flexible triggering and re-execution
 * **Subset execution**: Run specific subgraphs or the entire workflow
 * **Resume capability**: Restart failed nodes and continue pipeline execution
 * **Interactive GUI**: Edit workflows visually with a Tkinter-based interface
@@ -190,19 +191,19 @@ Prefix and Suffix
 -----------------
 Adding the following prefix and suffixes to the wf run command (or within gui) will add those prefix and suffixes to each command ran by the pipeline.
 
-+-------------------------------------------------+---------------------------------------------------------------------------+--+--+--+--+--+--+--+--+
-| Wrapper Command                                 | Description                                                               |  |  |  |  |  |  |  |  |
-+=================================================+===========================================================================+==+==+==+==+==+==+==+==+
-| --wrapper 'bash -c "{}"'                        | Standard bash execution                                                   |  |  |  |  |  |  |  |  |
-| --wrapper 'bash -c '. env.sh ''                 | Bash execution with definition of config or other environmental settings  |  |  |  |  |  |  |  |  |
-| --wrapper 'tmux send-keys {} C-m'               | Sends each command to a tmux session and executes it.                     |  |  |  |  |  |  |  |  |
-| --wrapper 'ssh ADDRESS {}'                      | Executes each command remotely on the specified server.                   |  |  |  |  |  |  |  |  |
-| --wrapper 'parallel {} ::: FILENAMES'           | Runs the pipeline on each specified filename.                             |  |  |  |  |  |  |  |  |
-| --wrapper 'docker run -it IMAGE {}'             | Executes each command inside a Docker container with an interactive TTY.  |  |  |  |  |  |  |  |  |
-| --wrapper 'echo {} >> commands.sh'              | Exports pipeline commands to a bash script named commands.sh.             |  |  |  |  |  |  |  |  |
-| --wrapper 'bash -lc "conda activate ENV && {}"' | Activates a Conda environment before executing the command.               |  |  |  |  |  |  |  |  |
-| --wrapper 'nohup {} &'                          | Runs commands in the background.                                          |  |  |  |  |  |  |  |  |
-+-------------------------------------------------+---------------------------------------------------------------------------+--+--+--+--+--+--+--+--+
++-------------------------------------------------+---------------------------------------------------------------------------+
+| Wrapper Command                                 | Description                                                               |
++=================================================+===========================================================================+
+| --wrapper 'bash -c "{}"'                        | Standard bash execution                                                   |
+| --wrapper 'bash -c '. env.sh ''                 | Bash execution with definition of config or other environmental settings  |
+| --wrapper 'tmux send-keys {} C-m'               | Sends each command to a tmux session and executes it.                     |
+| --wrapper 'ssh ADDRESS {}'                      | Executes each command remotely on the specified server.                   |
+| --wrapper 'parallel {} ::: FILENAMES'           | Runs the pipeline on each specified filename.                             |
+| --wrapper 'docker run -it IMAGE {}'             | Executes each command inside a Docker container with an interactive TTY.  |
+| --wrapper 'echo {} >> commands.sh'              | Exports pipeline commands to a bash script named commands.sh.             |
+| --wrapper 'bash -lc "conda activate ENV && {}"' | Activates a Conda environment before executing the command.               |
+| --wrapper 'nohup {} &'                          | Runs commands in the background.                                          |
++-------------------------------------------------+---------------------------------------------------------------------------+
 
 To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run. Opening the terminal with shortcut 't' (or on the toolbar), you can see the output of the commands.
 

@@ -78,13 +78,17 @@ Step 2: Create Nodes
 Step 3: Connect Nodes
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Create dependencies between nodes using either method:
+Create dependencies between nodes. By default, edges are :ref:`blocking edges <blocking-edge>` that enforce sequential execution. For advanced workflows, you can create :ref:`non-blocking edges <non-blocking-edge>` using keyboard modifiers.
+
+**Creating Blocking Edges (Default)**
+
+Blocking edges enforce strict dependencies. A node only executes when all incoming blocking edges are ready. This is the standard edge type for sequential pipelines.
 
 **Method 1: Right-click and drag**
 
 1. **Right-click** on the first node (download_data) and **hold**
 2. **Drag** to the second node (process_data)
-3. **Release** to create the edge
+3. **Release** to create a blocking edge (solid line)
 
 Repeat for the second dependency:
 
@@ -96,13 +100,38 @@ Repeat for the second dependency:
 1. Click on the first node to select it
 2. Hold Shift and click the second node (multi-select)
 3. Continue selecting nodes in order
-4. Press **'E'** to connect them in sequence
+4. Press **'E'** to connect them in sequence with blocking edges
 
 Your workflow should now show:
 
 .. code-block:: text
 
-    [download_data] → [process_data] → [generate_report]
+    [download_data] ─→ [process_data] ─→ [generate_report]
+                    (blocking)       (blocking)
+
+This ensures download_data completes before process_data starts, and process_data completes before generate_report starts.
+
+**Creating Non-Blocking Edges (Optional)**
+
+Non-blocking edges are soft triggers that allow nodes to execute without waiting for all dependencies. Use this for advanced patterns like node re-execution or fan-out workflows.
+
+To create a non-blocking edge:
+
+1. Hold **Ctrl+Shift**
+2. Right-click and drag from source node to target node
+3. Release to create a non-blocking edge (dashed line)
+
+Example: If you wanted process_data to be re-triggered externally without waiting for download_data, you could:
+
+1. Right-click download_data and drag to process_data → blocking edge
+2. Then Ctrl+Shift + right-click external_trigger and drag to process_data → non-blocking edge
+
+Now process_data will execute when:
+
+* ALL blocking edges are ready (download_data completed), OR
+* The non-blocking edge triggers (external_trigger is ready)
+
+This allows flexible execution patterns beyond strict sequential order. See :ref:`re-triggering` and :ref:`dependency-resolution` for more details.
 
 Step 4: Save the Workflow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

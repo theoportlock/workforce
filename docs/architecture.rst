@@ -11,6 +11,8 @@ Overview
 
 Workforce uses a client-server architecture to manage workflow execution. The system is built around a Flask API server that maintains workflow state and coordinates execution across multiple clients.
 
+**Backward Compatibility Note**: Workforce 2.0 introduces :ref:`non-blocking edges <non-blocking-edge>` for more flexible workflow execution. Existing workflows remain fully compatible—all edges default to :ref:`blocking edges <blocking-edge>`, preserving the strict dependency semantics of earlier versions. New workflows can optionally mix blocking and non-blocking edges for advanced execution patterns.
+
 Core Components
 ---------------
 
@@ -241,13 +243,116 @@ This mechanism ensures the engine only advances when subset-specific dependencie
 Dependency Resolution
 ^^^^^^^^^^^^^^^^^^^^^
 
-The dependency resolution system works as follows:
+The dependency resolution system is the core of Workforce's scheduling logic. It determines which nodes are ready to execute based on their incoming :ref:`edge-type` attributes and the current status of those edges.
 
-* Each node maintains awareness of its incoming edges
-* Before a node can run, it checks all incoming edges
-* An edge must have ``to_run`` status for the node to proceed
-* Edges outside the subset are ignored during checks
-* Once all within-subset dependencies are satisfied, the node executes
+**Edge Types in Dependency Resolution**:
+
+Workforce supports two edge types that affect dependency checking:
+
+* **Blocking Edges** (:ref:`blocking-edge`) - The target node waits for ALL incoming blocking edges to be ``to_run``
+* **Non-Blocking Edges** (:ref:`non-blocking-edge`) - The target node runs immediately when ANY incoming non-blocking edge becomes ``to_run``
+
+**Resolution Algorithm**:
+
+When an upstream node completes (status becomes ``ran``), the scheduler:
+
+1. Marks all outgoing edges as ``to_run``
+2. For each downstream node, checks its incoming edges:
+
+   **If the incoming edge is BLOCKING**:
+   
+   * Check if ALL incoming blocking edges are ``to_run``
+   * Only if true: Set target node status to ``run``
+   * Non-blocking edges do not affect blocking edge checks
+   
+   **If the incoming edge is NON-BLOCKING**:
+   
+   * Immediately set target node status to ``run``
+   * Do not wait for other incoming edges
+   * Allows target to execute (or re-execute) from this single trigger
+
+3. All propagation respects :ref:`subset-run` boundaries:
+
+   * Only edges within the active subset are processed
+   * Edges leading to nodes outside the subset are ignored
+   * Ensures execution remains confined to selected scope
+
+**Visual Representation**:
+
+Here's how blocking and non-blocking edges interact during execution::
+
+    Initial State:
+    ┌─────┐         ┌─────┐
+    │ A   │ (ran)   │ B   │ (waiting)
+    └─────┘         └─────┘
+      │ blocked
+      │ to_run
+
+    With all blocking edges to_run and no non-blocking incoming:
+    ┌─────┐         ┌─────┐
+    │ A   │ (ran)   │ B   │ (run) ──> executes once
+    └─────┘         └─────┘
+      │ blocked
+      │ to_run
+
+    With non-blocking edge triggering:
+    ┌─────┐         ┌─────┐
+    │ A   │ (ran)   │ B   │ (run) ──> re-executes
+    └─────┘         └─────┘
+      │ non-blocked
+      │ to_run
+
+**Mixed Dependencies Example**:
+
+Consider a node C with one blocking edge from A and one non-blocking edge from B::
+
+    ┌─────┐      ┌─────┐
+    │ A   │      │ B   │
+    └─────┘      └─────┘
+      │ (blocking)  │ (non-blocking)
+      └────┬────────┘
+           │
+         ┌─────┐
+         │ C   │
+         └─────┘
+
+Execution sequence:
+
+1. A completes: A→C marked ``to_run``, C checks dependencies
+   
+   * A→C is blocking and ``to_run`` ✓
+   * Need to wait for B (no edges from B are ``to_run`` yet)
+   * C status remains waiting
+
+2. B completes: B→C marked ``to_run``
+   
+   * B→C is non-blocking, immediately set C to ``run``
+   * C executes (does not wait for A→C to be ``to_run``)
+
+3. If B runs again: B→C marked ``to_run`` again
+   
+   * C immediately runs again (re-triggers)
+   * A→C status does not affect re-triggering
+
+**Cycle Detection**:
+
+Before execution begins, Workforce checks for cycles using only :ref:`blocking-edge` edges:
+
+* Constructs a subgraph containing only blocking edges
+* Checks if the subgraph is a directed acyclic graph (DAG)
+* Non-blocking edges are ignored for cycle detection
+* This allows workflows with non-blocking cycles (safe, no infinite loops)
+* Blocking cycles cause an error before run initiation
+
+**Subset Run Propagation**:
+
+During dependency resolution, the system:
+
+* Maintains an active set of nodes for the current run (the subset)
+* Only propagates edges where both endpoints are in the subset
+* Ignores edges leading to nodes outside the subset
+* Prevents execution from "leaking" beyond the intended scope
+* Enables safe subset runs and node recovery without side effects
 
 Resume Functionality
 ~~~~~~~~~~~~~~~~~~~~

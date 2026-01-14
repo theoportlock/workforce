@@ -142,6 +142,124 @@ Keyboard Shortcuts
 * **Left-Click + Drag Node** - Move node(s)
 * **Shift + Left-Click + Drag Canvas** - Rectangle selection
 
+Edge Types
+~~~~~~~~~~
+
+Workforce supports two types of edges that define how nodes depend on each other. See the :ref:`glossary` for detailed definitions.
+
+**Blocking Edges** (:ref:`blocking-edge`)
+
+Blocking edges are the default edge type and enforce strict dependencies. When a node has blocking edges as inputs, it only transitions to ``run`` state after **all** incoming blocking edges are ready. This enforces sequential execution.
+
+To create a blocking edge (default behavior):
+
+1. Right-click on a source node
+2. Drag to the target node
+3. Release to create the edge
+4. The edge will appear as a solid line
+
+Via CLI:
+
+.. code-block:: bash
+
+    wf edit add-edge Workfile "source_node" "target_node"
+
+This creates a blocking edge by default.
+
+Via REST API (blocking edge):
+
+.. code-block:: bash
+
+    curl -X POST http://localhost:5000/workspace/workspace_id/add-edge \
+      -H "Content-Type: application/json" \
+      -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "blocking"}'
+
+Via Python client:
+
+.. code-block:: python
+
+    from workforce.gui.client import ServerClient
+    
+    client = ServerClient(server_url)
+    client.add_edge(source_id="node-uuid-1", target_id="node-uuid-2", edge_type="blocking")
+
+**Non-Blocking Edges** (:ref:`non-blocking-edge`)
+
+Non-blocking edges are soft triggers that allow immediate execution without waiting for other dependencies. When a non-blocking edge becomes ready, the target node immediately transitions to ``run`` state, allowing for flexible triggering and re-execution patterns.
+
+To create a non-blocking edge:
+
+1. Hold **Ctrl+Shift**
+2. Right-click and drag from source node to target node
+3. Release to create the non-blocking edge
+4. The edge will appear as a dashed line
+
+Via CLI:
+
+.. code-block:: bash
+
+    wf edit add-edge Workfile "source_node" "target_node" --edge_type non-blocking
+
+Via REST API (non-blocking edge):
+
+.. code-block:: bash
+
+    curl -X POST http://localhost:5000/workspace/workspace_id/add-edge \
+      -H "Content-Type: application/json" \
+      -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "non-blocking"}'
+
+Via Python client:
+
+.. code-block:: python
+
+    from workforce.gui.client import ServerClient
+    
+    client = ServerClient(server_url)
+    client.add_edge(source_id="node-uuid-1", target_id="node-uuid-2", edge_type="non-blocking")
+
+**Updating Edge Types**
+
+Change an existing edge type:
+
+Via CLI:
+
+.. code-block:: bash
+
+    wf edit edit-edge-type Workfile "source_node" "target_node" "non-blocking"
+
+Via REST API:
+
+.. code-block:: bash
+
+    curl -X POST http://localhost:5000/workspace/workspace_id/edit-edge-type \
+      -H "Content-Type: application/json" \
+      -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "non-blocking"}'
+
+**Use Cases**
+
+**Blocking Edges** are appropriate for:
+
+* Sequential pipelines where each step must complete before the next starts
+* Workflows that conform to directed acyclic graph (DAG) structure
+* Ensuring all prerequisites are satisfied before proceeding
+* Traditional data processing pipelines (extract → transform → load)
+
+**Non-Blocking Edges** are appropriate for:
+
+* Fan-out patterns where a single node triggers multiple independent branches
+* Workflows requiring node re-execution (e.g., error recovery, data reprocessing)
+* Event-driven execution where triggers are more important than strict ordering
+* Flexible workflows that don't conform to strict DAG structure
+* Monitoring or signal nodes that notify multiple consumers
+
+**Mixed Edge Workflows**
+
+Workflows can combine both edge types for sophisticated execution patterns. For example:
+
+* A node with both blocking edges (ensuring prerequisites) and non-blocking edges (allowing immediate re-execution on external triggers)
+* Multiple independent branches triggered by a single source (blocking to first node, then non-blocking to branch starts)
+* See :ref:`dependency-resolution` in the architecture documentation for detailed execution semantics
+
 Creating Workflows
 ~~~~~~~~~~~~~~~~~~
 
