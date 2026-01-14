@@ -52,15 +52,33 @@ def remove_node_from_graph(path, node_id):
         return {"status": "removed"}
     return {"error": "Node not found"}
 
-def add_edge_to_graph(path, source, target):
+def _normalize_edge_type(edge_type: str) -> str:
+    if not edge_type:
+        return "blocking"
+    if edge_type == "non_blocking":
+        return "non-blocking"
+    return edge_type
+
+
+def add_edge_to_graph(path, source, target, edge_type="blocking"):
     G = load_graph(path)
     if source not in G or target not in G:
         return {"error": "Both source and target must exist"}
     edge_id = str(uuid.uuid4())
-    G.add_edge(source, target, id=edge_id)
+    G.add_edge(source, target, id=edge_id, edge_type=_normalize_edge_type(edge_type))
     save_graph(G, path)
     log.info(f"Added edge {edge_id} ({source} -> {target}) to graph: {path}")
     return {"edge_id": edge_id}
+
+
+def edit_edge_type_in_graph(path, source, target, edge_type):
+    G = load_graph(path)
+    if not G.has_edge(source, target):
+        return {"error": "Edge not found"}
+    G[source][target]["edge_type"] = _normalize_edge_type(edge_type)
+    save_graph(G, path)
+    log.info(f"Set edge_type for {source}->{target} to {edge_type}")
+    return {"status": "updated"}
 
 
 def remove_edge_from_graph(path, source, target):
@@ -190,6 +208,22 @@ def save_node_execution_data_in_graph(path, node_id, command, stdout, stderr, pi
     save_graph(G, path)
     log.info(f"Saved execution data for node {node_id} in graph: {path}")
     return {"status": "updated"}
+
+
+def has_blocking_cycle(path):
+    """Return True if blocking edges contain a directed cycle."""
+    G = load_graph(path)
+    blocking_edges = [
+        (u, v, data)
+        for u, v, data in G.edges(data=True)
+        if data.get("edge_type", "blocking") == "blocking"
+    ]
+    if not blocking_edges:
+        return False
+    blocking_subgraph = nx.DiGraph()
+    blocking_subgraph.add_nodes_from(G.nodes(data=True))
+    blocking_subgraph.add_edges_from(blocking_edges)
+    return not nx.is_directed_acyclic_graph(blocking_subgraph)
 
 def edit_statuses_in_graph(path, updates):
     """Batch update statuses for multiple elements (nodes/edges).

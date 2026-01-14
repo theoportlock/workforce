@@ -165,7 +165,29 @@ def register_routes(app):
             return jsonify({"error": "Workspace not found"}), 404
         
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.add_edge_to_graph, ctx.workfile_path, data["source"], data["target"])
+        result = ctx.enqueue(
+            edit.add_edge_to_graph,
+            ctx.workfile_path,
+            data["source"],
+            data["target"],
+            data.get("edge_type", "blocking")
+        )
+        return jsonify(result), 202
+
+    @app.route("/workspace/<workspace_id>/edit-edge-type", methods=["POST"])
+    def edit_edge_type(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        
+        data = request.get_json(force=True)
+        result = ctx.enqueue(
+            edit.edit_edge_type_in_graph,
+            ctx.workfile_path,
+            data["source"],
+            data["target"],
+            data.get("edge_type", "blocking")
+        )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/remove-edge", methods=["POST"])
@@ -388,6 +410,23 @@ def register_routes(app):
             # create run id and register
             run_id = str(uuid.uuid4())
             G = edit.load_graph(ctx.workfile_path)
+
+            # Blocking cycle prevention (only consider blocking edges)
+            if selected_nodes:
+                # Build blocking-only subgraph restricted to selected nodes
+                blocking_edges = [
+                    (u, v, data) for u, v, data in G.edges(data=True)
+                    if data.get("edge_type", "blocking") == "blocking" and u in selected_nodes and v in selected_nodes
+                ]
+                sub = nx.DiGraph()
+                sub.add_nodes_from((n, G.nodes[n]) for n in selected_nodes if n in G)
+                sub.add_edges_from(blocking_edges)
+                has_cycle = not nx.is_directed_acyclic_graph(sub)
+            else:
+                has_cycle = edit.has_blocking_cycle(ctx.workfile_path)
+
+            if has_cycle:
+                return jsonify({"error": "Run blocked: blocking edges contain a cycle"}), 400
 
             # Determine which nodes to start and which are in scope for this run
             if selected_nodes:

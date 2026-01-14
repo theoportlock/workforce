@@ -39,9 +39,9 @@ def start_graph_worker(ctx):
         
         # Second pass: mark edges as to_run
         for u, v, edge_data in out_edges:
-            # Only propagate if target is in the subset run (if this is a subset run)
-            if subset_only and v not in run_nodes:
-                log.info(f"Skipping edge to {v} - not in subset run")
+            # Only propagate if both source and target are in the subset run (if subset run)
+            if subset_only and (u not in run_nodes or v not in run_nodes):
+                log.info(f"Skipping edge {u}->{v} - endpoints not both in subset run")
                 continue
             
             edge_id = edge_data["id"]  # Should exist now
@@ -83,29 +83,50 @@ def start_graph_worker(ctx):
         # Get all incoming edges to target
         in_edges = list(G.in_edges(target_node, data=True))
         log.info(f"Checking target node {target_node}: {len(in_edges)} incoming edges")
-        
-        # Check if all incoming edges are 'to_run'
-        all_ready = all(ed.get("status") == "to_run" for _, _, ed in in_edges)
+
+        # Handle non-blocking edges: immediately trigger run and clear only this edge
+        edge_type = None
+        for u, v, ed in in_edges:
+            if ed.get("id") == edge_id:
+                edge_type = ed.get("edge_type", "blocking")
+                break
+        edge_type = edge_type or "blocking"
+
+        # If subset run, ignore edges whose endpoints are outside the subset
+        def _is_in_subset(node_id):
+            return (not subset_only) or (node_id in run_nodes)
+
+        if edge_type == "non-blocking":
+            log.info(f"Non-blocking edge {edge_id} ready; triggering {target_node}")
+            ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", edge_id, "")
+            ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
+            return
+
+        # For blocking readiness, consider only blocking in-edges that are in subset (if subset run)
+        blocking_in_edges = [
+            (u, v, ed) for u, v, ed in in_edges
+            if ed.get("edge_type", "blocking") == "blocking" and _is_in_subset(u) and _is_in_subset(v)
+        ]
+        all_ready = all(ed.get("status") == "to_run" for _, _, ed in blocking_in_edges)
         
         if all_ready:
-            log.info(f"All dependencies met for node {target_node}, clearing edges and queuing node")
+            log.info(f"All blocking dependencies met for node {target_node}, clearing edges and queuing node")
             
-            # Clear all incoming edge statuses
-            for _, _, ed in in_edges:
+            # Clear blocking incoming edge statuses
+            for _, _, ed in blocking_in_edges:
                 eid = ed.get("id")
                 if eid:
                     ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", eid, "")
             
-            # Set target node to 'run' (only if not already running/ran)
+            # Set target node to 'run' unless already running/ran
             current_status = G.nodes[target_node].get("status", "")
             if current_status not in ("run", "running", "ran"):
-                log.info(f"Queuing node {target_node} for execution with run_id={run_id}")
                 ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
             else:
-                log.debug(f"Node {target_node} already has status {current_status}, not queuing")
+                log.debug(f"Node {target_node} already {current_status}, not queuing for blocking edges")
         else:
-            ready_count = sum(1 for _, _, ed in in_edges if ed.get("status") == "to_run")
-            log.info(f"Node {target_node} not ready: {ready_count}/{len(in_edges)} edges ready")
+            ready_count = sum(1 for _, _, ed in blocking_in_edges if ed.get("status") == "to_run")
+            log.info(f"Node {target_node} not ready: {ready_count}/{len(blocking_in_edges)} blocking edges ready")
 
     def worker():
         log.info(f"Graph worker thread started for workspace {ctx.workspace_id}.")

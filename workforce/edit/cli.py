@@ -2,7 +2,7 @@ import argparse
 from .client import (
     cmd_add_node, cmd_remove_node, cmd_add_edge, cmd_remove_edge,
     cmd_edit_status, cmd_edit_position, cmd_edit_wrapper,
-    cmd_edit_node_label, cmd_save_node_log
+    cmd_edit_node_label, cmd_save_node_log, cmd_edit_edge_type
 )
 from workforce.utils import compute_workspace_id, get_absolute_path, default_workfile
 
@@ -27,7 +27,15 @@ def main():
     ee.add_argument("base_url")
     ee.add_argument("source")
     ee.add_argument("target")
+    ee.add_argument("--type", dest="edge_type", choices=["blocking", "non_blocking", "non-blocking"], default="blocking")
     ee.set_defaults(func=cmd_add_edge)
+
+    eet = sub.add_parser("edit-edge-type")
+    eet.add_argument("base_url")
+    eet.add_argument("source")
+    eet.add_argument("target")
+    eet.add_argument("--type", dest="edge_type", choices=["blocking", "non_blocking", "non-blocking"], default="blocking")
+    eet.set_defaults(func=cmd_edit_edge_type)
 
     ere = sub.add_parser("remove-edge")
     ere.add_argument("base_url")

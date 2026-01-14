@@ -1189,6 +1189,11 @@ class WorkflowApp:
 
     # right-click drag to create edge
     def on_right_press(self, event):
+        # Determine desired edge type based on modifiers: Ctrl+Shift = non-blocking, else blocking
+        is_shift = bool(event.state & 0x0001)
+        is_ctrl = bool(event.state & 0x0004)
+        self._edge_type_pending = "non-blocking" if (is_shift and is_ctrl) else "blocking"
+
         item = self.canvas.find_withtag(tk.CURRENT)
         for nid, (rect, txt) in self.canvas_view.node_widgets.items():
             if item and item[0] in (rect, txt):
@@ -1197,10 +1202,16 @@ class WorkflowApp:
                 cx = (coords[0] + coords[2]) / 2
                 cy = (coords[1] + coords[3]) / 2
                 self._edge_line = self.canvas.create_line(
-                    cx, cy, cx, cy, dash=(3, 2), fill=THEME["colors"]["edge"]["drag_preview"]
+                    cx,
+                    cy,
+                    cx,
+                    cy,
+                    dash=(3, 2) if self._edge_type_pending == "blocking" else (4, 3),
+                    fill=THEME["colors"]["edge"]["drag_preview"],
                 )
                 return
         self.state.edge_start = None
+        self._edge_type_pending = None
 
     def on_right_motion(self, event):
         if getattr(self, "_edge_line", None):
@@ -1229,9 +1240,11 @@ class WorkflowApp:
         self._edge_line = None
         if self.state.edge_start and target and target != self.state.edge_start:
             try:
-                self.server.add_edge(self.state.edge_start, target)
+                edge_type = getattr(self, "_edge_type_pending", "blocking") or "blocking"
+                self.server.add_edge(self.state.edge_start, target, edge_type=edge_type)
             except Exception as e:
                 log.error(f"add-edge error: {e}")
+        self._edge_type_pending = None
 
     def on_node_press(self, event, node_id):
         self.state.dragging_node = node_id

@@ -124,11 +124,14 @@ class ServerClient:
     def remove_node(self, node_id):
         return utils._post(self.base_url, "/remove-node", {"node_id": node_id})
 
-    def add_edge(self, source, target):
-        return utils._post(self.base_url, "/add-edge", {"source": source, "target": target})
+    def add_edge(self, source, target, edge_type="blocking"):
+        return utils._post(self.base_url, "/add-edge", {"source": source, "target": target, "edge_type": edge_type})
 
     def remove_edge(self, source, target):
         return utils._post(self.base_url, "/remove-edge", {"source": source, "target": target})
+
+    def edit_edge_type(self, source, target, edge_type="blocking"):
+        return utils._post(self.base_url, "/edit-edge-type", {"source": source, "target": target, "edge_type": edge_type})
 
     def edit_status(self, element_type, element_id, value):
         return utils._post(self.base_url, "/edit-status", {"element_type": element_type, "element_id": element_id, "value": value})

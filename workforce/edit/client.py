@@ -23,8 +23,16 @@ def cmd_remove_node(args, base_url, workspace_id):
     print(resp)
 
 def cmd_add_edge(args, base_url, workspace_id):
-    payload = {"source": args.source, "target": args.target}
+    payload = {"source": args.source, "target": args.target, "edge_type": args.edge_type}
     endpoint = f"/workspace/{workspace_id}/add-edge"
+    print(f"[CLIENT] POST {endpoint} {payload}")
+    resp = _post(base_url, endpoint, payload)
+    print(resp)
+
+
+def cmd_edit_edge_type(args, base_url, workspace_id):
+    payload = {"source": args.source, "target": args.target, "edge_type": args.edge_type}
+    endpoint = f"/workspace/{workspace_id}/edit-edge-type"
     print(f"[CLIENT] POST {endpoint} {payload}")
     resp = _post(base_url, endpoint, payload)
     print(resp)

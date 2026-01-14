@@ -22,7 +22,7 @@ class GraphCanvas:
         for node in graph.get("nodes", []):
             self.draw_node(node.get("id"), node_data=node)
         for link in graph.get("links", []):
-            self.draw_edge(link.get("source"), link.get("target"))
+            self.draw_edge(link)
 
     def draw_node(self, node_id, node_data=None, font_size=None, selected=None):
         data = node_data or {}
@@ -70,14 +70,32 @@ class GraphCanvas:
             if "on_node_double_right_click" in cb:
                 self.canvas.tag_bind(item, "<Double-Button-2>", lambda e, nid=node_id: cb["on_node_double_right_click"](e, nid))
 
-    def draw_edge(self, src, tgt):
+    def draw_edge(self, edge_data):
+        src = edge_data.get("source") if isinstance(edge_data, dict) else None
+        tgt = edge_data.get("target") if isinstance(edge_data, dict) else None
+        if not src or not tgt:
+            return
         x1, y1 = self.get_node_center(src)
         x2, y2 = self.get_node_center(tgt)
         src_box = self.get_node_bounds(src)
         tgt_box = self.get_node_bounds(tgt)
         x1a, y1a = self.clip_line_to_box(x1, y1, x2, y2, src_box)
         x2a, y2a = self.clip_line_to_box(x2, y2, x1, y1, tgt_box)
-        line = self.canvas.create_line(x1a, y1a, x2a, y2a, arrow=tk.LAST, fill=THEME["colors"]["edge"]["line"], tags="edge", width=self.state.base_edge_width * self.state.scale)
+        edge_type = edge_data.get("edge_type", "blocking") if isinstance(edge_data, dict) else "blocking"
+        scale_width = self.state.base_edge_width * self.state.scale
+        width = scale_width * (2.5 if edge_type == "non-blocking" else 1.0)
+        dash = (4, 3) if edge_type == "non-blocking" else None
+        line = self.canvas.create_line(
+            x1a,
+            y1a,
+            x2a,
+            y2a,
+            arrow=tk.LAST,
+            fill=THEME["colors"]["edge"]["line"],
+            tags="edge",
+            width=width,
+            dash=dash,
+        )
         self.canvas.tag_lower(line)
 
     def get_node_bounds(self, node_id):
