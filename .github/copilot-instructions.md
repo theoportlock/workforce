@@ -31,6 +31,7 @@
 - Logs: node stdout/stderr captured and posted back; GUI log viewer relies on node log attribute.
 
 ## When contributing
+- **CRITICAL: Run pytest before implementing changes**: Always run `pytest` from repo root and confirm all tests pass before making any code changes. After implementation, run the full suite again to validate.
 - Prefer new tests near existing patterns in tests/test_runner.py for scheduler/run changes.
 - Keep GraphML compatibility: convert positions to strings and use uuid4 ids for nodes/edges.
 - Maintain Socket.IO event names/protocol for GUI compatibility; emit through EventBus rather than direct socket calls.
