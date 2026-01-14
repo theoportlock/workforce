@@ -23,7 +23,7 @@
       <data key="d6">asdfad
 </data>
       <data key="d7" />
-      <data key="d8">28063</data>
+      <data key="d8">51605</data>
       <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -56,7 +56,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">28158</data>
+      <data key="d8">51705</data>
       <data key="d9">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
@@ -89,7 +89,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">27882</data>
+      <data key="d8">51411</data>
       <data key="d9">0</data>
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
@@ -101,7 +101,7 @@ workforce.egg-info
       <data key="d6">test
 </data>
       <data key="d7" />
-      <data key="d8">28661</data>
+      <data key="d8">52364</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -113,7 +113,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">28352</data>
+      <data key="d8">51918</data>
       <data key="d9">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
@@ -125,7 +125,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">28715</data>
+      <data key="d8">52431</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
@@ -185,7 +185,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">27912</data>
+      <data key="d8">51423</data>
       <data key="d9">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
@@ -197,7 +197,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">28261</data>
+      <data key="d8">51785</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -208,19 +208,19 @@ workforce.egg-info
       <data key="d5">bash -c 'sleep 1; sleep 5'</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">28015</data>
+      <data key="d8">51582</data>
       <data key="d9">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
       <data key="d1">sleep 5</data>
       <data key="d2">409.0</data>
       <data key="d3">385.0</data>
-      <data key="d4">fail</data>
+      <data key="d4">ran</data>
       <data key="d5">bash -c 'sleep 1; sleep 5'</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">28518</data>
-      <data key="d9">-9</data>
+      <data key="d8">52073</data>
+      <data key="d9">0</data>
     </node>
     <node id="aa76a115-4a4e-44ec-899f-8eb872e48ebe">
       <data key="d1">ls</data>
@@ -244,7 +244,6 @@ pyproject.toml
 README.rst
 scripts
 tests
-tmpjl5nnke7
 todo.md
 venv
 Workfile
@@ -253,7 +252,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">27905</data>
+      <data key="d8">51433</data>
       <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
@@ -286,7 +285,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">28759</data>
+      <data key="d8">52475</data>
       <data key="d9">-9</data>
     </node>
     <node id="3326a2b5-f09f-44e1-956c-e78a8489f9e3">
@@ -319,7 +318,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">27920</data>
+      <data key="d8">51450</data>
       <data key="d9">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">

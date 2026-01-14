@@ -213,4 +213,3 @@ def test_log_overwrite_on_reexecution(temp_graph_file):
     assert node.get("stderr") == "err2"
     assert node.get("pid") == "2"
     assert node.get("error_code") == "1"
-*** End File
