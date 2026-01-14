@@ -505,7 +505,7 @@ def test_run_with_multiple_root_nodes(temp_graph_file):
 # =======================
 
 def test_cyclic_graph_does_not_infinite_loop(temp_graph_file, mock_server_context):
-    """Test that cyclic graphs don't cause infinite loops."""
+    """Test that cyclic graphs allow nodes to be retriggered."""
     nodes = create_cyclic_graph(temp_graph_file)
     ctx = mock_server_context
     
@@ -537,14 +537,14 @@ def test_cyclic_graph_does_not_infinite_loop(temp_graph_file, mock_server_contex
     G = edit.load_graph(temp_graph_file)
     assert G.nodes[nodes["c"]]["status"] == "run"
     
-    # Complete C -> should NOT retrigger A (already ran)
+    # Complete C -> should retrigger A (cyclic behavior enabled)
     ctx.active_node_run[nodes["c"]] = run_id
     ctx.enqueue_status(temp_graph_file, "node", nodes["c"], "ran", run_id)
     ctx.mod_queue.join()
     time.sleep(0.1)
     
     G = edit.load_graph(temp_graph_file)
-    assert G.nodes[nodes["a"]]["status"] == "ran"  # Should still be ran, not run
+    assert G.nodes[nodes["a"]]["status"] == "run"  # Should be retriggered to run
 
 
 # =======================

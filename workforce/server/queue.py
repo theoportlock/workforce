@@ -118,26 +118,9 @@ def start_graph_worker(ctx):
                 if eid:
                     ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", eid, "")
             
-            # Set target node to 'run'
-            # For blocking edges: retrigger if node has multiple incoming edges (not a simple cycle)
-            # This allows mixed blocking/non-blocking scenarios while preventing infinite cycles
-            current_status = G.nodes[target_node].get("status", "")
-            all_in_edges = list(G.in_edges(target_node, data=True))
-            # Filter to only edges in the subset if it's a subset run
-            in_edges_in_subset = [
-                (u, v, ed) for u, v, ed in all_in_edges
-                if _is_in_subset(u) and _is_in_subset(v)
-            ]
-            
-            should_retrigger = (
-                current_status not in ("run", "running", "ran") or
-                len(in_edges_in_subset) > 1  # Allow retrigger if multiple incoming edges
-            )
-            
-            if should_retrigger:
-                ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
-            else:
-                log.debug(f"Node {target_node} already {current_status} with single incoming edge, not retriggering")
+            # Set target node to 'run' (always, for blocking edges)
+            # Blocking edges should retrigger execution even if node was previously ran
+            ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
         else:
             ready_count = sum(1 for _, _, ed in blocking_in_edges if ed.get("status") == "to_run")
             log.info(f"Node {target_node} not ready: {ready_count}/{len(blocking_in_edges)} blocking edges ready")
