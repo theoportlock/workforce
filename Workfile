@@ -96,13 +96,12 @@ workforce.egg-info
       <data key="d1">echo test</data>
       <data key="d2">-45.734848484848385</data>
       <data key="d3">107.45202020202025</data>
-      <data key="d4">ran</data>
+      <data key="d4">running</data>
       <data key="d5">bash -c 'sleep 1; echo test'</data>
-      <data key="d6">test
-</data>
+      <data key="d6" />
       <data key="d7" />
-      <data key="d8">63382</data>
-      <data key="d9">0</data>
+      <data key="d8">64963</data>
+      <data key="d9" />
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d1">pwd</data>
@@ -120,12 +119,13 @@ workforce.egg-info
       <data key="d1">pwd</data>
       <data key="d2">52.88888888888895</data>
       <data key="d3">-23.444444444444372</data>
-      <data key="d4">running</data>
+      <data key="d4">ran</data>
       <data key="d5">bash -c 'sleep 1; pwd'</data>
-      <data key="d6" />
+      <data key="d6">/home/tpor598/workforce
+</data>
       <data key="d7" />
-      <data key="d8">63415</data>
-      <data key="d9" />
+      <data key="d8">64883</data>
+      <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
       <data key="d1">echo "teststet"
@@ -285,7 +285,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">63329</data>
+      <data key="d8">64911</data>
       <data key="d9">0</data>
     </node>
     <node id="3326a2b5-f09f-44e1-956c-e78a8489f9e3">
