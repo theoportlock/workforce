@@ -32,6 +32,7 @@ def save_graph(G: nx.DiGraph, path: str):
     dirpath = os.path.dirname(path) if os.path.dirname(path) else '.'
     with tempfile.NamedTemporaryFile(dir=dirpath, delete=False, mode='wb') as tmp:
         tmppath = tmp.name
+        # Close the file handle so it can be written to on Windows
     nx.write_graphml(G, tmppath)
     os.replace(tmppath, path)
 
