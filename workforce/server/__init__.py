@@ -95,20 +95,7 @@ def _acquire_lock() -> bool:
         os.close(fd)
         return True
     except FileExistsError:
-        # If lock exists but server is dead, allow removing it
-        pid_info = _read_pid_file()
-        if pid_info and _pid_alive(pid_info[2]):
-            return False
-        try:
-            os.remove(path)
-        except OSError:
-            pass
-        try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.close(fd)
-            return True
-        except FileExistsError:
-            return False
+        return False
 
 
 def _release_lock():
@@ -392,14 +379,21 @@ def _is_compatible_server(host: str, port: int) -> bool:
 
 
 def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5000, log_dir: str | None = None):
-    """Start the single machine-wide server with explicit host/port."""
+    """Start the single machine-wide server with explicit host/port.
+    
+    Environment variable precedence:
+    - Server binds to WORKFORCE_HOST (if set) or host parameter
+    - Server binds to WORKFORCE_PORT (if set) or port parameter
+    - Health checks use WORKFORCE_URL (if set), else derive from host/port
+    - Logs written to WORKFORCE_LOG_DIR (if set) or log_dir parameter
+    """
 
     log_dir = log_dir or os.environ.get("WORKFORCE_LOG_DIR")
     skip_lock = os.environ.get("WORKFORCE_SKIP_LOCK", "0") in ("1", "true", "True")
     pid_info = _read_pid_file()
     if pid_info and _pid_alive(pid_info[2]):
         existing_host, existing_port, existing_pid = pid_info
-        log.info(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
+        print(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
         return
 
     lock_acquired = True if skip_lock else _acquire_lock()
@@ -413,7 +407,25 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         except OSError:
             pass
 
-    _setup_logging(log_dir)
+    # Only setup logging in foreground mode to avoid concurrent file access
+    if not background:
+        _setup_logging(log_dir)
+
+    # Check if server already running via HTTP health check
+    if background:
+        check_url = os.environ.get("WORKFORCE_URL")
+        if not check_url:
+            check_url = f"http://{host}:{port}"
+        
+        try:
+            with urllib.request.urlopen(f"{check_url}/workspaces", timeout=2) as resp:
+                if resp.status == 200:
+                    print(f"Server already running on {check_url}")
+                    _release_lock()
+                    return
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+            # No server running, proceed with start
+            pass
 
     # Ensure host/port are available
     if is_port_in_use(port, host=host):
@@ -436,29 +448,26 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         if log_dir:
             cmd += ["--log-dir", log_dir]
 
-        log.info(f"Starting background server: {' '.join(cmd)}")
+        print(f"Starting background server: {' '.join(cmd)}")
+        
+        # On Windows, detach subprocess from parent console to avoid signal propagation
+        creation_flags = 0
+        if sys.platform == "win32":
+            creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+        
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=os.getcwd(),
             env=env,
+            creationflags=creation_flags,
         )
 
-        # Wait for pid file to appear and process to be alive
-        max_retries = 20
-        for attempt in range(max_retries):
-            time.sleep(0.25)
-            pid_info = _read_pid_file()
-            if pid_info and _pid_alive(pid_info[2]):
-                log.info(f"Server started on http://{pid_info[0]}:{pid_info[1]} (pid {pid_info[2]})")
-                _release_lock()
-                return
-            if process.poll() is not None:
-                break
-
+        # Release lock and return immediately - background process will register itself
+        print(f"Starting background server on http://{host}:{port}")
         _release_lock()
-        raise RuntimeError("Failed to start server (pid file not created)")
+        return
 
     # Foreground server
     app, socketio = get_app()
@@ -622,7 +631,11 @@ def cmd_start(args):
     host = getattr(args, 'host', '127.0.0.1')
     port = getattr(args, 'port', 5000)
     log_dir = getattr(args, 'log_dir', None)
-    start_server(background=not foreground, host=host, port=port, log_dir=log_dir)
+    try:
+        start_server(background=not foreground, host=host, port=port, log_dir=log_dir)
+    except KeyboardInterrupt:
+        # User interrupted or Windows file operation interrupted - server may have started
+        pass
 
 def cmd_stop(args):
     stop_server()

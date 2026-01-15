@@ -81,19 +81,19 @@ def test_remote_execution_via_workspace_url(tmp_path):
         t = threading.Thread(target=lambda: runner.start(initial_nodes=None), daemon=True)
         t.start()
 
-            # 6) Poll graph file until all nodes transition to 'ran'
-            def all_ran_from_disk():
-                try:
-                    G = edit.load_graph(str(workfile))
-                    return (
-                        G.nodes[a].get("status") == "ran" and
-                        G.nodes[b].get("status") == "ran" and
-                        G.nodes[c].get("status") == "ran"
-                    )
-                except Exception:
-                    return False
+        # 6) Poll graph file until all nodes transition to 'ran'
+        def all_ran_from_disk():
+            try:
+                G = edit.load_graph(str(workfile))
+                return (
+                    G.nodes[a].get("status") == "ran" and
+                    G.nodes[b].get("status") == "ran" and
+                    G.nodes[c].get("status") == "ran"
+                )
+            except Exception:
+                return False
 
-            assert _wait_for(all_ran_from_disk, timeout=15.0), "Workflow did not complete via remote execution"
+        assert _wait_for(all_ran_from_disk, timeout=15.0), "Workflow did not complete via remote execution"
 
         # 7) Ensure runner thread exits
         t.join(timeout=2.0)

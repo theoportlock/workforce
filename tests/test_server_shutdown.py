@@ -101,3 +101,43 @@ def test_duplicate_server_prevention():
                 raise AssertionError(f"Unexpected second server found on port {port}")
         except requests.exceptions.RequestException:
             pass  # Expected - no server on this port
+
+
+def test_singleton_explicit_port():
+    """Test singleton behavior with explicit port specification."""
+    import subprocess
+    import sys
+    import os
+    
+    # Kill any existing servers
+    pid_info = utils.get_running_server()
+    if pid_info:
+        try:
+            import signal
+            os.kill(pid_info[2], signal.SIGTERM if sys.platform != "win32" else signal.CTRL_C_EVENT)
+            time.sleep(1.0)
+        except Exception:
+            pass
+    
+    # (a) Start first server on port 5050
+    start_server(background=True, host="127.0.0.1", port=5050)
+    result = _wait_for(lambda: utils.get_running_server(), timeout=8.0)
+    assert result is not None, "First server did not start"
+    first_host, first_port, first_pid = result
+    assert first_port == 5050, f"Expected port 5050, got {first_port}"
+    
+    # Verify it's accessible
+    resp = requests.get(f"http://127.0.0.1:5050/workspaces", timeout=2)
+    assert resp.status_code == 200
+    
+    # (b) Attempt to start second server on same port - should detect and return early
+    start_server(background=True, host="127.0.0.1", port=5050)
+    time.sleep(1.0)
+    
+    # (c) Verify only one process exists on port 5050
+    # Check that the PID hasn't changed
+    new_result = utils.get_running_server()
+    assert new_result is not None
+    new_host, new_port, new_pid = new_result
+    assert new_port == 5050, "Port changed unexpectedly"
+    assert new_pid == first_pid, f"Second server process created (PID {new_pid}) instead of reusing existing (PID {first_pid})"

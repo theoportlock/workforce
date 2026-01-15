@@ -101,14 +101,34 @@ def is_workspace_url(text: str) -> bool:
 
 
 def looks_like_url(text: str) -> bool:
-    """Check if text looks like a URL (but may not be valid)."""
+    """Check if text looks like a URL (but may not be valid).
+    
+    Distinguishes URLs from Windows file paths (C:\...).
+    """
     if not text:
         return False
-    return (
-        text.startswith(('http://', 'https://')) or 
-        ':' in text or 
-        '/workspace/' in text
-    )
+    
+    # Check for explicit URL schemes first
+    if text.startswith(('http://', 'https://')):
+        return True
+    
+    # Check for /workspace/ endpoint
+    if '/workspace/' in text:
+        return True
+    
+    # Check for colon, but exclude Windows drive letters (C:, D:, etc.)
+    # Windows drive letters are single letters followed by colon at position 1
+    if ':' in text:
+        # If colon is at position 1 and text[0] is a single letter, it's a drive letter
+        colon_pos = text.find(':')
+        if colon_pos == 1 and text[0].isalpha():
+            # This is a Windows drive letter path (C:\...) or relative path with colon
+            # In URL context, we need host:port, so position 1 colon isn't a URL
+            return False
+        # Otherwise, it might be a URL with host:port
+        return True
+    
+    return False
 
 
 def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
@@ -128,44 +148,60 @@ def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
 # HTTP POST helper
 # -----------------------------------------------------------------------------
 
-def _post(base_url: str, endpoint: str, payload: dict | None = None) -> dict:
-    """POST JSON payload to an endpoint. Used by edit, run, and GUI clients."""
+def _post(base_url: str, endpoint: str, payload: dict | None = None, retry_on_connect_error: bool = False) -> dict:
+    """POST JSON payload to an endpoint. Used by edit, run, and GUI clients.
+    
+    If retry_on_connect_error=True, retry up to 10 times with 0.5s delay between attempts.
+    """
     if not endpoint.startswith("/"):
         endpoint = "/" + endpoint
 
     url = f"{base_url.rstrip('/')}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
 
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(req) as resp:
-            resp_data = resp.read().decode("utf-8")
-            try:
-                return json.loads(resp_data)
-            except json.JSONDecodeError:
-                raise RuntimeError(f"Server returned non-JSON response: {resp_data}")
-
-    except urllib.error.HTTPError as e:
-        # HTTP errors (404, 409, 500, etc.) - try to read error response
-        try:
-            error_body = e.read().decode("utf-8")
-            error_data = json.loads(error_body)
-            error_msg = error_data.get("error", str(e))
-        except:
-            error_msg = str(e)
-        raise RuntimeError(f"Failed to POST to {url}: HTTP Error {e.code} {e.reason}. {error_msg}")
+    max_retries = 10 if retry_on_connect_error else 1
+    last_error = None
     
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Failed to POST to {url}: {e}")
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            
+            with urllib.request.urlopen(req) as resp:
+                resp_data = resp.read().decode("utf-8")
+                try:
+                    return json.loads(resp_data)
+                except json.JSONDecodeError:
+                    raise RuntimeError(f"Server returned non-JSON response: {resp_data}")
 
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error POSTing to {url}: {e}")
+        except urllib.error.HTTPError as e:
+            # HTTP errors (404, 409, 500, etc.) - try to read error response
+            try:
+                error_body = e.read().decode("utf-8")
+                error_data = json.loads(error_body)
+                error_msg = error_data.get("error", str(e))
+            except:
+                error_msg = str(e)
+            raise RuntimeError(f"Failed to POST to {url}: HTTP Error {e.code} {e.reason}. {error_msg}")
+        
+        except (urllib.error.URLError, ConnectionRefusedError, OSError) as e:
+            # Connection errors - retry if enabled
+            last_error = e
+            if retry_on_connect_error and attempt < max_retries - 1:
+                import time
+                time.sleep(0.5)
+                continue
+            raise RuntimeError(f"Failed to POST to {url}: {e}")
+
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error POSTing to {url}: {e}")
+    
+    raise RuntimeError(f"Failed to POST to {url} after {max_retries} retries: {last_error}")
+
 
 
 def shell_quote_multiline(script: str) -> str:
@@ -293,8 +329,11 @@ def _normalize_server_url(url: str) -> tuple[str, int, str]:
 
 
 def register_workspace(server_url: str, workfile_path: str) -> dict:
-    """Register a workspace path with the server and return metadata."""
-    return _post(server_url, "/workspace/register", {"path": workfile_path})
+    """Register a workspace path with the server and return metadata.
+    
+    Retries up to 10 times with 0.5s delay to wait for server startup.
+    """
+    return _post(server_url, "/workspace/register", {"path": workfile_path}, retry_on_connect_error=True)
 
 
 def remove_workspace(server_url: str, workspace_id: str) -> dict:
@@ -314,6 +353,9 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
     """Return server URL, starting the server if needed.
 
     Priority: explicit server_url argument > WORKFORCE_SERVER_URL env > http://127.0.0.1:5000.
+    
+    Note: If server needs to be started, this function returns immediately.
+    Callers should poll/wait for server availability if needed.
     """
     candidate = server_url or os.environ.get("WORKFORCE_SERVER_URL") or "http://127.0.0.1:5000"
     host, port, normalized = _normalize_server_url(candidate)
@@ -336,7 +378,7 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
 
     start_server(background=True, host=host, port=port, log_dir=log_dir)
 
-    # After start, trust the requested host/port; pid file should be created soon after
+    # Return expected URL immediately - server will start in background
     return normalized
 
 
