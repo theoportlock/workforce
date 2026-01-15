@@ -90,7 +90,7 @@ class TestServerInitialization:
     
     def test_server_accessible(self, server_url):
         """Verify server is accessible and responding."""
-        result = utils.find_running_server()
+        result = utils.get_running_server()
         assert result is not None
     
     def test_workspace_endpoint_accessible(self, server_url):

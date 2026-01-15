@@ -12,7 +12,9 @@ import socket
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
+import signal
 
 # -----------------------------------------------------------------------------
 # Workspace identification
@@ -112,7 +114,7 @@ def looks_like_url(text: str) -> bool:
 def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
     """Build absolute URL for a workspace endpoint.
     
-    Discovers running server dynamically via resolve_server().
+    Discovers or starts the server via resolve_server().
     """
     server_url = resolve_server()
     base = f"{server_url}/workspace/{workspace_id}"
@@ -219,81 +221,128 @@ def is_port_in_use(port: int) -> bool:
             return True  # Port is in use
 
 
-# -----------------------------------------------------------------------------
-# Server discovery and lifecycle
-# -----------------------------------------------------------------------------
-
-def find_free_port(start: int = 5000, end: int = 5100) -> int:
-    """Find the first available port in the given range."""
-    for port in range(start, end + 1):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("", port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError(f"No free port found in range {start}-{end}")
+def runtime_dir() -> str:
+    """Return the directory used for runtime artifacts (~/.workforce)."""
+    path = os.path.join(os.path.expanduser("~"), ".workforce")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
-def find_running_server(host: str = "127.0.0.1", port_range: tuple = (5000, 5100), timeout: float = 1) -> tuple | None:
-    """
-    Scan port range for an active Workforce server via health check.
-    
-    Returns:
-        (host, port) tuple if found, None if no server detected.
-    """
-    start_port, end_port = port_range
-    for port in range(start_port, end_port + 1):
-        try:
-            url = f"http://{host}:{port}/workspaces"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                if resp.status == 200:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    if "workspaces" in data:
-                        return (host, port)
-        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError, OSError):
-            continue
-    return None
+def pid_file_path() -> str:
+    return os.path.join(runtime_dir(), "server.pid")
 
 
-def resolve_server(host: str | None = None) -> str:
-    """
-    Find a running Workforce server or auto-start one.
-    
-    Args:
-        host: Host to bind to (default: 127.0.0.1 for discovery, 0.0.0.0 for startup).
-              If None, uses 127.0.0.1 for discovery, then 0.0.0.0 for startup.
-    
-    Returns:
-        Full server URL (e.g., http://127.0.0.1:5042)
-    
-    Raises:
-        RuntimeError: If server cannot be found or started.
-    """
-    discovery_host = host or "127.0.0.1"
-    
-    # Try to find existing server
-    result = find_running_server(host=discovery_host)
-    if result:
-        found_host, found_port = result
-        return f"http://{found_host}:{found_port}"
-    
-    # No server found, start one
-    # Import here to avoid circular dependency
-    from workforce.server import start_server
-    
-    startup_host = host or "0.0.0.0"
+def lock_file_path() -> str:
+    return os.path.join(runtime_dir(), "server.lock")
+
+
+def log_file_path(log_dir: str | None = None) -> str:
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+        return os.path.join(log_dir, "server.log")
+    return os.path.join(runtime_dir(), "server.log")
+
+
+def _read_pid_file() -> tuple[str, int, int] | None:
+    """Return (host, port, pid) if pid file exists and is parseable."""
+    path = pid_file_path()
+    if not os.path.exists(path):
+        return None
     try:
-        start_server(background=True, host=startup_host)
-    except Exception as e:
-        raise RuntimeError(f"Failed to start server: {e}")
-    
-    # Try to find the newly started server
-    # Use discovery host (127.0.0.1) since server on 0.0.0.0 is reachable locally via 127.0.0.1
-    result = find_running_server(host=discovery_host, port_range=(5000, 5100), timeout=1)
-    if result:
-        found_host, found_port = result
-        return f"http://{found_host}:{found_port}"
-    
-    raise RuntimeError("Server started but could not be discovered")
+        with open(path, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f.readlines() if line.strip()]
+        if len(lines) < 2:
+            return None
+        host_port = lines[0]
+        if ":" not in host_port:
+            return None
+        host, port_str = host_port.split(":", 1)
+        pid = int(lines[1])
+        port = int(port_str)
+        return host, port, pid
+    except Exception:
+        return None
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        # On Unix, os.kill(pid, 0) checks liveness without killing
+        if sys.platform != "win32":
+            os.kill(pid, 0)
+            return True
+        # On Windows, os.kill may raise PermissionError for running processes
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return False
+
+
+def _normalize_server_url(url: str) -> tuple[str, int, str]:
+    """Normalize URL, returning (host, port, normalized_url)."""
+    if not url.startswith(("http://", "https://")):
+        url = "http://" + url
+    parsed = urllib.parse.urlparse(url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 5000
+    normalized = f"http://{host}:{port}"
+    return host, port, normalized
+
+
+def register_workspace(server_url: str, workfile_path: str) -> dict:
+    """Register a workspace path with the server and return metadata."""
+    return _post(server_url, "/workspace/register", {"path": workfile_path})
+
+
+def remove_workspace(server_url: str, workspace_id: str) -> dict:
+    """Remove a workspace from the server."""
+    import urllib.request
+    url = f"{server_url.rstrip('/')}/workspace/{workspace_id}"
+    req = urllib.request.Request(url, method="DELETE")
+    with urllib.request.urlopen(req) as resp:
+        data = resp.read().decode("utf-8")
+        try:
+            return json.loads(data)
+        except json.JSONDecodeError:
+            return {"status": data}
+
+
+def resolve_server(server_url: str | None = None, start_if_missing: bool = True, log_dir: str | None = None) -> str:
+    """Return server URL, starting the server if needed.
+
+    Priority: explicit server_url argument > WORKFORCE_SERVER_URL env > http://127.0.0.1:5000.
+    """
+    candidate = server_url or os.environ.get("WORKFORCE_SERVER_URL") or "http://127.0.0.1:5000"
+    host, port, normalized = _normalize_server_url(candidate)
+
+    pid_info = _read_pid_file()
+    if pid_info:
+        pid_host, pid_port, pid = pid_info
+        if _pid_alive(pid):
+            # If a running server exists but host/port differ, respect the running one
+            if (pid_host, pid_port) != (host, port) and server_url:
+                raise RuntimeError(
+                    f"Server already running at http://{pid_host}:{pid_port} (pid {pid}); requested {normalized}"
+                )
+            return f"http://{pid_host}:{pid_port}"
+
+    if not start_if_missing:
+        raise RuntimeError("Workforce server is not running")
+
+    from workforce.server import start_server
+
+    start_server(background=True, host=host, port=port, log_dir=log_dir)
+
+    # After start, trust the requested host/port; pid file should be created soon after
+    return normalized
+
+
+def get_running_server() -> tuple[str, int, int] | None:
+    """Return (host, port, pid) if a server is running, else None."""
+    info = _read_pid_file()
+    if info and _pid_alive(info[2]):
+        return info
+    return None

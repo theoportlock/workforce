@@ -23,7 +23,7 @@
       <data key="d6">asdfad
 </data>
       <data key="d7" />
-      <data key="d8">61277</data>
+      <data key="d8">24727</data>
       <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -56,7 +56,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">61382</data>
+      <data key="d8">24843</data>
       <data key="d9">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
@@ -89,19 +89,20 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">61106</data>
+      <data key="d8">24624</data>
       <data key="d9">0</data>
     </node>
     <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
       <data key="d1">echo test</data>
       <data key="d2">-45.734848484848385</data>
       <data key="d3">107.45202020202025</data>
-      <data key="d4">running</data>
+      <data key="d4">ran</data>
       <data key="d5">bash -c 'sleep 1; echo test'</data>
-      <data key="d6" />
+      <data key="d6">test
+</data>
       <data key="d7" />
-      <data key="d8">64963</data>
-      <data key="d9" />
+      <data key="d8">26754</data>
+      <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d1">pwd</data>
@@ -112,7 +113,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">61578</data>
+      <data key="d8">24923</data>
       <data key="d9">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
@@ -124,7 +125,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">64883</data>
+      <data key="d8">26805</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
@@ -176,7 +177,6 @@ pyproject.toml
 README.rst
 scripts
 tests
-tmpe1xut0_w
 todo.md
 venv
 Workfile
@@ -185,7 +185,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">61117</data>
+      <data key="d8">24483</data>
       <data key="d9">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
@@ -197,7 +197,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">61479</data>
+      <data key="d8">24960</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -208,7 +208,7 @@ workforce.egg-info
       <data key="d5">bash -c 'sleep 1; sleep 5'</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">61236</data>
+      <data key="d8">24741</data>
       <data key="d9">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
@@ -219,47 +219,14 @@ workforce.egg-info
       <data key="d5">bash -c 'sleep 1; sleep 5'</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">61762</data>
-      <data key="d9">0</data>
-    </node>
-    <node id="aa76a115-4a4e-44ec-899f-8eb872e48ebe">
-      <data key="d1">ls</data>
-      <data key="d2">762.0</data>
-      <data key="d3">421.0</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c 'sleep 1; ls'</data>
-      <data key="d6">AUTHORS.rst
-build
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-scripts
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d7" />
-      <data key="d8">61138</data>
+      <data key="d8">25181</data>
       <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls</data>
-      <data key="d2">212.25</data>
-      <data key="d3">115.24999999999994</data>
-      <data key="d4">ran</data>
+      <data key="d2">174.25</data>
+      <data key="d3">108.24999999999994</data>
+      <data key="d4">fail</data>
       <data key="d5">bash -c 'sleep 1; ls'</data>
       <data key="d6">AUTHORS.rst
 build
@@ -285,8 +252,8 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">64911</data>
-      <data key="d9">0</data>
+      <data key="d8">26852</data>
+      <data key="d9">-9</data>
     </node>
     <node id="3326a2b5-f09f-44e1-956c-e78a8489f9e3">
       <data key="d1">ls</data>
@@ -318,7 +285,29 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">61145</data>
+      <data key="d8">24487</data>
+      <data key="d9">0</data>
+    </node>
+    <node id="0d9519f9-c2ae-440c-99c5-f74a610f3e4b">
+      <data key="d1">curl google.com</data>
+      <data key="d2">397.0</data>
+      <data key="d3">-101.0</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c 'sleep 1; curl google.com'</data>
+      <data key="d6">&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv="content-type" content="text/html;charset=utf-8"&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF="http://www.google.com/"&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+</data>
+      <data key="d7">  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100   219  100   219    0     0   1283      0 --:--:-- --:--:-- --:--:--  1288
+</data>
+      <data key="d8">24492</data>
       <data key="d9">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -372,6 +361,11 @@ workforce.egg-info
     <edge source="3326a2b5-f09f-44e1-956c-e78a8489f9e3" target="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d10">695da950-a9c2-49f7-bb71-a62a8635acbf</data>
       <data key="d12">blocking</data>
+      <data key="d11" />
+    </edge>
+    <edge source="0d9519f9-c2ae-440c-99c5-f74a610f3e4b" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
+      <data key="d10">161e44f6-8802-41a2-9969-40de9654ecdd</data>
+      <data key="d12">non-blocking</data>
       <data key="d11" />
     </edge>
     <data key="d0">bash -c 'sleep 1; {}'</data>

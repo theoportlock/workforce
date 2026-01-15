@@ -34,7 +34,15 @@ def register_routes(app):
     """Register all routes with workspace routing middleware."""
     
     # Import here to avoid circular dependency
-    from workforce.server import get_context, get_or_create_context, destroy_context, _contexts
+    from workforce.server import (
+        get_context,
+        get_or_create_context,
+        destroy_context,
+        _contexts,
+        _clear_workspace_cache,
+        _stop_nodes_for_workspace,
+    )
+    from workforce.utils import compute_workspace_id
     
     @app.before_request
     def extract_workspace_id():
@@ -76,6 +84,39 @@ def register_routes(app):
             },
             "workspaces": workspaces
         })
+
+    @app.route("/workspace/register", methods=["POST"])
+    def register_workspace():
+        data = request.get_json(force=True)
+        path = data.get("path") or data.get("workfile_path")
+        if not path:
+            return jsonify({"error": "path required"}), 400
+
+        abs_path = os.path.abspath(path)
+        workspace_id = compute_workspace_id(abs_path)
+
+        # Ensure graph exists to avoid late failures
+        try:
+            edit.load_graph(abs_path)
+        except Exception as e:
+            return jsonify({"error": f"Failed to load graph: {e}"}), 500
+
+        ctx = get_or_create_context(workspace_id, abs_path, increment_client=False)
+
+        from workforce.server import get_bind_info
+        host, port = get_bind_info()
+        if not host or not port:
+            # Fallback if bind info not yet set
+            host = "127.0.0.1"
+            port = 5000
+        url = f"http://{host}:{port}/workspace/{workspace_id}"
+
+        return jsonify({
+            "workspace_id": workspace_id,
+            "url": url,
+            "path": abs_path,
+            "client_count": ctx.client_count
+        }), 200
     
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
     def get_graph(workspace_id):
@@ -523,6 +564,16 @@ def register_routes(app):
         except Exception as e:
             log.exception("Error in /stop endpoint")
             return jsonify({"error": str(e)}), 500
+
+    @app.route("/workspace/<workspace_id>", methods=["DELETE"])
+    def delete_workspace(workspace_id):
+        """Remove a workspace context, stop active runs, and clear cache."""
+        ctx = get_context(workspace_id)
+        if ctx:
+            _stop_nodes_for_workspace(workspace_id)
+            destroy_context(workspace_id)
+        _clear_workspace_cache(workspace_id)
+        return jsonify({"status": "removed", "workspace_id": workspace_id}), 200
 
     @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])
     def save_as(workspace_id):

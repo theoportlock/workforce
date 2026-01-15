@@ -20,19 +20,19 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from workforce.utils import find_running_server
+from workforce.utils import get_running_server
 
 
 def cleanup_lingering_workspaces(force=False):
     """Cleanup workspaces from test runs."""
     
     # Find running server
-    server_info = find_running_server()
+    server_info = get_running_server()
     if not server_info:
         print("No server running. Nothing to cleanup.")
         return 0
     
-    host, port = server_info
+    host, port, _pid = server_info
     server_url = f"http://{host}:{port}"
     print(f"Found server at: {server_url}")
     

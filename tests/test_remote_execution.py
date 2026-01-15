@@ -48,22 +48,28 @@ def test_remote_execution_via_workspace_url(tmp_path):
     # 1) Start server in background and discover host/port
     start_server(background=True)
 
-    found = _wait_for(lambda: utils.find_running_server(), timeout=8.0)
+    found = _wait_for(lambda: utils.get_running_server(), timeout=8.0)
     assert found is not None, "Server did not start"
-    host, port = found
+    host, port, _pid = found
     base_server_url = f"http://{host}:{port}"
+
+    def server_ready():
+        try:
+            r = requests.get(f"{base_server_url}/workspaces", timeout=1.0)
+            return r.status_code == 200
+        except Exception:
+            return False
+
+    assert _wait_for(server_ready, timeout=8.0), "Server HTTP endpoint not ready"
 
     # 2) Create a temporary workflow graph on disk
     workfile = tmp_path / "Workfile.graphml"
     a, b, c = _create_linear_graph(str(workfile))
 
-    # 3) Compute workspace URL and create context with real path
-    ws_id = utils.compute_workspace_id(str(workfile))
-    ws_base = f"{base_server_url}/workspace/{ws_id}"
-
-    # Ensure context is created with correct file path
-    resp = requests.post(f"{ws_base}/client-connect", json={"workfile_path": str(workfile)})
-    assert resp.status_code == 200
+    # 3) Register workspace and get URL
+    registration = utils.register_workspace(base_server_url, str(workfile))
+    ws_id = registration["workspace_id"]
+    ws_base = registration["url"]
 
     try:
         # 4) Start runner pointing at the workspace URL
@@ -75,30 +81,24 @@ def test_remote_execution_via_workspace_url(tmp_path):
         t = threading.Thread(target=lambda: runner.start(initial_nodes=None), daemon=True)
         t.start()
 
-        # 6) Poll graph until all nodes transition to 'ran'
-        def all_ran():
-            try:
-                r = requests.get(f"{ws_base}/get-graph", timeout=1.5)
-                if r.status_code != 200:
+            # 6) Poll graph file until all nodes transition to 'ran'
+            def all_ran_from_disk():
+                try:
+                    G = edit.load_graph(str(workfile))
+                    return (
+                        G.nodes[a].get("status") == "ran" and
+                        G.nodes[b].get("status") == "ran" and
+                        G.nodes[c].get("status") == "ran"
+                    )
+                except Exception:
                     return False
-                data = r.json()
-                nodes = {n["id"]: n for n in data.get("nodes", [])}
-                return (
-                    a in nodes and b in nodes and c in nodes and
-                    nodes[a].get("status") == "ran" and
-                    nodes[b].get("status") == "ran" and
-                    nodes[c].get("status") == "ran"
-                )
-            except Exception:
-                return False
 
-        assert _wait_for(all_ran, timeout=15.0), "Workflow did not complete via remote execution"
+            assert _wait_for(all_ran_from_disk, timeout=15.0), "Workflow did not complete via remote execution"
 
         # 7) Ensure runner thread exits
         t.join(timeout=2.0)
     finally:
-        # Cleanup client context
         try:
-            requests.post(f"{ws_base}/client-disconnect", json={})
+            utils.remove_workspace(base_server_url, ws_id)
         except Exception:
             pass

@@ -26,14 +26,11 @@ def test_server_starts_and_context_lifecycle(tmp_path):
     # Start server in background
     start_server(background=True)
     
-    # Find the running server via discovery
-    def find_server():
-        return utils.find_running_server()
-    
-    result = _wait_for(find_server, timeout=8.0)
+    # Find the running server via pid tracking
+    result = _wait_for(lambda: utils.get_running_server(), timeout=8.0)
     assert result is not None, "Server did not start"
     
-    found_host, found_port = result
+    found_host, found_port, _pid = result
     
     # Compute workspace_id for this workfile
     workspace_id = utils.compute_workspace_id(str(workfile.resolve()))
@@ -61,19 +58,19 @@ def test_server_starts_and_context_lifecycle(tmp_path):
     assert workspace_id not in ws_ids
     
     # Server should still be running (it's machine-wide, not killed after context closes)
-    assert _wait_for(lambda: utils.find_running_server() is not None), "Server should still be running"
+    assert _wait_for(lambda: utils.get_running_server() is not None), "Server should still be running"
 
 
 def test_duplicate_server_prevention():
     """Test that attempting to start a second server when one is already running logs message and exits gracefully."""
     # Ensure a server is running
-    result = utils.find_running_server()
+    result = utils.get_running_server()
     if not result:
         start_server(background=True)
-        result = _wait_for(lambda: utils.find_running_server(), timeout=8.0)
+        result = _wait_for(lambda: utils.get_running_server(), timeout=8.0)
         assert result is not None, "Server did not start"
     
-    found_host, found_port = result
+    found_host, found_port, _pid = result
     
     # Verify server is accessible
     resp = requests.get(f"http://{found_host}:{found_port}/workspaces")
@@ -87,9 +84,9 @@ def test_duplicate_server_prevention():
     time.sleep(1.0)
     
     # Verify only one server is running by checking that the port didn't change
-    new_result = utils.find_running_server()
+    new_result = utils.get_running_server()
     assert new_result is not None
-    new_host, new_port = new_result
+    new_host, new_port, _new_pid = new_result
     
     # Should still be the same server
     assert new_port == found_port, f"New server started on port {new_port} instead of using existing server on {found_port}"

@@ -10,6 +10,8 @@ import sys
 import logging
 import threading
 import atexit
+import shutil
+from logging.handlers import RotatingFileHandler
 
 import platformdirs
 from flask import Flask
@@ -25,10 +27,6 @@ from .queue import start_graph_worker
 from . import routes as server_routes
 from . import sockets as server_sockets
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("werkzeug").setLevel(logging.ERROR)
-logging.getLogger("werkzeug.serving").setLevel(logging.CRITICAL)
 log = logging.getLogger(__name__)
 
 # Global app and socketio instances (single server process)
@@ -38,6 +36,86 @@ _contexts: dict[str, ServerContext] = {}
 _contexts_lock = threading.Lock()
 _bind_host: str | None = None
 _bind_port: int | None = None
+_log_configured = False
+
+
+def _setup_logging(log_dir: str | None = None):
+    """Configure rotating file logging for server, Flask, and SocketIO."""
+    global _log_configured
+    if _log_configured:
+        return
+
+    log_path = utils.log_file_path(log_dir)
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    handler = RotatingFileHandler(log_path, maxBytes=10 * 1024 * 1024, backupCount=5)
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    # Avoid duplicate handlers if re-imported
+    existing_paths = [getattr(h, 'baseFilename', None) for h in root.handlers]
+    if log_path not in existing_paths:
+        root.addHandler(handler)
+
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+    logging.getLogger("werkzeug.serving").setLevel(logging.CRITICAL)
+    _log_configured = True
+
+
+def _pid_file() -> str:
+    return utils.pid_file_path()
+
+
+def _lock_file() -> str:
+    return utils.lock_file_path()
+
+
+def _write_pid_file(host: str, port: int, pid: int):
+    path = _pid_file()
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"{host}:{port}\n{pid}\n")
+
+
+def _read_pid_file() -> tuple[str, int, int] | None:
+    return utils._read_pid_file()
+
+
+def _pid_alive(pid: int) -> bool:
+    return utils._pid_alive(pid)
+
+
+def _acquire_lock() -> bool:
+    """Acquire start lock to avoid racing starts. Returns True if lock acquired."""
+    path = _lock_file()
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+        return True
+    except FileExistsError:
+        # If lock exists but server is dead, allow removing it
+        pid_info = _read_pid_file()
+        if pid_info and _pid_alive(pid_info[2]):
+            return False
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            return True
+        except FileExistsError:
+            return False
+
+
+def _release_lock():
+    try:
+        os.remove(_lock_file())
+    except OSError:
+        pass
 
 
 def get_app():
@@ -157,6 +235,8 @@ def destroy_context(workspace_id: str):
     with _contexts_lock:
         _contexts.pop(workspace_id, None)
     
+    _clear_workspace_cache(workspace_id)
+    
     log.info(f"Destroyed workspace context: {workspace_id}")
 
 
@@ -202,6 +282,33 @@ def _stop_nodes_for_workspace(workspace_id: str) -> dict:
         return {"killed": 0, "errors": [str(e)], "stopped_nodes": []}
 
 
+def _cache_root() -> str:
+    return platformdirs.user_cache_dir("workforce")
+
+
+def _clear_workspace_cache(workspace_id: str):
+    root = _cache_root()
+    path = os.path.join(root, workspace_id)
+    try:
+        if os.path.exists(path):
+            shutil.rmtree(path, ignore_errors=True)
+    except Exception as e:
+        log.warning(f"Failed to remove cache for {workspace_id}: {e}")
+
+
+def _clear_all_caches():
+    root = _cache_root()
+    if not os.path.exists(root):
+        return
+    try:
+        for entry in os.listdir(root):
+            full = os.path.join(root, entry)
+            if os.path.isdir(full):
+                shutil.rmtree(full, ignore_errors=True)
+    except Exception as e:
+        log.warning(f"Failed to clear workspace caches: {e}")
+
+
 def graceful_shutdown():
     """Stop all running processes and exit the server gracefully."""
     log.info("========== GRACEFUL SERVER SHUTDOWN ==========")
@@ -233,7 +340,14 @@ def graceful_shutdown():
                 log.warning(f"Error stopping socketio: {e}")
         except Exception as e:
             log.warning(f"Error stopping socketio: {e}")
-    
+
+    try:
+        os.remove(_pid_file())
+    except OSError:
+        pass
+    _release_lock()
+    _clear_all_caches()
+
     # Exit the process
     os._exit(0)
 
@@ -277,44 +391,52 @@ def _is_compatible_server(host: str, port: int) -> bool:
         return False
 
 
-def start_server(background: bool = True, host: str = "0.0.0.0"):
-    """
-    Start the single machine-wide server with dynamic port discovery.
-    
-    Args:
-        background: If True, spawn subprocess. If False, run foreground.
-        host: Host to bind to (default: 0.0.0.0, accessible from all interfaces).
-    """
-    # Check if server is already running
-    discovery_host = "127.0.0.1"  # Always check localhost for discovery
-    result = utils.find_running_server(host=discovery_host)
-    if result:
-        found_host, found_port = result
-        log.info(f"Server already running on {found_host}:{found_port}")
-        log.info("Use 'wf server stop' to stop the existing server if you want to restart.")
+def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5000, log_dir: str | None = None):
+    """Start the single machine-wide server with explicit host/port."""
+
+    log_dir = log_dir or os.environ.get("WORKFORCE_LOG_DIR")
+    skip_lock = os.environ.get("WORKFORCE_SKIP_LOCK", "0") in ("1", "true", "True")
+    pid_info = _read_pid_file()
+    if pid_info and _pid_alive(pid_info[2]):
+        existing_host, existing_port, existing_pid = pid_info
+        log.info(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
         return
-    
-    # Find a free port
-    port = utils.find_free_port()
-    log.info(f"Found free port: {port}")
-    
+
+    lock_acquired = True if skip_lock else _acquire_lock()
+    if not lock_acquired:
+        raise RuntimeError("Another server start is in progress or server already running")
+
+    # Clear stale pid file if present
+    if pid_info and not _pid_alive(pid_info[2]):
+        try:
+            os.remove(_pid_file())
+        except OSError:
+            pass
+
+    _setup_logging(log_dir)
+
+    # Ensure host/port are available
+    if is_port_in_use(port, host=host):
+        _release_lock()
+        raise RuntimeError(f"Port {port} on {host} is already in use")
+
     if background and sys.platform != "emscripten":
-        # Ensure workforce package is in PYTHONPATH for subprocess
         env = os.environ.copy()
-        
-        # Find the parent directory containing the workforce package
+        env["WORKFORCE_SKIP_LOCK"] = "1"
+        if log_dir:
+            env["WORKFORCE_LOG_DIR"] = log_dir
+
         import workforce
         package_root = os.path.dirname(os.path.dirname(os.path.abspath(workforce.__file__)))
-        
-        # Add to PYTHONPATH if not already there
         pythonpath = env.get('PYTHONPATH', '')
         if package_root not in pythonpath.split(os.pathsep):
             env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
-        
-        # Spawn background server subprocess with host argument
-        cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground", "--host", host]
+
+        cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground", "--host", host, "--port", str(port)]
+        if log_dir:
+            cmd += ["--log-dir", log_dir]
+
         log.info(f"Starting background server: {' '.join(cmd)}")
-        
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -322,175 +444,173 @@ def start_server(background: bool = True, host: str = "0.0.0.0"):
             cwd=os.getcwd(),
             env=env,
         )
-        
-        # Wait for server to be discoverable via health check
-        max_retries = 10
+
+        # Wait for pid file to appear and process to be alive
+        max_retries = 20
         for attempt in range(max_retries):
-            time.sleep(0.5)
-            result = utils.find_running_server(host="127.0.0.1")  # Always check localhost for discovery
-            if result:
-                found_host, found_port = result
-                log.info(f"Server started on {found_host}:{found_port} (PID {process.pid})")
+            time.sleep(0.25)
+            pid_info = _read_pid_file()
+            if pid_info and _pid_alive(pid_info[2]):
+                log.info(f"Server started on http://{pid_info[0]}:{pid_info[1]} (pid {pid_info[2]})")
+                _release_lock()
                 return
-        
-        # If we get here, server didn't start
-        log.error("Server failed to start within timeout")
-        process.terminate()
-        raise RuntimeError("Failed to start server")
-    
+            if process.poll() is not None:
+                break
+
+        _release_lock()
+        raise RuntimeError("Failed to start server (pid file not created)")
+
     # Foreground server
     app, socketio = get_app()
-    
-    # Record bind info for diagnostics endpoints
+
     global _bind_host, _bind_port
     _bind_host, _bind_port = host, port
 
-    # Register signal handlers for graceful shutdown
+    _write_pid_file(host, port, os.getpid())
+
     signal.signal(signal.SIGTERM, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
 
     log.info(f"Starting Workforce server on http://{host}:{port}")
     log.info("Server ready. Waiting for client connections...")
-    
+
     try:
         socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         log.info("Server interrupted, triggering graceful shutdown...")
         graceful_shutdown()
     finally:
+        _release_lock()
         log.info("Server shutdown complete.")
 
 
 def stop_server():
-    """Stop the machine-wide server (sends SIGTERM to process)."""
-    import os
-    import signal
-    import subprocess
-    
-    # Find running server
-    result = utils.find_running_server()
-    if not result:
-        log.warning("No Workforce server found running")
+    """Stop the server via PID file, clear caches, and preserve logs."""
+
+    pid_info = _read_pid_file()
+    if not pid_info:
+        log.warning("No Workforce server pid file found")
+        _clear_all_caches()
+        _release_lock()
         return
-    
-    found_host, found_port = result
-    
-    # Find process listening on discovered port
-    try:
-        result = subprocess.run(
-            ["lsof", "-i", f":{found_port}", "-t"],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        if result.stdout.strip():
-            pids = result.stdout.strip().split("\n")
-            for pid_str in pids:
-                try:
-                    pid = int(pid_str)
-                    os.kill(pid, signal.SIGTERM)
-                    log.info(f"Sent SIGTERM to process {pid}")
-                except (ValueError, ProcessLookupError, PermissionError) as e:
-                    log.warning(f"Failed to kill PID {pid_str}: {e}")
-        else:
-            log.warning(f"Could not find PID for server process on port {found_port}")
-    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-        log.warning(f"Could not determine server PID (lsof error): {e}")
-        # Fallback: try pkill
+
+    host, port, pid = pid_info
+    if not _pid_alive(pid):
+        log.info("Server pid not alive; cleaning up artifacts")
         try:
-            subprocess.run(["pkill", "-f", "workforce server start"], timeout=2)
-            log.info("Sent pkill signal to workforce server")
-        except Exception as e2:
-            log.error(f"Failed to stop server: {e2}")
+            os.remove(_pid_file())
+        except OSError:
+            pass
+        _clear_all_caches()
+        _release_lock()
+        return
+
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/PID", str(pid)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            os.kill(pid, signal.SIGTERM)
+        log.info(f"Sent termination signal to server pid {pid}")
+    except Exception as e:
+        log.warning(f"Failed to signal server pid {pid}: {e}")
+
+    # Wait briefly for shutdown
+    for _ in range(20):
+        time.sleep(0.25)
+        if not _pid_alive(pid):
+            break
+
+    if _pid_alive(pid):
+        log.warning(f"Server pid {pid} is still alive after SIGTERM")
+    else:
+        log.info("Server stopped")
+
+    try:
+        os.remove(_pid_file())
+    except OSError:
+        pass
+    _release_lock()
+    _clear_all_caches()
 
 
 def list_servers():
     """List active workspace contexts with connection URLs."""
-    # Find running server
-    result = utils.find_running_server()
-    if not result:
+    pid_info = _read_pid_file()
+    if not pid_info or not _pid_alive(pid_info[2]):
         print("Server is not running.")
         print("Start the server with: wf server start")
         return
-    
-    found_host, found_port = result
-    
-    # Try to fetch from server's /workspaces endpoint
+
+    host, port, pid = pid_info
+
     try:
-        import urllib.request
         import json
         import socket
-        
-        url = f"http://{found_host}:{found_port}/workspaces"
+
+        url = f"http://{host}:{port}/workspaces"
         with urllib.request.urlopen(url, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             workspaces = data.get("workspaces", [])
             server_info = data.get("server", {})
-            bind_host = server_info.get("host") or found_host
-            bind_port = int(server_info.get("port") or found_port)
+            bind_host = server_info.get("host") or host
+            bind_port = int(server_info.get("port") or port)
             lan_enabled = bool(server_info.get("lan_enabled", bind_host not in ("127.0.0.1", "localhost")))
-            
-            # Get local network interfaces
+
             local_ips = []
             try:
-                # Get the primary network interface IP (most reliable method)
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("8.8.8.8", 80))  # Doesn't actually send data
+                s.connect(("8.8.8.8", 80))
                 ip = s.getsockname()[0]
                 s.close()
                 if ip != '127.0.0.1' and not ip.startswith('127.'):
                     local_ips.append(ip)
             except:
                 pass
-            
-            # Determine if LAN is enabled by configuration rather than platform-specific probing
+
             bound_to_all = lan_enabled or bind_host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0")
-            
-            # Display server info
+
             print("=" * 80)
-            print(f"Workforce Server on port {bind_port}")
+            print(f"Workforce Server (pid {pid}) on port {bind_port}")
             print("=" * 80)
-            
+
             if bound_to_all and local_ips:
                 print("\n📍 Access URLs:")
                 print(f"  Local:    http://127.0.0.1:{bind_port}")
                 for ip in local_ips:
                     print(f"  LAN:      http://{ip}:{bind_port}")
             else:
-                print(f"\n📍 Access URL: http://{found_host}:{bind_port}")
+                print(f"\n📍 Access URL: http://{host}:{bind_port}")
                 if not bound_to_all:
                     print("   ⚠️  Server bound to localhost only (not accessible from LAN)")
                     print(f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0")
-            
-            # Display workspaces
+
             if not workspaces:
                 print("\n📂 No active workspaces")
                 print("   Open a workflow with: wf gui")
                 return
-                
+
             print(f"\n📂 Active Workspaces ({len(workspaces)}):")
             print("-" * 80)
-            
+
             for ws in workspaces:
                 ws_id = ws['workspace_id']
                 ws_path = ws['workfile_path']
                 client_count = ws['client_count']
-                
+
                 print(f"\n  Workspace: {ws_id}")
                 print(f"  File:      {ws_path}")
                 print(f"  Clients:   {client_count}")
-                
-                # Show connection URLs
+
                 if bound_to_all and local_ips:
-                    print(f"  URLs:")
+                    print("  URLs:")
                     print(f"    Local:   http://127.0.0.1:{bind_port}/workspace/{ws_id}")
                     for ip in local_ips:
                         print(f"    LAN:     http://{ip}:{bind_port}/workspace/{ws_id}")
                 else:
-                    print(f"  URL:       http://{found_host}:{bind_port}/workspace/{ws_id}")
-            
+                    print(f"  URL:       http://{host}:{bind_port}/workspace/{ws_id}")
+
             print("\n" + "=" * 80)
-            
+
     except Exception as e:
         print(f"Error communicating with server: {e}")
 
@@ -499,8 +619,10 @@ def list_servers():
 def cmd_start(args):
     # Default to background mode, unless --foreground is specified
     foreground = getattr(args, 'foreground', False)
-    host = getattr(args, 'host', '0.0.0.0')
-    start_server(background=not foreground, host=host)
+    host = getattr(args, 'host', '127.0.0.1')
+    port = getattr(args, 'port', 5000)
+    log_dir = getattr(args, 'log_dir', None)
+    start_server(background=not foreground, host=host, port=port, log_dir=log_dir)
 
 def cmd_stop(args):
     stop_server()

@@ -1,22 +1,24 @@
 from workforce import utils
 from .client import Runner
 
-def main(url_or_path, nodes=None, wrapper="{}"):
+
+def main(url_or_path, nodes=None, wrapper="{}", server_url: str | None = None):
 	"""
 	CLI entry point for the runner.
 	Accepts either a URL or a filesystem path and resolves it to a workspace URL.
-	Ensures server is running with dynamic port discovery.
 	"""
-	# Compute workspace_id from the path to match server's routing
-	wf_path = url_or_path if not url_or_path.startswith(('http://', 'https://')) else utils.default_workfile()
-	abs_path = utils.get_absolute_path(wf_path)
-	workspace_id = utils.compute_workspace_id(abs_path)
-	
-	# Auto-start server if not running (via resolve_server)
-	server_url = utils.resolve_server()
-	
-	# Build workspace URL
-	base_url = f"{server_url}/workspace/{workspace_id}"
-	
+	parsed = utils.parse_workspace_url(url_or_path) if url_or_path else None
+
+	if parsed:
+		server_url, workspace_id = parsed
+		base_url = f"{server_url}/workspace/{workspace_id}"
+		wf_path = f"<remote:{workspace_id}>"
+	else:
+		wf_path = utils.ensure_workfile(url_or_path)
+		resolved_server = utils.resolve_server(server_url=server_url)
+		registration = utils.register_workspace(resolved_server, wf_path)
+		workspace_id = registration.get("workspace_id") or utils.compute_workspace_id(wf_path)
+		base_url = registration.get("url") or f"{resolved_server}/workspace/{workspace_id}"
+
 	runner = Runner(base_url, workspace_id=workspace_id, workfile_path=wf_path, wrapper=wrapper)
 	runner.start(initial_nodes=nodes)
