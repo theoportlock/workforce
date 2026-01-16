@@ -151,7 +151,8 @@ def get_workspace_url(workspace_id: str, endpoint: str = "") -> str:
 def _post(base_url: str, endpoint: str, payload: dict | None = None, retry_on_connect_error: bool = False) -> dict:
     """POST JSON payload to an endpoint. Used by edit, run, and GUI clients.
     
-    If retry_on_connect_error=True, retry up to 10 times with 0.5s delay between attempts.
+    If retry_on_connect_error=True, retry up to 30 times with 0.5s delay between attempts (15s total).
+    This allows time for background server startup, especially on Windows frozen executables.
     """
     if not endpoint.startswith("/"):
         endpoint = "/" + endpoint
@@ -159,7 +160,7 @@ def _post(base_url: str, endpoint: str, payload: dict | None = None, retry_on_co
     url = f"{base_url.rstrip('/')}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
 
-    max_retries = 10 if retry_on_connect_error else 1
+    max_retries = 30 if retry_on_connect_error else 1
     last_error = None
     
     for attempt in range(max_retries):
@@ -247,11 +248,19 @@ def ensure_workfile(path: str | None = None) -> str:
     return temp_path
 
 
-def is_port_in_use(port: int) -> bool:
-    """Check if a port is in use."""
+def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+    """Check if a port is in use.
+    
+    Args:
+        port: Port number to check
+        host: Host to bind to (default: 127.0.0.1)
+    
+    Returns:
+        True if port is in use, False if available
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.bind(("localhost", port))
+            s.bind((host, port))
             return False  # Port is free
         except OSError:
             return True  # Port is in use
@@ -331,7 +340,7 @@ def _normalize_server_url(url: str) -> tuple[str, int, str]:
 def register_workspace(server_url: str, workfile_path: str) -> dict:
     """Register a workspace path with the server and return metadata.
     
-    Retries up to 10 times with 0.5s delay to wait for server startup.
+    Retries up to 30 times with 0.5s delay (15s total) to wait for server startup.
     """
     return _post(server_url, "/workspace/register", {"path": workfile_path}, retry_on_connect_error=True)
 

@@ -11,6 +11,7 @@ import argparse
 import sys
 import os
 import json
+import traceback
 
 from workforce import utils
 from workforce.utils import (
@@ -46,6 +47,28 @@ def print_version():
     print(f"Python {sys.version}")
 
 def main():
+    # If running as frozen executable, wrap everything in error handling
+    is_frozen = getattr(sys, 'frozen', False)
+    
+    if is_frozen:
+        try:
+            _main_impl()
+        except Exception as e:
+            # Show error in message box for frozen executables
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
+            error_msg = f"Workforce failed to start:\n\n{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+            messagebox.showerror("Workforce Error", error_msg)
+            root.destroy()
+            sys.exit(1)
+    else:
+        _main_impl()
+
+def _main_impl():
+    is_frozen = getattr(sys, 'frozen', False)
+    
     # Handle --version flag at top level
     if '--version' in sys.argv or '-v' in sys.argv:
         print_version()
@@ -58,7 +81,8 @@ def main():
         registration = register_workspace(server_url, wf)
         ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
         base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-        gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=True)
+        # If running as frozen executable (PyInstaller), run in foreground to avoid subprocess issues
+        gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=(not is_frozen))
         return
 
     parser = argparse.ArgumentParser(

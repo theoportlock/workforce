@@ -88,8 +88,21 @@ def _pid_alive(pid: int) -> bool:
 
 
 def _acquire_lock() -> bool:
-    """Acquire start lock to avoid racing starts. Returns True if lock acquired."""
+    """Acquire start lock to avoid racing starts. Returns True if lock acquired.
+    
+    Cleans up stale lock files older than 30 seconds before attempting to acquire.
+    """
     path = _lock_file()
+    
+    # Clean up stale lock file (older than 30 seconds)
+    if os.path.exists(path):
+        try:
+            mtime = os.path.getmtime(path)
+            if time.time() - mtime > 30:
+                os.remove(path)
+        except (OSError, IOError):
+            pass
+    
     try:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         os.close(fd)
@@ -464,10 +477,27 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
             creationflags=creation_flags,
         )
 
-        # Release lock and return immediately - background process will register itself
+        # Wait for server to be ready with HTTP health check (10 second timeout)
         print(f"Starting background server on http://{host}:{port}")
+        server_url = f"http://{host}:{port}"
+        start_time = time.time()
+        timeout = 10
+        
+        while time.time() - start_time < timeout:
+            try:
+                with urllib.request.urlopen(f"{server_url}/workspaces", timeout=1) as resp:
+                    if resp.status == 200:
+                        print(f"Server is ready")
+                        _release_lock()
+                        return
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+                # Server not ready yet, continue waiting
+                pass
+            time.sleep(0.2)
+        
+        # Timeout waiting for server to start
         _release_lock()
-        return
+        raise RuntimeError(f"Background server failed to start within {timeout} seconds")
 
     # Foreground server
     app, socketio = get_app()
@@ -498,7 +528,7 @@ def stop_server():
 
     pid_info = _read_pid_file()
     if not pid_info:
-        log.warning("No Workforce server pid file found")
+        print("No server registered. Use 'wf server start' to launch a server.")
         _clear_all_caches()
         _release_lock()
         return
