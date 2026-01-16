@@ -344,10 +344,13 @@ def _pid_alive(pid: int) -> bool:
                 # Timeout is likely due to tasklist hang on bad PID
                 # Assume dead to speed up discovery
                 return False
-    except (PermissionError, ProcessLookupError):
-        # PermissionError: process exists but we can't send signal (treat as alive)
-        # ProcessLookupError: process doesn't exist
-        return pid != 0 and sys.platform != "win32"
+    except ProcessLookupError:
+        # Process doesn't exist
+        return False
+    except PermissionError:
+        # Process exists but we don't have permission to send signals
+        # On Unix, treat as alive since process clearly exists (we got permission error, not "not found")
+        return True
     except Exception:
         # Unknown error - assume dead to avoid false positives
         return False

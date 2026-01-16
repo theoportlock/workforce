@@ -1,10 +1,14 @@
 import time
 from pathlib import Path
+import tempfile
+import os
 
+import pytest
 import requests
 
 from workforce.server import start_server
 from workforce import utils
+from workforce.edit.graph import load_graph, save_graph
 
 
 def _wait_for(predicate, timeout=8.0, interval=0.1):
@@ -16,49 +20,6 @@ def _wait_for(predicate, timeout=8.0, interval=0.1):
             return result
         time.sleep(interval)
     return None
-
-
-def test_server_starts_and_context_lifecycle(tmp_path):
-    """Test that server starts on dynamic port and contexts are created/destroyed on-demand."""
-    workfile = tmp_path / "Workfile"
-    workfile.touch()  # Create the file
-    
-    # Start server in background
-    start_server(background=True)
-    
-    # Find the running server via pid tracking
-    result = _wait_for(lambda: utils.get_running_server(), timeout=8.0)
-    assert result is not None, "Server did not start"
-    
-    found_host, found_port, _pid = result
-    
-    # Compute workspace_id for this workfile
-    workspace_id = utils.compute_workspace_id(str(workfile.resolve()))
-    base_url = f"http://{found_host}:{found_port}/workspace/{workspace_id}"
-    
-    # Register a client for this workspace
-    resp = requests.post(f"{base_url}/client-connect", json={"workfile_path": str(workfile)})
-    assert resp.status_code == 200
-    
-    # Verify workspace context exists via diagnostics endpoint
-    resp = requests.get(f"http://{found_host}:{found_port}/workspaces")
-    workspaces = resp.json()["workspaces"]
-    ws_ids = [ws["workspace_id"] for ws in workspaces]
-    assert workspace_id in ws_ids
-    
-    # Disconnect the client
-    resp = requests.post(f"{base_url}/client-disconnect", json={})
-    assert resp.status_code == 200
-    
-    # Verify workspace context is destroyed (give it a moment)
-    time.sleep(0.5)
-    resp = requests.get(f"http://{found_host}:{found_port}/workspaces")
-    workspaces = resp.json()["workspaces"]
-    ws_ids = [ws["workspace_id"] for ws in workspaces]
-    assert workspace_id not in ws_ids
-    
-    # Server should still be running (it's machine-wide, not killed after context closes)
-    assert _wait_for(lambda: utils.get_running_server() is not None), "Server should still be running"
 
 
 def test_duplicate_server_prevention():
@@ -141,3 +102,141 @@ def test_singleton_explicit_port():
     new_host, new_port, new_pid = new_result
     assert new_port == 5050, "Port changed unexpectedly"
     assert new_pid == first_pid, f"Second server process created (PID {new_pid}) instead of reusing existing (PID {first_pid})"
+
+
+def test_server_add_registers_workspace(tmp_path):
+    """Test that 'wf server add' registers a workspace and returns workspace metadata."""
+    # Create a temporary workfile
+    workfile_path = tmp_path / "test_workflow.graphml"
+    G = load_graph(str(workfile_path))
+    save_graph(G, str(workfile_path))
+    
+    # Resolve server (will find running or start new one)
+    server_url = utils.resolve_server()
+    
+    # Register the workspace via register_workspace utility
+    registration = utils.register_workspace(server_url, str(workfile_path))
+    
+    # Verify registration response
+    assert "workspace_id" in registration, "Missing workspace_id in registration"
+    assert "url" in registration, "Missing url in registration"
+    assert "path" in registration, "Missing path in registration"
+    
+    workspace_id = registration["workspace_id"]
+    assert workspace_id.startswith("ws_"), f"Invalid workspace_id format: {workspace_id}"
+    
+    # Verify the workspace URL is correct
+    assert registration["url"].endswith(f"/workspace/{workspace_id}"), f"URL mismatch: {registration['url']}"
+    
+    # Verify workspace is listed in /workspaces
+    resp = requests.get(f"{server_url}/workspaces")
+    assert resp.status_code == 200
+    workspaces = resp.json().get("workspaces", [])
+    workspace_ids = [ws["workspace_id"] for ws in workspaces]
+    assert workspace_id in workspace_ids, f"Workspace {workspace_id} not found in /workspaces"
+
+
+def test_server_add_duplicate_registration(tmp_path):
+    """Test that registering the same workspace twice returns same workspace_id."""
+    # Create a temporary workfile
+    workfile_path = tmp_path / "duplicate_test.graphml"
+    G = load_graph(str(workfile_path))
+    save_graph(G, str(workfile_path))
+    
+    # Resolve server
+    server_url = utils.resolve_server()
+    
+    # Register the same workspace twice
+    reg1 = utils.register_workspace(server_url, str(workfile_path))
+    reg2 = utils.register_workspace(server_url, str(workfile_path))
+    
+    # Should get the same workspace_id both times
+    assert reg1["workspace_id"] == reg2["workspace_id"], "Workspace ID changed on re-registration"
+    assert reg1["url"] == reg2["url"], "URL changed on re-registration"
+
+
+def test_server_rm_removes_workspace(tmp_path):
+    """Test that 'wf server rm' removes a workspace from the server."""
+    # Create a temporary workfile
+    workfile_path = tmp_path / "removable.graphml"
+    G = load_graph(str(workfile_path))
+    save_graph(G, str(workfile_path))
+    
+    # Resolve server
+    server_url = utils.resolve_server()
+    
+    # Register a workspace
+    registration = utils.register_workspace(server_url, str(workfile_path))
+    workspace_id = registration["workspace_id"]
+    
+    # Verify it's listed
+    resp = requests.get(f"{server_url}/workspaces")
+    workspaces = resp.json().get("workspaces", [])
+    workspace_ids = [ws["workspace_id"] for ws in workspaces]
+    assert workspace_id in workspace_ids
+    
+    # Remove the workspace
+    result = utils.remove_workspace(server_url, workspace_id)
+    assert result.get("status") == "removed" or "workspace_id" in result, f"Unexpected response: {result}"
+    
+    # Verify it's removed from /workspaces
+    resp = requests.get(f"{server_url}/workspaces")
+    workspaces = resp.json().get("workspaces", [])
+    workspace_ids = [ws["workspace_id"] for ws in workspaces]
+    assert workspace_id not in workspace_ids, f"Workspace {workspace_id} still in /workspaces after removal"
+
+
+def test_server_rm_nonexistent_workspace():
+    """Test that removing a non-existent workspace doesn't cause errors."""
+    # Resolve server
+    server_url = utils.resolve_server()
+    
+    # Try to remove a non-existent workspace
+    # Should not raise, server should handle gracefully
+    fake_ws_id = "ws_nonexistent123456"
+    result = utils.remove_workspace(server_url, fake_ws_id)
+    
+    # Server should return success even for non-existent workspace
+    assert result.get("status") == "removed" or "workspace_id" in result, f"Unexpected response: {result}"
+
+
+def test_server_add_multiple_workspaces(tmp_path):
+    """Test registering multiple different workspaces."""
+    # Create multiple workfiles
+    workfile1 = tmp_path / "workflow1.graphml"
+    workfile2 = tmp_path / "workflow2.graphml"
+    
+    G1 = load_graph(str(workfile1))
+    save_graph(G1, str(workfile1))
+    
+    G2 = load_graph(str(workfile2))
+    save_graph(G2, str(workfile2))
+    
+    # Resolve server
+    server_url = utils.resolve_server()
+    
+    # Register both workspaces
+    reg1 = utils.register_workspace(server_url, str(workfile1))
+    reg2 = utils.register_workspace(server_url, str(workfile2))
+    
+    # Should have different workspace IDs
+    ws_id1 = reg1["workspace_id"]
+    ws_id2 = reg2["workspace_id"]
+    assert ws_id1 != ws_id2, "Different workfiles should have different workspace IDs"
+    
+    # Both should be listed
+    resp = requests.get(f"{server_url}/workspaces")
+    workspaces = resp.json().get("workspaces", [])
+    workspace_ids = [ws["workspace_id"] for ws in workspaces]
+    assert ws_id1 in workspace_ids
+    assert ws_id2 in workspace_ids
+    
+    # Remove first one
+    utils.remove_workspace(server_url, ws_id1)
+    
+    # Verify first is removed but second remains
+    resp = requests.get(f"{server_url}/workspaces")
+    workspaces = resp.json().get("workspaces", [])
+    workspace_ids = [ws["workspace_id"] for ws in workspaces]
+    assert ws_id1 not in workspace_ids
+    assert ws_id2 in workspace_ids

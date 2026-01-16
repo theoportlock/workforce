@@ -405,6 +405,16 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     log_dir = log_dir or os.environ.get("WORKFORCE_LOG_DIR")
     skip_lock = os.environ.get("WORKFORCE_SKIP_LOCK", "0") in ("1", "true", "True")
     pid_info = _read_pid_file()
+    
+    # If PID file exists and process is NOT alive, clean it up
+    if pid_info and not _pid_alive(pid_info[2]):
+        try:
+            os.remove(_pid_file())
+        except OSError:
+            pass
+        pid_info = None  # Treat as no PID file now
+    
+    # If PID file exists and process IS alive, we're done
     if pid_info and _pid_alive(pid_info[2]):
         existing_host, existing_port, existing_pid = pid_info
         print(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
@@ -413,13 +423,6 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     lock_acquired = True if skip_lock else _acquire_lock()
     if not lock_acquired:
         raise RuntimeError("Another server start is in progress or server already running")
-
-    # Clear stale pid file if present
-    if pid_info and not _pid_alive(pid_info[2]):
-        try:
-            os.remove(_pid_file())
-        except OSError:
-            pass
 
     # Only setup logging in foreground mode to avoid concurrent file access
     if not background:
@@ -438,11 +441,14 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
                     _release_lock()
                     return
         except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
-            # No server running, proceed with start
+            # Health check failed - but the port might still be in use
+            # Fall through to port check below
             pass
 
     # Ensure host/port are available
     if is_port_in_use(port, host=host):
+        # Port is in use. For background starts, just raise an error and let the caller handle it
+        # (they can either wait for the server to start or use a different port)
         _release_lock()
         raise RuntimeError(f"Port {port} on {host} is already in use")
 
