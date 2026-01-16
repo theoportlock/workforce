@@ -15,6 +15,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import signal
+import subprocess
+import time
 
 # -----------------------------------------------------------------------------
 # Workspace identification
@@ -101,7 +103,7 @@ def is_workspace_url(text: str) -> bool:
 
 
 def looks_like_url(text: str) -> bool:
-    """Check if text looks like a URL (but may not be valid).
+    r"""Check if text looks like a URL (but may not be valid).
     
     Distinguishes URLs from Windows file paths (C:\...).
     """
@@ -310,19 +312,41 @@ def _read_pid_file() -> tuple[str, int, int] | None:
 
 
 def _pid_alive(pid: int) -> bool:
+    """Check if a process with given PID is still alive.
+    
+    Handles both Unix and Windows platforms correctly:
+    - Returns False if pid is 0 (invalid/unknown)
+    - Unix: Uses os.kill(pid, 0) signal check
+    - Windows: Uses tasklist to check for running process
+    """
+    if pid == 0:
+        # Invalid or unknown PID
+        return False
+    
     try:
-        # On Unix, os.kill(pid, 0) checks liveness without killing
         if sys.platform != "win32":
+            # Unix: os.kill(pid, 0) checks liveness without killing
             os.kill(pid, 0)
             return True
-        # On Windows, os.kill may raise PermissionError for running processes
-        os.kill(pid, 0)
+        else:
+            # Windows: Use tasklist to verify process exists
+            result = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=1
+            )
+            # tasklist returns 0 if process found, 1 if not
+            return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        # Assume process is alive if we can't check (defensive)
         return True
-    except PermissionError:
-        return True
-    except ProcessLookupError:
-        return False
-    except OSError:
+    except (PermissionError, ProcessLookupError):
+        # PermissionError: process exists but we can't send signal (treat as alive)
+        # ProcessLookupError: process doesn't exist
+        return pid != 0 and sys.platform != "win32"
+    except Exception:
+        # Unknown error - assume dead to avoid false positives
         return False
 
 
@@ -358,8 +382,47 @@ def remove_workspace(server_url: str, workspace_id: str) -> dict:
             return {"status": data}
 
 
+def find_running_server(start_port: int = 5000, end_port: int = 5100) -> str | None:
+    """Discover a running Workforce server by scanning ports for /workspaces endpoint.
+    
+    Scans the port range [start_port, end_port) for a responsive /workspaces endpoint.
+    Returns the first responsive server's URL, or None if none found.
+    
+    This implements the documented "port scanning" discovery mechanism that works
+    even when the PID file is missing or stale.
+    
+    Args:
+        start_port: Start of port range to scan (default: 5000)
+        end_port: End of port range (exclusive, default: 5100)
+    
+    Returns:
+        Server URL like "http://127.0.0.1:5000" if found, else None
+    """
+    # Always check localhost first since it's the most common case
+    for port in range(start_port, end_port):
+        url = f"http://127.0.0.1:{port}"
+        try:
+            with urllib.request.urlopen(f"{url}/workspaces", timeout=1) as resp:
+                if resp.status == 200:
+                    return url
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+            # Port not responsive, continue to next
+            pass
+        except Exception:
+            # Unexpected error, skip this port
+            pass
+    
+    return None
+
+
 def resolve_server(server_url: str | None = None, start_if_missing: bool = True, log_dir: str | None = None) -> str:
     """Return server URL, starting the server if needed.
+
+    Discovery strategy:
+    1. Try PID file lookup (fast path for running server)
+    2. Fall back to port scanning (handles stale/missing PID files)
+    3. Clean up stale PID file and try exponential backoff before starting new server
+    4. Start new server if still not found
 
     Priority: explicit server_url argument > WORKFORCE_SERVER_URL env > http://127.0.0.1:5000.
     
@@ -369,6 +432,7 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
     candidate = server_url or os.environ.get("WORKFORCE_SERVER_URL") or "http://127.0.0.1:5000"
     host, port, normalized = _normalize_server_url(candidate)
 
+    # Step 1: Try PID file lookup (fast path)
     pid_info = _read_pid_file()
     if pid_info:
         pid_host, pid_port, pid = pid_info
@@ -379,12 +443,32 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
                     f"Server already running at http://{pid_host}:{pid_port} (pid {pid}); requested {normalized}"
                 )
             return f"http://{pid_host}:{pid_port}"
+        else:
+            # Step 2: PID file points to dead process, clean it up
+            try:
+                os.remove(pid_file_path())
+            except OSError:
+                pass
+
+    # Step 3: Fall back to port scanning (discovers server even with missing/stale PID file)
+    discovered_url = find_running_server()
+    if discovered_url:
+        return discovered_url
 
     if not start_if_missing:
         raise RuntimeError("Workforce server is not running")
 
     from workforce.server import start_server
 
+    # Step 4: Exponential backoff before starting new server to prevent concurrent starts
+    # This allows a second wf command to find the server started by the first one
+    for backoff_delay in [0.5, 1.0]:
+        time.sleep(backoff_delay)
+        discovered_url = find_running_server()
+        if discovered_url:
+            return discovered_url
+
+    # Step 5: Start new server
     start_server(background=True, host=host, port=port, log_dir=log_dir)
 
     # Return expected URL immediately - server will start in background
@@ -392,8 +476,29 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
 
 
 def get_running_server() -> tuple[str, int, int] | None:
-    """Return (host, port, pid) if a server is running, else None."""
+    """Return (host, port, pid) if a server is running, else None.
+    
+    Uses PID file first (fast), falls back to port scanning if needed.
+    """
     info = _read_pid_file()
-    if info and _pid_alive(info[2]):
-        return info
+    if info:
+        host, port, pid = info
+        if _pid_alive(pid):
+            return info
+        # PID file points to dead process, clean it up
+        try:
+            os.remove(pid_file_path())
+        except OSError:
+            pass
+    
+    # Fall back to port scanning
+    discovered_url = find_running_server()
+    if discovered_url:
+        # Return parsed host/port from discovered URL (pid is unknown in this path)
+        parsed = urllib.parse.urlparse(discovered_url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 5000
+        # Return 0 as placeholder for pid since we don't have it
+        return (host, port, 0)
+    
     return None
