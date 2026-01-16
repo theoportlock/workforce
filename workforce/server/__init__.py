@@ -576,8 +576,7 @@ def stop_server():
 def list_servers():
     """List active workspace contexts with connection URLs.
     
-    Uses PID file first (fast), falls back to port scanning to handle
-    stale/missing PID files.
+    Uses PID file first (fast). If no server running, offers to start one.
     """
     pid_info = _read_pid_file()
     
@@ -585,25 +584,17 @@ def list_servers():
     if pid_info and _pid_alive(pid_info[2]):
         host, port, pid = pid_info
     else:
-        # Fall back to port scanning
+        # Clean up stale PID file
         if pid_info:
-            # PID file points to dead process, clean it up
             try:
                 os.remove(_pid_file())
             except OSError:
                 pass
         
-        discovered_url = utils.find_running_server()
-        if not discovered_url:
-            print("Server is not running.")
-            print("Start the server with: wf server start")
-            return
-        
-        # Parse discovered URL for display
-        parsed = urllib.parse.urlparse(discovered_url)
-        host = parsed.hostname or "127.0.0.1"
-        port = parsed.port or 5000
-        pid = 0  # Unknown PID in port scan scenario
+        # No server running on default port - offer to start one
+        print("Server is not running.")
+        print("Start the server with: wf server start")
+        return
 
     try:
         import json

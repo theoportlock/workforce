@@ -317,7 +317,7 @@ def _pid_alive(pid: int) -> bool:
     Handles both Unix and Windows platforms correctly:
     - Returns False if pid is 0 (invalid/unknown)
     - Unix: Uses os.kill(pid, 0) signal check
-    - Windows: Uses tasklist to check for running process
+    - Windows: Uses tasklist with very aggressive timeout
     """
     if pid == 0:
         # Invalid or unknown PID
@@ -329,18 +329,21 @@ def _pid_alive(pid: int) -> bool:
             os.kill(pid, 0)
             return True
         else:
-            # Windows: Use tasklist to verify process exists
-            result = subprocess.run(
-                ["tasklist", "/FI", f"PID eq {pid}"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=1
-            )
-            # tasklist returns 0 if process found, 1 if not
-            return result.returncode == 0
-    except subprocess.TimeoutExpired:
-        # Assume process is alive if we can't check (defensive)
-        return True
+            # Windows: Use tasklist with extremely short timeout
+            # tasklist can hang on some systems, so fail fast
+            try:
+                result = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {pid}"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=0.1
+                )
+                # tasklist returns 0 if process found, 1 if not
+                return result.returncode == 0
+            except subprocess.TimeoutExpired:
+                # Timeout is likely due to tasklist hang on bad PID
+                # Assume dead to speed up discovery
+                return False
     except (PermissionError, ProcessLookupError):
         # PermissionError: process exists but we can't send signal (treat as alive)
         # ProcessLookupError: process doesn't exist
@@ -398,18 +401,38 @@ def find_running_server(start_port: int = 5000, end_port: int = 5100) -> str | N
     Returns:
         Server URL like "http://127.0.0.1:5000" if found, else None
     """
-    # Always check localhost first since it's the most common case
+    # Try a quick HTTP GET on the most common port first before full scan
+    # This avoids slow port scanning in the common case of server on default port
+    try:
+        url = "http://127.0.0.1:5000"
+        with urllib.request.urlopen(f"{url}/workspaces", timeout=0.1) as resp:
+            if resp.status == 200:
+                return url
+    except Exception:
+        pass
+    
+    # Full port scan only if default port failed
+    # Use very aggressive timeout to avoid hanging when no server is running
     for port in range(start_port, end_port):
-        url = f"http://127.0.0.1:{port}"
+        if port == 5000:
+            continue  # Already checked above
+        
         try:
-            with urllib.request.urlopen(f"{url}/workspaces", timeout=1) as resp:
-                if resp.status == 200:
-                    return url
-        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
-            # Port not responsive, continue to next
-            pass
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.05)  # Extremely short timeout (50ms)
+            result = sock.connect_ex(("127.0.0.1", port))
+            sock.close()
+            
+            # If socket connected, verify with HTTP request
+            if result == 0:
+                url = f"http://127.0.0.1:{port}"
+                try:
+                    with urllib.request.urlopen(f"{url}/workspaces", timeout=0.1) as resp:
+                        if resp.status == 200:
+                            return url
+                except Exception:
+                    pass
         except Exception:
-            # Unexpected error, skip this port
             pass
     
     return None
@@ -419,10 +442,9 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
     """Return server URL, starting the server if needed.
 
     Discovery strategy:
-    1. Try PID file lookup (fast path for running server)
-    2. Fall back to port scanning (handles stale/missing PID files)
-    3. Clean up stale PID file and try exponential backoff before starting new server
-    4. Start new server if still not found
+    1. Try the candidate port (explicit URL, env var, or default)
+    2. Try PID file if different from candidate
+    3. Start new server on candidate port if not found
 
     Priority: explicit server_url argument > WORKFORCE_SERVER_URL env > http://127.0.0.1:5000.
     
@@ -432,43 +454,54 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
     candidate = server_url or os.environ.get("WORKFORCE_SERVER_URL") or "http://127.0.0.1:5000"
     host, port, normalized = _normalize_server_url(candidate)
 
-    # Step 1: Try PID file lookup (fast path)
+    # Step 1: Quick check on the candidate URL (the one we're supposed to use)
+    try:
+        with urllib.request.urlopen(f"{candidate}/workspaces", timeout=0.1) as resp:
+            if resp.status == 200:
+                return candidate
+    except Exception:
+        pass
+
+    # Step 2: Try PID file lookup (fast path if PID file exists and process is alive)
+    # Only check PID file if it points to a different location than our candidate
     pid_info = _read_pid_file()
     if pid_info:
         pid_host, pid_port, pid = pid_info
-        if _pid_alive(pid):
-            # If a running server exists but host/port differ, respect the running one
-            if (pid_host, pid_port) != (host, port) and server_url:
+        pid_url = f"http://{pid_host}:{pid_port}"
+        if pid_url != candidate:
+            # Different server running - inform user
+            if server_url:
                 raise RuntimeError(
-                    f"Server already running at http://{pid_host}:{pid_port} (pid {pid}); requested {normalized}"
+                    f"Server already running at {pid_url} (pid {pid}); requested {normalized}"
                 )
-            return f"http://{pid_host}:{pid_port}"
+            # Return the running server if no explicit URL was requested
+            if _pid_alive(pid):
+                return pid_url
         else:
-            # Step 2: PID file points to dead process, clean it up
+            # Same URL in PID file, clean it up since it didn't respond
             try:
                 os.remove(pid_file_path())
             except OSError:
                 pass
-
-    # Step 3: Fall back to port scanning (discovers server even with missing/stale PID file)
-    discovered_url = find_running_server()
-    if discovered_url:
-        return discovered_url
 
     if not start_if_missing:
         raise RuntimeError("Workforce server is not running")
 
     from workforce.server import start_server
 
-    # Step 4: Exponential backoff before starting new server to prevent concurrent starts
+    # Step 3: Exponential backoff before starting new server to prevent concurrent starts
     # This allows a second wf command to find the server started by the first one
     for backoff_delay in [0.5, 1.0]:
         time.sleep(backoff_delay)
-        discovered_url = find_running_server()
-        if discovered_url:
-            return discovered_url
+        # Quick recheck on candidate
+        try:
+            with urllib.request.urlopen(f"{candidate}/workspaces", timeout=0.1) as resp:
+                if resp.status == 200:
+                    return candidate
+        except Exception:
+            pass
 
-    # Step 5: Start new server
+    # Step 4: Start new server on candidate port
     start_server(background=True, host=host, port=port, log_dir=log_dir)
 
     # Return expected URL immediately - server will start in background
