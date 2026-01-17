@@ -1,3 +1,22 @@
+Integrate wf server ls into the gui to see which servers are live
+wf server functions in gui to start and stop
+wf server ls to accept url to check
+cli and gui clients are separated in the log
+wf server doesn't stop until wf server stop
+default port is 5050
+add wf run stop url
+wf run should have it's own address that can be stopped - like a tree
+for wf, don't import tkinter, load it lasily so that it can be ran on termux without installing the tkinter package with pkg:
+    def import_gui():
+    from workforce.gui import main as gui_main
+    return gui_main
+when the last client leaves the workspace then keep the workspace running - simplify - close from gui for wf server rm
+in the open recent list, include the remote addresses also (top 20) - saves to .workforce/whateveritis
+some way to run on a connected server
+wf server ls --watch/-w
+
+
+
 Remote wf server ls that accepts arg for server name
 
 wf edit = ERROR
