@@ -6,7 +6,7 @@ import os
 import pytest
 import requests
 
-from workforce.server import start_server
+from workforce.server import list_servers, start_server
 from workforce import utils
 from workforce.edit.graph import load_graph, save_graph
 
@@ -240,3 +240,24 @@ def test_server_add_multiple_workspaces(tmp_path):
     workspace_ids = [ws["workspace_id"] for ws in workspaces]
     assert ws_id1 not in workspace_ids
     assert ws_id2 in workspace_ids
+
+
+def test_list_servers_with_explicit_url(tmp_path, monkeypatch, capsys):
+    """list_servers should honor explicit server_url without PID checks."""
+    workfile_path = tmp_path / "remote_ls.graphml"
+    G = load_graph(str(workfile_path))
+    save_graph(G, str(workfile_path))
+
+    server_url = utils.resolve_server()
+    registration = utils.register_workspace(server_url, str(workfile_path))
+    workspace_id = registration["workspace_id"]
+
+    # Simulate missing/stale PID file; list_servers must not rely on it when server_url is provided
+    monkeypatch.setattr(utils, "_read_pid_file", lambda: None)
+
+    list_servers(server_url=server_url)
+
+    output = capsys.readouterr().out
+    _, _, normalized_url = utils._normalize_server_url(server_url)
+    assert workspace_id in output
+    assert normalized_url in output

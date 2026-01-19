@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
 import requests
+from urllib.parse import urlparse
 import atexit
 
 from workforce import utils
@@ -23,6 +24,7 @@ class WorkflowApp:
         self.state = GUIState()
         # Lock to protect state mutations from concurrent threads (SocketIO + HTTP)
         self._state_lock = threading.Lock()
+        self._pending_add_ids: set[str] | None = None
         self.base_url = base_url
         self.wf_path = wf_path
         self.workspace_id = workspace_id
@@ -61,9 +63,25 @@ class WorkflowApp:
         # Initialize recent files manager
         self.recent_manager = RecentFileManager()
         
-        # Add current workfile to recent list on startup
-        if wf_path:
-            self.recent_manager.add(wf_path)
+        # Add current workfile or remote workspace to recent list on startup
+        try:
+            if wf_path and isinstance(wf_path, str) and wf_path.startswith('<remote:') and self.base_url:
+                # Remote session: record remote recent entry
+                parsed = utils.parse_workspace_url(self.base_url)
+                if parsed:
+                    server_url, ws_id = parsed
+                    host = urlparse(server_url).hostname or server_url
+                    label = f"{host} + {ws_id}"
+                    self.recent_manager.add_remote_entry(self.base_url, workspace_id=ws_id, label=label)
+                else:
+                    # Fallback: just store the base_url
+                    self.recent_manager.add_remote_entry(self.base_url, workspace_id=self.workspace_id, label=None)
+            elif wf_path:
+                # Local file session
+                self.recent_manager.add(wf_path)
+        except Exception:
+            # Do not fail GUI init due to recent list issues
+            log.debug("Failed to update recent entries on startup", exc_info=True)
 
         menubar = tk.Menu(self.master)
 
@@ -279,14 +297,21 @@ class WorkflowApp:
     # ----------------------
     # Node / edge operations (server-mediated)
     # ----------------------
+    def _set_pending_add_snapshot(self):
+        with self._state_lock:
+            current_nodes = self.state.graph.get("nodes", [])
+            self._pending_add_ids = {n.get("id") for n in current_nodes if n.get("id")}
+
     def add_node_at(self, x, y, label=None):
         def on_save(lbl):
             if not lbl.strip():
                 return
             try:
+                self._set_pending_add_snapshot()
                 # `x`/`y` are world coordinates.
                 self.server.add_node(lbl, x, y)
             except Exception as e:
+                self._pending_add_ids = None
                 messagebox.showerror("Add node failed", str(e))
         if label:
             on_save(label)
@@ -318,8 +343,10 @@ class WorkflowApp:
             x = 100 + count * 50
             y = 100
             try:
+                self._set_pending_add_snapshot()
                 self.server.add_node(label, x, y)
             except Exception as e:
+                self._pending_add_ids = None
                 messagebox.showerror("Add node error", str(e))
         self.node_label_popup("", on_save)
 
@@ -794,19 +821,43 @@ class WorkflowApp:
         # Clear existing items
         self.recent_submenu.delete(0, tk.END)
         
-        # Get validated recent files list
+        # Get validated recent local files list
         recent_files = self.recent_manager.get_list()
-        
-        if not recent_files:
-            self.recent_submenu.add_command(label="(No recent files)", state=tk.DISABLED)
+        # Get remote recent entries
+        recent_remotes = self.recent_manager.get_remote_list()
+
+        if not recent_files and not recent_remotes:
+            self.recent_submenu.add_command(label="(No recent items)", state=tk.DISABLED)
             return
-        
-        # Add each recent file to submenu
+
+        # Add each recent local file to submenu
         for file_path in recent_files[:20]:  # Limit display to 20
-            # Create menu item with full file path as label
             self.recent_submenu.add_command(
                 label=file_path,
                 command=lambda fp=file_path: self._open_recent_file(fp)
+            )
+
+        # Add separator if both local and remote exist
+        if recent_files and recent_remotes:
+            self.recent_submenu.add_separator()
+
+        # Add recent remote workspaces
+        for entry in recent_remotes[:20]:
+            url = entry.get('url')
+            ws_id = entry.get('workspace_id')
+            label = entry.get('label')
+            if not label:
+                # Derive label "hostname + workspace_id"
+                parsed = utils.parse_workspace_url(url) if url else None
+                if parsed:
+                    server_url, parsed_ws_id = parsed
+                    host = urlparse(server_url).hostname or server_url
+                    label = f"{host} + {parsed_ws_id}"
+                else:
+                    label = url or '(remote)'
+            self.recent_submenu.add_command(
+                label=label,
+                command=lambda u=url: self._open_recent_remote(u)
             )
     
     def _open_recent_file(self, file_path: str):
@@ -832,6 +883,29 @@ class WorkflowApp:
         
         # Launch new GUI for this file
         self._launch_gui_for_file(file_path)
+
+    def _open_recent_remote(self, url: str):
+        """
+        Open a remote workspace from recent list.
+        Moves entry to top and launches a new GUI for the URL.
+        """
+        if not url:
+            messagebox.showwarning("Invalid URL", "Missing remote workspace URL.")
+            return
+        try:
+            self.recent_manager.move_remote_to_top(url)
+            # Import launch from gui/app.py to spawn new process
+            from .app import launch
+            # Parse URL to extract workspace id
+            parsed = utils.parse_workspace_url(url)
+            if not parsed:
+                messagebox.showerror("Invalid URL", f"Not a valid workspace URL:\n{url}")
+                return
+            server_url, ws_id = parsed
+            base_url = f"{server_url}/workspace/{ws_id}"
+            launch(base_url, wf_path=f"<remote:{ws_id}>", workspace_id=ws_id, background=True)
+        except Exception as e:
+            messagebox.showerror("Launch Error", f"Failed to launch GUI for remote workspace:\n{e}")
 
     def show_node_log(self):
         if len(self.state.selected_nodes) != 1:
@@ -1562,10 +1636,18 @@ class WorkflowApp:
                 elif "nodes" in data or "links" in data:
                     # Full graph update (structure change or initial load)
                     log.info(f"Full graph update received with {len(data.get('nodes', []))} nodes")
+                    pending_ids = self._pending_add_ids
+                    prev_ids = pending_ids if pending_ids is not None else {n.get("id") for n in self.state.graph.get("nodes", []) if n.get("id")}
                     self.state.graph = data
                     # Extract and cache wrapper if present
                     if "graph" in data and "wrapper" in data["graph"]:
                         self.state.wrapper = data["graph"]["wrapper"]
+                    new_ids = {n.get("id") for n in self.state.graph.get("nodes", []) if n.get("id")}
+                    if pending_ids is not None:
+                        added = new_ids - prev_ids
+                        if len(added) == 1:
+                            self.state.selected_nodes = [next(iter(added))]
+                        self._pending_add_ids = None
                 else:
                     log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")
                     return  # Don't redraw if we didn't update anything

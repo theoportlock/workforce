@@ -201,6 +201,7 @@ def _main_impl():
 
     # List (diagnostic)
     sp3 = server_sub.add_parser("ls", help="List active workspaces")
+    sp3.add_argument("--server-url", help="Server URL to query (default: current running server)")
     sp3.set_defaults(func=lambda args: server_cmd_list(args))
 
     # Add workspace registration

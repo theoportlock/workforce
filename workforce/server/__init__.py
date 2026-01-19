@@ -585,54 +585,66 @@ def stop_server():
     _clear_all_caches()
 
 
-def list_servers():
+def list_servers(server_url: str | None = None):
     """List active workspace contexts with connection URLs.
     
-    Uses PID file first (fast). If no server running, offers to start one.
+    When server_url is provided, query that endpoint directly (no PID checks).
+    Otherwise, use PID file discovery; if no server is running, print guidance.
     """
-    pid_info = _read_pid_file()
-    
-    # Try PID file first
-    if pid_info and _pid_alive(pid_info[2]):
-        host, port, pid = pid_info
+    if server_url:
+        host, port, base_url = utils._normalize_server_url(server_url)
+        pid = 0
     else:
-        # Clean up stale PID file
-        if pid_info:
-            try:
-                os.remove(_pid_file())
-            except OSError:
-                pass
+        pid_info = _read_pid_file()
         
-        # No server running on default port - offer to start one
-        print("Server is not running.")
-        print("Start the server with: wf server start")
-        return
+        # Try PID file first
+        if pid_info and _pid_alive(pid_info[2]):
+            host, port, pid = pid_info
+            base_url = f"http://{host}:{port}"
+        else:
+            # Clean up stale PID file
+            if pid_info:
+                try:
+                    os.remove(_pid_file())
+                except OSError:
+                    pass
+            
+            # No server running on default port - offer to start one
+            print("Server is not running.")
+            print("Start the server with: wf server start")
+            return
 
     try:
         import json
         import socket
 
-        url = f"http://{host}:{port}/workspaces"
+        url = f"{base_url}/workspaces"
         with urllib.request.urlopen(url, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             workspaces = data.get("workspaces", [])
             server_info = data.get("server", {})
-            bind_host = server_info.get("host") or host
-            bind_port = int(server_info.get("port") or port)
-            lan_enabled = bool(server_info.get("lan_enabled", bind_host not in ("127.0.0.1", "localhost")))
 
-            local_ips = []
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(("8.8.8.8", 80))
-                ip = s.getsockname()[0]
-                s.close()
-                if ip != '127.0.0.1' and not ip.startswith('127.'):
-                    local_ips.append(ip)
-            except:
-                pass
+            if server_url:
+                bind_host, bind_port = host, port
+                local_ips = []
+                bound_to_all = False
+            else:
+                bind_host = server_info.get("host") or host
+                bind_port = int(server_info.get("port") or port)
+                lan_enabled = bool(server_info.get("lan_enabled", bind_host not in ("127.0.0.1", "localhost")))
 
-            bound_to_all = lan_enabled or bind_host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0")
+                local_ips = []
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s.connect(("8.8.8.8", 80))
+                    ip = s.getsockname()[0]
+                    s.close()
+                    if ip != '127.0.0.1' and not ip.startswith('127.'):
+                        local_ips.append(ip)
+                except:
+                    pass
+
+                bound_to_all = lan_enabled or bind_host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0")
 
             print("=" * 80)
             if pid > 0:
@@ -641,7 +653,9 @@ def list_servers():
                 print(f"Workforce Server on port {bind_port}")
             print("=" * 80)
 
-            if bound_to_all and local_ips:
+            if server_url:
+                print(f"\n📍 Access URL: {base_url}")
+            elif bound_to_all and local_ips:
                 print("\n📍 Access URLs:")
                 print(f"  Local:    http://127.0.0.1:{bind_port}")
                 for ip in local_ips:
@@ -669,7 +683,9 @@ def list_servers():
                 print(f"  File:      {ws_path}")
                 print(f"  Clients:   {client_count}")
 
-                if bound_to_all and local_ips:
+                if server_url:
+                    print(f"  URL:       {base_url}/workspace/{ws_id}")
+                elif bound_to_all and local_ips:
                     print("  URLs:")
                     print(f"    Local:   http://127.0.0.1:{bind_port}/workspace/{ws_id}")
                     for ip in local_ips:
@@ -700,5 +716,5 @@ def cmd_stop(args):
     stop_server()
 
 def cmd_list(args):
-    list_servers()
+    list_servers(server_url=getattr(args, 'server_url', None))
 

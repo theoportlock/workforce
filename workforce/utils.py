@@ -357,13 +357,19 @@ def _pid_alive(pid: int) -> bool:
 
 
 def _normalize_server_url(url: str) -> tuple[str, int, str]:
-    """Normalize URL, returning (host, port, normalized_url)."""
-    if not url.startswith(("http://", "https://")):
-        url = "http://" + url
+    """Normalize URL, preserving scheme, returning (host, port, normalized_url).
+
+    Defaults to http when the scheme is missing. When no port is provided, uses
+    443 for https and 5000 otherwise.
+    """
     parsed = urllib.parse.urlparse(url)
+    if not parsed.scheme:
+        parsed = urllib.parse.urlparse("http://" + url)
+
+    scheme = (parsed.scheme or "http").lower()
     host = parsed.hostname or "127.0.0.1"
-    port = parsed.port or 5000
-    normalized = f"http://{host}:{port}"
+    port = parsed.port or (443 if scheme == "https" else 5000)
+    normalized = f"{scheme}://{host}:{port}"
     return host, port, normalized
 
 

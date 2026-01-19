@@ -298,6 +298,50 @@ class TestRecentFileManager:
         assert rm.data_dir.exists()
         assert rm.recent_path.exists()
 
+    def test_add_remote_entry_and_persistence(self):
+        """Test adding a remote workspace and persistence in JSON."""
+        rm = RecentFileManager()
+        rm.save([])
+        rm.save_remote([])
+        url = "http://127.0.0.1:5001/workspace/ws_12345678"
+        ws_id = "ws_12345678"
+        label = "127.0.0.1 + ws_12345678"
+        remotes = rm.add_remote_entry(url, workspace_id=ws_id, label=label)
+        assert isinstance(remotes, list)
+        assert remotes[0]["url"] == url
+        # Verify JSON structure contains recent_remotes
+        with open(rm.recent_path, 'r') as f:
+            data = json.load(f)
+        assert "recent_files" in data
+        assert "recent_remotes" in data
+        assert isinstance(data["recent_remotes"], list)
+        assert data["recent_remotes"][0]["url"] == url
+
+    def test_move_remote_to_top(self):
+        """Test moving a remote entry to the top of the remote list."""
+        rm = RecentFileManager()
+        rm.save([])
+        rm.save_remote([])
+        r1 = rm.add_remote_entry("http://127.0.0.1:5001/workspace/ws_aaaa1111", workspace_id="ws_aaaa1111", label="127.0.0.1 + ws_aaaa1111")
+        r2 = rm.add_remote_entry("http://127.0.0.1:5001/workspace/ws_bbbb2222", workspace_id="ws_bbbb2222", label="127.0.0.1 + ws_bbbb2222")
+        # Move first back to top
+        remotes = rm.move_remote_to_top("ws_aaaa1111")
+        assert remotes[0]["workspace_id"] == "ws_aaaa1111"
+
+    def test_remote_entries_not_filtered_by_get_list(self):
+        """Ensure remote entries are not affected by local file validation in get_list()."""
+        rm = RecentFileManager()
+        rm.save_remote([])
+        rm.save(["/tmp/nonexistent_local_file.wf"])  # Will be filtered out by get_list
+        rm.add_remote_entry("http://127.0.0.1:5001/workspace/ws_cccc3333", workspace_id="ws_cccc3333", label="127.0.0.1 + ws_cccc3333")
+        # Local get_list should filter missing local file
+        locals_valid = rm.get_list()
+        assert len(locals_valid) == 0
+        # Remote list remains intact
+        remotes = rm.get_remote_list()
+        assert len(remotes) == 1
+        assert remotes[0]["workspace_id"] == "ws_cccc3333"
+
 
 class TestRecentFileIntegration:
     """Integration tests for recent files with simulated GUI workflows."""
