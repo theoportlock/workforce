@@ -23,7 +23,7 @@
       <data key="d6">asdfad
 </data>
       <data key="d7" />
-      <data key="d8">18069</data>
+      <data key="d8">20287</data>
       <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -47,7 +47,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -57,7 +56,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">18184</data>
+      <data key="d8">20397</data>
       <data key="d9">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
@@ -66,16 +65,15 @@ workforce.egg-info
       <data key="d3">100.33333333333331</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 208
-drwxr-xr-x 14 tpor598 tpor598  4096 Jan 19 21:41 .
--rw-------  1 tpor598 tpor598  9740 Jan 19 21:41 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jan 19 21:40 .git
-drwxr-x--- 62 tpor598 tpor598  4096 Jan 19 21:18 ..
+      <data key="d6">total 204
+drwxr-xr-x 13 tpor598 tpor598  4096 Jan 20 09:12 .
+-rw-------  1 tpor598 tpor598  9096 Jan 20 09:12 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jan 20 09:12 .git
+drwxr-x--- 62 tpor598 tpor598  4096 Jan 20 09:11 ..
+drwxr-xr-x  2 tpor598 tpor598  4096 Jan 20 08:57 workforce.egg-info
+-rw-r--r--  1 tpor598 tpor598  1517 Jan 20 08:23 pyproject.toml
 -rw-r--r--  1 tpor598 tpor598  9633 Jan 19 21:18 README.rst
-drwxr-xr-x  2 tpor598 tpor598  4096 Jan 17 20:54 scripts
 -rw-r--r--  1 tpor598 tpor598  3711 Jan 17 20:38 todo.md
--rw-r--r--  1 tpor598 tpor598  1517 Jan 16 15:24 pyproject.toml
-drwxr-xr-x  2 tpor598 tpor598  4096 Jan 16 15:22 workforce.egg-info
 drwxr-xr-x  7 tpor598 tpor598  4096 Jan 16 14:10 workforce
 -rw-r--r--  1 tpor598 tpor598  2491 Jan 16 13:29 BUILD_INSTALLER.md
 -rw-r--r--  1 tpor598 tpor598   796 Jan 16 13:29 installer.iss
@@ -102,7 +100,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
 -rwxr-xr-x  1 tpor598 tpor598   262 Aug 12 20:34 MANIFEST.in
 </data>
       <data key="d7" />
-      <data key="d8">17961</data>
+      <data key="d8">20178</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -114,7 +112,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">18232</data>
+      <data key="d8">20458</data>
       <data key="d9">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
@@ -126,7 +124,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">17918</data>
+      <data key="d8">20134</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
@@ -155,7 +153,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -178,7 +175,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -188,7 +184,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">17785</data>
+      <data key="d8">20038</data>
       <data key="d9">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
@@ -200,7 +196,7 @@ workforce.egg-info
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">18276</data>
+      <data key="d8">20503</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -211,7 +207,7 @@ workforce.egg-info
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">18087</data>
+      <data key="d8">20304</data>
       <data key="d9">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
@@ -222,7 +218,7 @@ workforce.egg-info
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">18341</data>
+      <data key="d8">20585</data>
       <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
@@ -246,7 +242,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -256,7 +251,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">18139</data>
+      <data key="d8">20353</data>
       <data key="d9">0</data>
     </node>
     <node id="3326a2b5-f09f-44e1-956c-e78a8489f9e3">
@@ -280,7 +275,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -290,7 +284,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">17795</data>
+      <data key="d8">20048</data>
       <data key="d9">0</data>
     </node>
     <node id="0d9519f9-c2ae-440c-99c5-f74a610f3e4b">
@@ -310,9 +304,9 @@ The document has moved
                                  Dload  Upload   Total   Spent    Left  Speed
 
   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-100   219  100   219    0     0    655      0 --:--:-- --:--:-- --:--:--   657
+100   219  100   219    0     0   1234      0 --:--:-- --:--:-- --:--:--  1244
 </data>
-      <data key="d8">17815</data>
+      <data key="d8">20052</data>
       <data key="d9">0</data>
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
@@ -336,7 +330,6 @@ MANIFEST.in
 prompt.txt
 pyproject.toml
 README.rst
-scripts
 tests
 todo.md
 venv
@@ -346,7 +339,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">18010</data>
+      <data key="d8">20228</data>
       <data key="d9">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">

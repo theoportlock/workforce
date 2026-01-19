@@ -1,5 +1,5 @@
 APP_NAME := workforce
-MAIN_SCRIPT := run.py
+MAIN_SCRIPT := workforce/__main__.py
 
 DIST_DIR := dist
 BUILD_DIR := build
@@ -44,12 +44,20 @@ windows: pyinstaller-windows inno-setup
 
 pyinstaller-windows:
 	pyinstaller --onefile --windowed --icon=$(ICON_WIN) \
+		--hidden-import engineio.async_drivers.threading \
+		--hidden-import dns.resolver \
 		--distpath $(DIST_DIR)/windows --workpath $(BUILD_DIR)/windows \
 		$(MAIN_SCRIPT)
 
+# Path to Inno Setup compiler - override if needed
+# Example: make windows INNO_SETUP_PATH="/path/to/ISCC.exe"
+INNO_SETUP_PATH ?= /mnt/c/Users/tpor598/AppData/Local/Programs/Inno\ Setup\ 6/ISCC.exe
+
+# ... (rest of the file)
+
 inno-setup:
 	# Run Inno Setup compiler from WSL using Windows path
-	/mnt/c/Users/tpor598/AppData/Local/Programs/Inno\ Setup\ 6/ISCC.exe installer.iss
+	$(INNO_SETUP_PATH) installer.iss
 
 # 3. macOS: Build binary + pkg installer
 mac: pyinstaller-mac pkgbuild

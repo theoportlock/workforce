@@ -1,6 +1,6 @@
 [Setup]
 AppName=workforce
-AppVersion=1.1.14
+AppVersion=1.1.18
 DefaultDirName={pf}\workforce
 DefaultGroupName=workforce
 OutputBaseFilename=workforce_setup
@@ -17,7 +17,7 @@ PrivilegesRequired=admin
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "dist\windows\__main__.exe"; DestDir: "{app}"; DestName: "workforce.exe"; Flags: ignoreversion
+Source: "dist\windows\workforce.exe"; DestDir: "{app}"; DestName: "workforce.exe"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\workforce"; Filename: "{app}\workforce.exe"
