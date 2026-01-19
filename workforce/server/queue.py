@@ -136,7 +136,7 @@ def start_graph_worker(ctx):
         while True:
             item = ctx.mod_queue.get()
             
-            # None signals shutdown
+            # None signals explicit shutdown (used by tests for cleanup)
             if item is None:
                 log.info(f"Graph worker shutting down for workspace {ctx.workspace_id}.")
                 break

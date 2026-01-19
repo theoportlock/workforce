@@ -1,8 +1,6 @@
 import uuid
 import logging
 import os
-import signal
-import threading
 from flask import current_app, request, g, jsonify
 from workforce import edit
 import networkx as nx
@@ -39,7 +37,7 @@ def register_routes(app):
         get_or_create_context,
         destroy_context,
         _contexts,
-        _clear_workspace_cache,
+        _clean_workspace_cache,
         _stop_nodes_for_workspace,
     )
     from workforce.utils import compute_workspace_id
@@ -411,26 +409,6 @@ def register_routes(app):
             if ctx.should_destroy():
                 destroy_context(workspace_id)
                 log.info(f"Destroyed context for {workspace_id} (no clients)")
-                
-                # Check if all workspaces are now empty (no clients)
-                # If so, trigger graceful server shutdown
-                from workforce.server import _contexts, _contexts_lock, graceful_shutdown
-                
-                with _contexts_lock:
-                    all_empty = all(ctx.client_count == 0 for ctx in _contexts.values())
-                    remaining_workspaces = len(_contexts)
-                
-                # Check if auto-shutdown is disabled (e.g., during testing)
-                auto_shutdown_disabled = os.environ.get("WORKFORCE_NO_AUTO_SHUTDOWN", "").lower() in ("1", "true", "yes")
-                
-                if all_empty and remaining_workspaces == 0:
-                    if auto_shutdown_disabled:
-                        log.info("Last client disconnected from last workspace, but auto-shutdown is disabled (WORKFORCE_NO_AUTO_SHUTDOWN set)")
-                    else:
-                        log.info("Last client disconnected from last workspace. Triggering graceful shutdown...")
-                        # Spawn shutdown in background thread to avoid blocking this request
-                        shutdown_thread = threading.Thread(target=graceful_shutdown, daemon=False)
-                        shutdown_thread.start()
             
             return jsonify({"status": "disconnected", "workspace_id": workspace_id}), 200
         except Exception as e:
@@ -572,7 +550,7 @@ def register_routes(app):
         if ctx:
             _stop_nodes_for_workspace(workspace_id)
             destroy_context(workspace_id)
-        _clear_workspace_cache(workspace_id)
+        _clean_workspace_cache(workspace_id)
         return jsonify({"status": "removed", "workspace_id": workspace_id}), 200
 
     @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])

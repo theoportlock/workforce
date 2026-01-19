@@ -127,6 +127,9 @@ def get_app():
         _socketio = SocketIO(_app, cors_allowed_origins="*", async_mode="threading", 
                             ping_interval=30, ping_timeout=90)
         
+        # Clean up old caches to prevent unbounded disk growth
+        _cycle_workspace_caches()
+        
         # Register route handlers with the shared app
         server_routes.register_routes(_app)
         
@@ -194,7 +197,10 @@ def get_or_create_context(workspace_id: str, workfile_path: str, increment_clien
 
 
 def destroy_context(workspace_id: str):
-    """Destroy and cleanup a workspace context."""
+    """Destroy and cleanup a workspace context.
+    
+    Worker thread is not explicitly stopped - it will exit with the server process.
+    """
     global _contexts
     
     # Get context but DON'T remove from registry yet
@@ -202,24 +208,6 @@ def destroy_context(workspace_id: str):
         if workspace_id not in _contexts:
             return
         ctx = _contexts[workspace_id]
-    
-    # Stop worker FIRST (outside lock to avoid deadlock)
-    # This ensures worker fully stops before context removed from registry
-    if ctx.worker_thread and ctx.worker_thread.is_alive():
-        log.info(f"Stopping worker thread for {workspace_id}")
-        # Signal queue to stop (None sentinel)
-        ctx.mod_queue.put(None)
-        
-        # Wait for thread with increased timeout (10s instead of 5s)
-        # Slow CI systems may need more time for graceful shutdown
-        ctx.worker_thread.join(timeout=10)
-        
-        if ctx.worker_thread.is_alive():
-            log.error(f"Worker thread for {workspace_id} did not stop within 10 seconds - may be stuck in I/O or deadlocked")
-            # Thread will become orphaned but at least we warned about it
-            # In production, could consider thread.daemon=True or more aggressive termination
-        else:
-            log.info(f"Worker thread for {workspace_id} stopped cleanly")
     
     # Clear EventBus subscriptions to prevent lingering references
     if hasattr(ctx, 'events') and ctx.events:
@@ -231,18 +219,18 @@ def destroy_context(workspace_id: str):
     ctx.active_runs.clear()
     ctx.active_node_run.clear()
     
-    # NOW remove from registry (AFTER worker stopped and cleanup complete)
-    # This ensures registry accurately reflects cleanup state
+    # Remove from registry
     with _contexts_lock:
         _contexts.pop(workspace_id, None)
     
-    _clear_workspace_cache(workspace_id)
+    # Clean up workspace cache to prevent unbounded disk growth
+    _clean_workspace_cache(workspace_id)
     
     log.info(f"Destroyed workspace context: {workspace_id}")
 
 
 def _stop_nodes_for_workspace(workspace_id: str) -> dict:
-    """Kill running processes for a workspace. Extracted logic from routes /stop endpoint.
+    """Kill running processes for a workspace. Used by manual stop_server().
     
     Returns:
         dict with keys: killed (count), errors (list), stopped_nodes (list)
@@ -287,78 +275,99 @@ def _cache_root() -> str:
     return platformdirs.user_cache_dir("workforce")
 
 
-def _clear_workspace_cache(workspace_id: str):
+def _clean_workspace_cache(workspace_id: str):
+    """Remove cache for a specific workspace."""
     root = _cache_root()
     path = os.path.join(root, workspace_id)
     try:
         if os.path.exists(path):
             shutil.rmtree(path, ignore_errors=True)
+            log.debug(f"Cleaned cache for workspace {workspace_id}")
     except Exception as e:
         log.warning(f"Failed to remove cache for {workspace_id}: {e}")
 
 
+def _cycle_workspace_caches(max_cache_size_mb: int = 500, max_age_days: int = 7):
+    """Clean old or excess workspace caches to prevent unbounded disk growth.
+    
+    Removes:
+    - Individual workspace caches older than max_age_days
+    - Workspace caches when total size exceeds max_cache_size_mb (removes oldest first)
+    """
+    root = _cache_root()
+    if not os.path.exists(root):
+        return  # No cache to clean yet
+    
+    try:
+        entries = []
+        total_size = 0
+        current_time = time.time()
+        
+        # Collect cache entries with size and mtime
+        for entry in os.listdir(root):
+            full_path = os.path.join(root, entry)
+            if not os.path.isdir(full_path):
+                continue
+            
+            try:
+                # Get directory size
+                size = sum(
+                    os.path.getsize(os.path.join(dirpath, filename))
+                    for dirpath, dirnames, filenames in os.walk(full_path)
+                    for filename in filenames
+                )
+                mtime = os.path.getmtime(full_path)
+                age_days = (current_time - mtime) / (24 * 3600)
+                
+                entries.append({
+                    "name": entry,
+                    "path": full_path,
+                    "size": size,
+                    "mtime": mtime,
+                    "age_days": age_days
+                })
+                total_size += size
+            except OSError:
+                pass
+        
+        # Remove caches older than max_age_days
+        for entry in entries:
+            if entry["age_days"] > max_age_days:
+                try:
+                    shutil.rmtree(entry["path"], ignore_errors=True)
+                    log.info(f"Removed old cache {entry['name']} (age: {entry['age_days']:.1f} days)")
+                    total_size -= entry["size"]
+                except Exception as e:
+                    log.warning(f"Failed to remove old cache {entry['name']}: {e}")
+        
+        # If still over size limit, remove oldest caches
+        max_size_bytes = max_cache_size_mb * 1024 * 1024
+        if total_size > max_size_bytes:
+            # Sort by mtime (oldest first)
+            entries.sort(key=lambda x: x["mtime"])
+            for entry in entries:
+                if total_size <= max_size_bytes:
+                    break
+                try:
+                    shutil.rmtree(entry["path"], ignore_errors=True)
+                    log.info(f"Removed cache {entry['name']} to stay under size limit ({entry['size'] / 1024 / 1024:.1f} MB)")
+                    total_size -= entry["size"]
+                except Exception as e:
+                    log.warning(f"Failed to remove cache {entry['name']}: {e}")
+    except Exception as e:
+        log.warning(f"Error cycling workspace caches: {e}")
+
+
 def _clear_all_caches():
+    """Remove all workspace caches. Used by manual stop_server()."""
     root = _cache_root()
     if not os.path.exists(root):
         return
     try:
-        for entry in os.listdir(root):
-            full = os.path.join(root, entry)
-            if os.path.isdir(full):
-                shutil.rmtree(full, ignore_errors=True)
+        shutil.rmtree(root, ignore_errors=True)
+        log.info("Cleared all workspace caches")
     except Exception as e:
         log.warning(f"Failed to clear workspace caches: {e}")
-
-
-def graceful_shutdown():
-    """Stop all running processes and exit the server gracefully."""
-    log.info("========== GRACEFUL SERVER SHUTDOWN ==========")
-    log.info("Stopping all running nodes across all workspaces...")
-    
-    with _contexts_lock:
-        workspace_ids = list(_contexts.keys())
-    
-    # Stop all running nodes in each workspace
-    total_killed = 0
-    for workspace_id in workspace_ids:
-        log.info(f"Stopping nodes for workspace: {workspace_id}")
-        result = _stop_nodes_for_workspace(workspace_id)
-        total_killed += result["killed"]
-        if result["errors"]:
-            log.warning(f"Errors stopping {workspace_id}: {result['errors']}")
-        log.info(f"Workspace {workspace_id}: killed {result['killed']} processes, stopped {len(result['stopped_nodes'])} nodes")
-    
-    log.info(f"Total processes killed: {total_killed}")
-    log.info("Exiting server process...")
-    
-    # Stop socketio if it's running (skip if not in request context)
-    if _socketio:
-        try:
-            _socketio.stop()
-        except RuntimeError as e:
-            # Ignore "Working outside of request context" errors
-            if "Working outside of request context" not in str(e):
-                log.warning(f"Error stopping socketio: {e}")
-        except Exception as e:
-            log.warning(f"Error stopping socketio: {e}")
-
-    try:
-        os.remove(_pid_file())
-    except OSError:
-        pass
-    _release_lock()
-    _clear_all_caches()
-
-    # Exit the process
-    os._exit(0)
-
-
-def _signal_handler(signum, frame):
-    """Handle shutdown signals (SIGTERM, SIGINT)."""
-    sig_name = signal.Signals(signum).name
-    log.info(f"Received signal {sig_name} ({signum}), triggering graceful shutdown")
-    # Call graceful_shutdown directly to kill processes and exit
-    graceful_shutdown()
 
 
 def get_context(workspace_id: str) -> ServerContext | None:
@@ -513,9 +522,6 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     _bind_host, _bind_port = host, port
 
     _write_pid_file(host, port, os.getpid())
-
-    signal.signal(signal.SIGTERM, _signal_handler)
-    signal.signal(signal.SIGINT, _signal_handler)
 
     log.info(f"Starting Workforce server on http://{host}:{port}")
     log.info("Server ready. Waiting for client connections...")

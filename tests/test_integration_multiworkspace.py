@@ -28,9 +28,6 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 def server_url():
     """Start server once per test module and return its URL."""
-    # Disable auto-shutdown for testing so server stays alive between tests
-    os.environ["WORKFORCE_NO_AUTO_SHUTDOWN"] = "1"
-    
     # Use resolve_server to find or start server
     try:
         server = utils.resolve_server()
