@@ -32,7 +32,7 @@ Server Startup Process
 
 When starting a server (typically automatic when running ``wf`` commands):
 
-1. **Singleton Check**: The system scans ports 5000-5100 with ``find_running_server()`` using /workspaces health checks to detect any existing server
+1. **Singleton Check**: The system checks the PID file registry to detect any existing server
 
 2. **Server Discovery**: If a server is already running:
    
@@ -40,11 +40,11 @@ When starting a server (typically automatic when running ``wf`` commands):
    * Exits without starting a duplicate server
    * Enforces single machine-wide server policy
 
-3. **Port Discovery**: If no server exists:
+3. **Port Configuration**: If no server exists:
    
-   * Scans port range 5000-5100 for available port
-   * Selects first free port automatically
-   * No manual port configuration needed
+   * Uses explicitly configured port (default: 5049)
+   * Port can be overridden via command-line argument or environment variable
+   * Server fails if port is already in use
 
 4. **Server Initialization**: Flask + Socket.IO server starts:
    
@@ -106,9 +106,9 @@ Workforce uses a single machine-wide server that manages multiple workflows thro
 
 **Server Discovery**:
 
-* ``find_running_server()`` scans ports 5000-5100 with /workspaces health checks
+* PID file registry tracks running server location and process ID
 * Detects existing server before attempting to start new one
-* Returns server URL for client connections
+* Returns server URL for client connections (default: http://127.0.0.1:5049)
 
 **Workspace Identification**:
 

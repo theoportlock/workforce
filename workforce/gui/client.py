@@ -25,6 +25,8 @@ class ServerClient:
         self.on_graph_update = on_graph_update
         self.sio = None
         self.connected = False
+        self.client_id: str | None = None
+        self.socketio_sid: str | None = None
 
     def _url(self, path: str) -> str:
         if not path.startswith("/"):
@@ -43,6 +45,7 @@ class ServerClient:
                 def connect():
                     log.info("Successfully connected to %s", self.base_url)
                     self.connected = True
+                    self.socketio_sid = getattr(self.sio, "sid", None)
                     
                     # Join workspace room immediately after connect
                     try:
@@ -59,6 +62,7 @@ class ServerClient:
                 def disconnect():
                     log.info("SocketIO disconnected")
                     self.connected = False
+                    self.socketio_sid = None
 
                 @self.sio.on('graph_update')
                 def _on_graph_update(data):
@@ -105,7 +109,11 @@ class ServerClient:
             # First disconnect SocketIO
             self.disconnect()
             # Then notify server via REST
-            result = utils._post(self.base_url, "/client-disconnect", {})
+            payload = {
+                "client_type": "gui",
+                "client_id": self.client_id,
+            }
+            result = utils._post(self.base_url, "/client-disconnect", payload)
             log.info(f"Client disconnected from {self.workspace_id}")
             return result
         except Exception as e:
@@ -114,6 +122,16 @@ class ServerClient:
 
     def get_graph(self, timeout=1.0):
         r = requests.get(self._url("/get-graph"), timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+
+    def get_clients(self, timeout=2.0):
+        r = requests.get(self._url("/clients"), timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+
+    def get_runs(self, timeout=2.0):
+        r = requests.get(self._url("/runs"), timeout=timeout)
         r.raise_for_status()
         return r.json()
 
@@ -183,7 +201,14 @@ class ServerClient:
     def client_connect(self):
         """Register client connection with the server."""
         try:
-            return utils._post(self.base_url, "/client-connect", {"workfile_path": self.workfile_path})
+            payload = {
+                "workfile_path": self.workfile_path,
+                "client_type": "gui",
+                "socketio_sid": self.socketio_sid,
+            }
+            resp = utils._post(self.base_url, "/client-connect", payload)
+            self.client_id = resp.get("client_id") if isinstance(resp, dict) else None
+            return resp
         except Exception:
             return None
 

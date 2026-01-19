@@ -103,7 +103,7 @@ def _main_impl():
                        help="Workfile path or workspace URL (e.g., http://host:port/workspace/ws_abc123)")
     gui_p.add_argument("--foreground", "-f", action="store_true",
                        help="Run GUI in foreground (default: background)")
-    gui_p.add_argument("--server-url", help="Server URL (overrides WORKFORCE_SERVER_URL, default http://127.0.0.1:5000)")
+    gui_p.add_argument("--server-url", help="Server URL (overrides WORKFORCE_SERVER_URL, default http://127.0.0.1:5049)")
     def _gui(args):
         # Check if input is a workspace URL
         parsed = utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
@@ -144,7 +144,7 @@ def _main_impl():
                        help="Workfile path or workspace URL (e.g., http://host:port/workspace/ws_abc123)")
     run_p.add_argument("--nodes", nargs='*', help="Specific node IDs to run.")
     run_p.add_argument("--wrapper", default="{}", help="Command wrapper, use {} as placeholder for the command.")
-    run_p.add_argument("--server-url", help="Server URL (overrides WORKFORCE_SERVER_URL, default http://127.0.0.1:5000)")
+    run_p.add_argument("--server-url", help="Server URL (overrides WORKFORCE_SERVER_URL, default http://127.0.0.1:5049)")
     def _run(args):
         # Check if input is a workspace URL
         parsed = utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
@@ -191,7 +191,7 @@ def _main_impl():
     sp = server_sub.add_parser("start", help="Start the server (background by default)")
     sp.add_argument("--foreground", action="store_true", help="Run in foreground instead of background")
     sp.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
-    sp.add_argument("--port", type=int, default=5000, help="Port to bind to (default: 5000)")
+    sp.add_argument("--port", type=int, default=5049, help="Port to bind to (default: 5049)")
     sp.add_argument("--log-dir", help="Directory for server.log (default: ~/.workforce)")
     sp.set_defaults(func=lambda args: server_cmd_start(args))
 

@@ -144,25 +144,13 @@ def get_bind_info() -> tuple[str | None, int | None]:
     return _bind_host, _bind_port
 
 
-def get_or_create_context(workspace_id: str, workfile_path: str, increment_client: bool = True) -> ServerContext:
-    """Get existing context or create a new one for the workspace.
-    
-    Args:
-        workspace_id: Unique identifier for the workspace
-        workfile_path: Path to the workflow file
-        increment_client: If True, increment client count under lock (default: True)
-    
-    Returns:
-        ServerContext for the workspace
-    """
+def get_or_create_context(workspace_id: str, workfile_path: str) -> ServerContext:
+    """Get existing context or create a new one for the workspace."""
     global _contexts, _socketio
     
     with _contexts_lock:
         if workspace_id in _contexts:
-            ctx = _contexts[workspace_id]
-            if increment_client:
-                ctx.increment_clients()
-            return ctx
+            return _contexts[workspace_id]
         
         # Create new context
         cache_dir = platformdirs.user_cache_dir("workforce")
@@ -178,11 +166,6 @@ def get_or_create_context(workspace_id: str, workfile_path: str, increment_clien
             mod_queue=std_queue.Queue(),
             socketio=_socketio,
         )
-        
-        # Initialize client count if incrementing
-        if increment_client:
-            ctx.increment_clients()
-        
         _contexts[workspace_id] = ctx
         log.info(f"Created workspace context: {workspace_id} for {workfile_path} (clients: {ctx.client_count})")
     
@@ -401,7 +384,7 @@ def _is_compatible_server(host: str, port: int) -> bool:
         return False
 
 
-def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5000, log_dir: str | None = None):
+def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5049, log_dir: str | None = None):
     """Start the single machine-wide server with explicit host/port.
     
     Environment variable precedence:
@@ -677,11 +660,12 @@ def list_servers(server_url: str | None = None):
             for ws in workspaces:
                 ws_id = ws['workspace_id']
                 ws_path = ws['workfile_path']
-                client_count = ws['client_count']
+                clients = ws.get('clients', {}) or {}
+                client_count = clients.get('gui', 0) + clients.get('runner', 0)
 
                 print(f"\n  Workspace: {ws_id}")
                 print(f"  File:      {ws_path}")
-                print(f"  Clients:   {client_count}")
+                print(f"  Clients:   {client_count} (GUI: {clients.get('gui', 0)}, Runner: {clients.get('runner', 0)})")
 
                 if server_url:
                     print(f"  URL:       {base_url}/workspace/{ws_id}")
@@ -692,6 +676,19 @@ def list_servers(server_url: str | None = None):
                         print(f"    LAN:     http://{ip}:{bind_port}/workspace/{ws_id}")
                 else:
                     print(f"  URL:       http://{host}:{bind_port}/workspace/{ws_id}")
+
+                # Fetch detailed client IDs for this workspace
+                try:
+                    with urllib.request.urlopen(f"{base_url}/workspace/{ws_id}/clients", timeout=2) as client_resp:
+                        client_data = json.loads(client_resp.read().decode("utf-8"))
+                        gui_clients = [c.get("client_id") for c in client_data.get("gui", [])]
+                        runner_clients = [c.get("client_id") for c in client_data.get("runner", [])]
+                        if gui_clients:
+                            print(f"  GUI Clients:    {', '.join(gui_clients)}")
+                        if runner_clients:
+                            print(f"  Runner Clients: {', '.join(runner_clients)}")
+                except Exception:
+                    pass
 
             print("\n" + "=" * 80)
 

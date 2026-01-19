@@ -39,13 +39,12 @@ class Runner:
 				log.debug("Ignoring run_complete for other run_id %s", run_id)
 				return
 			log.info("Server signaled run completion. Disconnecting.")
-			# Notify server via REST API to decrement client count
-			if self._registered_with_server:
+			# Notify server via REST API
+			if self._registered_with_server and self.run_id:
 				try:
 					endpoint = "/client-disconnect"
-					utils._post(self.base_url, endpoint, {})
+					utils._post(self.base_url, endpoint, {"client_type": "runner", "client_id": self.run_id})
 					self._registered_with_server = False
-					log.info("Successfully notified server of client disconnect")
 				except Exception as e:
 					log.error(f"Failed to notify server of disconnect: {e}")
 			# Then disconnect SocketIO
@@ -171,19 +170,12 @@ class Runner:
 				server_url = utils.resolve_server()
 			self.sio.connect(server_url, transports=['websocket'], wait_timeout=10)
 			
-			# Register with server for this workspace
-			try:
-				endpoint = "/client-connect"
-				utils._post(self.base_url, endpoint, {"workfile_path": self.workfile_path})
-				self._registered_with_server = True
-				log.info(f"Runner registered with workspace {self.workspace_id}")
-			except Exception as e:
-				log.error(f"Failed to register with workspace: {e}")
-				self.sio.disconnect()
-				return
-
-			# Now that we're connected, initiate the run
-			payload = {"nodes": initial_nodes or []}
+			# Now that we're connected, initiate the run (register runner client)
+			payload = {
+				"nodes": initial_nodes or [],
+				"socketio_sid": getattr(self.sio, "sid", None),
+				"workfile_path": self.workfile_path,
+			}
 			try:
 				endpoint = "/run"
 				log.info(f"Posting /run to server with payload: {payload}...")
@@ -191,6 +183,7 @@ class Runner:
 				self.run_id = run_response.get("run_id")
 				if self.run_id:
 					log.info(f"Runner associated with run_id={self.run_id}")
+					self._registered_with_server = True
 				else:
 					log.warning(f"No run_id in response: {run_response}")
 			except Exception as e:
@@ -209,12 +202,11 @@ class Runner:
 			log.info("\nStopping runner.")
 		finally:
 			# Always notify server and disconnect, even on error
-			if self._registered_with_server:
+			if self._registered_with_server and self.run_id:
 				try:
 					endpoint = "/client-disconnect"
-					utils._post(self.base_url, endpoint, {})
+					utils._post(self.base_url, endpoint, {"client_type": "runner", "client_id": self.run_id})
 					self._registered_with_server = False
-					log.info("Runner cleanup: notified server of disconnect")
 				except Exception as e:
 					log.error(f"Runner cleanup: failed to notify server: {e}")
 			

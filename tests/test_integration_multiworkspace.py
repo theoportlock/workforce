@@ -2,7 +2,7 @@
 Integration tests for multi-workspace architecture.
 
 Tests the complete workflow with the new fixed-port server and workspace routing:
-- Server auto-start on fixed port 5000
+- Server auto-start on fixed port 5049
 - On-demand workspace context creation/destruction
 - Workspace isolation (events don't cross workspaces)
 - Multi-workspace concurrent operations

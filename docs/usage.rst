@@ -170,7 +170,7 @@ Via REST API (blocking edge):
 
 .. code-block:: bash
 
-    curl -X POST http://localhost:5000/workspace/workspace_id/add-edge \
+    curl -X POST http://localhost:5049/workspace/workspace_id/add-edge \
       -H "Content-Type: application/json" \
       -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "blocking"}'
 
@@ -204,7 +204,7 @@ Via REST API (non-blocking edge):
 
 .. code-block:: bash
 
-    curl -X POST http://localhost:5000/workspace/workspace_id/add-edge \
+    curl -X POST http://localhost:5049/workspace/workspace_id/add-edge \
       -H "Content-Type: application/json" \
       -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "non-blocking"}'
 
@@ -231,7 +231,7 @@ Via REST API:
 
 .. code-block:: bash
 
-    curl -X POST http://localhost:5000/workspace/workspace_id/edit-edge-type \
+    curl -X POST http://localhost:5049/workspace/workspace_id/edit-edge-type \
       -H "Content-Type: application/json" \
       -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "non-blocking"}'
 
@@ -512,17 +512,17 @@ Then use the Windows host LAN IP in the URL.
 
     ip addr | grep 'inet '
 
-- Add a Windows port proxy to forward port 5000 to WSL (run in an elevated PowerShell or cmd):
+- Add a Windows port proxy to forward port 5049 to WSL (run in an elevated PowerShell or cmd):
 
 .. code-block:: text
 
-    netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=5000 connectaddress=<WSL_IP> connectport=5000
+    netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=5049 connectaddress=<WSL_IP> connectport=5049
 
-- Open firewall for inbound TCP 5000:
+- Open firewall for inbound TCP 5049:
 
 .. code-block:: text
 
-    netsh advfirewall firewall add rule name="Workforce 5000" dir=in action=allow protocol=TCP localport=5000
+    netsh advfirewall firewall add rule name="Workforce 5049" dir=in action=allow protocol=TCP localport=5049
 
 - Verify:
 
@@ -534,7 +534,7 @@ Then use the Windows host LAN IP in the URL.
 
 .. code-block:: bash
 
-    wf gui http://<windows_host_ip>:5000/workspace/<workspace_id>
+    wf gui http://<windows_host_ip>:5049/workspace/<workspace_id>
 
 Note: WSL IP can change after restart. Recreate the portproxy if needed.
 

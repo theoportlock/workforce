@@ -49,9 +49,9 @@ The server component provides a single machine-wide instance that manages multip
 
 **Server Startup**: When starting a server using the CLI (``python -m workforce server start``):
 
-1. Checks if a server is already running via health check discovery (ports 5000-5100)
+1. Checks if a server is already running via PID file registry (default port 5049)
 2. If found, informs user and exits (enforces singleton per machine)
-3. If not found, discovers free port and starts Flask + Socket.IO server
+3. If not found, starts Flask + Socket.IO server on configured port
 4. Waits for clients to connect and creates workspace contexts on-demand
 
 **Workspace Management**:

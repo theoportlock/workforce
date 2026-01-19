@@ -51,17 +51,6 @@ def test_duplicate_server_prevention():
     
     # Should still be the same server
     assert new_port == found_port, f"New server started on port {new_port} instead of using existing server on {found_port}"
-    
-    # Verify no second server on adjacent ports
-    for port in range(5000, 5100):
-        if port == found_port:
-            continue  # Skip the legitimate server port
-        try:
-            resp = requests.get(f"http://127.0.0.1:{port}/workspaces", timeout=0.5)
-            if resp.status_code == 200 and "workspaces" in resp.json():
-                raise AssertionError(f"Unexpected second server found on port {port}")
-        except requests.exceptions.RequestException:
-            pass  # Expected - no server on this port
 
 
 def test_singleton_explicit_port():

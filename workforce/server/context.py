@@ -25,9 +25,14 @@ class ServerContext:
     events: Any = None  # EventBus, set in __post_init__
     
     # Lifecycle tracking
+    # client_count remains for backward compatibility; authoritative counts come from gui_clients/runner_clients
     client_count: int = 0
     created_at: float = field(default_factory=time.time)
     worker_thread: threading.Thread | None = None
+
+    # Per-client tracking
+    gui_clients: Dict[str, dict] = field(default_factory=dict)       # gui_id -> {connected_at, socketio_sid}
+    runner_clients: Dict[str, dict] = field(default_factory=dict)    # run_id -> {connected_at, socketio_sid}
     
     # per-run tracking
     active_runs: Dict[str, dict] = field(default_factory=dict)       # run_id -> {"nodes": set(), "subset_only": bool}
@@ -50,29 +55,43 @@ class ServerContext:
         
         self.events = EventBus(log_file=str(event_log_path))
 
-    def increment_clients(self):
-        """Called when a client connects."""
-        self.client_count += 1
+    @property
+    def client_summary(self) -> Dict[str, int]:
+        """Return per-type client counts."""
+        return {
+            "gui": len(self.gui_clients),
+            "runner": len(self.runner_clients),
+        }
 
-    def decrement_clients(self) -> int:
-        """Called when a client disconnects. Returns new client count.
-        
-        Raises:
-            ValueError: If client count would go negative (indicates double-disconnect bug)
-        """
-        if self.client_count <= 0:
-            log.warning(f"Client count underflow detected for workspace {self.workspace_id}: "
-                       f"decrement called when count is {self.client_count}. "
-                       f"This indicates a double-disconnect bug.")
-            # Don't raise exception to avoid breaking client, but log loudly
-            return 0
-        
-        self.client_count -= 1
-        return self.client_count
+    def _sync_client_count(self):
+        """Keep legacy client_count in sync with authoritative per-type maps."""
+        self.client_count = len(self.gui_clients) + len(self.runner_clients)
+
+    def add_gui_client(self, gui_id: str, socketio_sid: str | None = None):
+        self.gui_clients[gui_id] = {
+            "connected_at": time.time(),
+            "socketio_sid": socketio_sid,
+        }
+        self._sync_client_count()
+
+    def remove_gui_client(self, gui_id: str):
+        self.gui_clients.pop(gui_id, None)
+        self._sync_client_count()
+
+    def add_runner_client(self, run_id: str, socketio_sid: str | None = None):
+        self.runner_clients[run_id] = {
+            "connected_at": time.time(),
+            "socketio_sid": socketio_sid,
+        }
+        self._sync_client_count()
+
+    def remove_runner_client(self, run_id: str):
+        self.runner_clients.pop(run_id, None)
+        self._sync_client_count()
 
     def should_destroy(self) -> bool:
         """Returns True if context should be destroyed (no clients left)."""
-        return self.client_count <= 0
+        return (len(self.gui_clients) + len(self.runner_clients)) <= 0
 
     def enqueue(self, func: Callable, *args, idempotency_key: str | None = None, **kwargs):
         """

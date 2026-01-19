@@ -116,6 +116,14 @@ class WorkflowApp:
         run_menu.add_command(label="Stop All", command=self.stop_all_runs, accelerator="Ctrl+C")
         menubar.add_cascade(label="Run", menu=run_menu)
 
+        # Server menu
+        server_menu = tk.Menu(menubar, tearoff=0)
+        server_menu.add_command(label="Active Runs", command=self.show_runs_dialog)
+        server_menu.add_command(label="Connected Clients", command=self.show_clients_dialog)
+        server_menu.add_separator()
+        server_menu.add_command(label="Server Status", command=self.show_server_status)
+        menubar.add_cascade(label="Server", menu=server_menu)
+
         # Tools menu
         tools_menu = tk.Menu(menubar, tearoff=0)
         tools_menu.add_command(label="Wrapper", command=self.wrapper_popup, accelerator="P")
@@ -246,6 +254,102 @@ class WorkflowApp:
             log.error(f"Error disconnecting: {e}")
         finally:
             self.client_connected = False
+
+    # ----------------------
+    # Server diagnostics
+    # ----------------------
+    def show_clients_dialog(self):
+        from tkinter import ttk
+
+        try:
+            data = self.server.get_clients()
+        except Exception as e:
+            messagebox.showerror("Clients", f"Failed to fetch clients: {e}")
+            return
+
+        win = tk.Toplevel(self.master)
+        win.title("Connected Clients")
+        win.geometry("500x400")
+
+        columns = ("details",)
+        tree = ttk.Treeview(win, columns=columns, show="tree headings")
+        tree.heading("details", text="Details")
+        tree.column("details", width=360, anchor="w")
+
+        gui_root = tree.insert("", "end", text="GUI Clients", values=("",))
+        for entry in data.get("gui", []):
+            cid = entry.get("client_id") or "(unknown)"
+            detail = f"connected_at={entry.get('connected_at', '')}"
+            tree.insert(gui_root, "end", text=cid, values=(detail,))
+
+        runner_root = tree.insert("", "end", text="Runner Clients", values=("",))
+        for entry in data.get("runner", []):
+            rid = entry.get("run_id") or entry.get("client_id") or "(unknown)"
+            nodes_total = entry.get("nodes_total", 0)
+            nodes_running = entry.get("nodes_running", 0)
+            nodes_failed = entry.get("nodes_failed", 0)
+            detail = f"running={nodes_running}/{nodes_total}, failed={nodes_failed}"
+            tree.insert(runner_root, "end", text=rid, values=(detail,))
+
+        tree.pack(fill=tk.BOTH, expand=True)
+
+        vsb = tk.Scrollbar(win, orient="vertical", command=tree.yview)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.configure(yscrollcommand=vsb.set)
+
+    def show_runs_dialog(self):
+        from tkinter import ttk
+
+        try:
+            data = self.server.get_runs()
+        except Exception as e:
+            messagebox.showerror("Runs", f"Failed to fetch runs: {e}")
+            return
+
+        win = tk.Toplevel(self.master)
+        win.title("Active Runs")
+        win.geometry("500x400")
+
+        columns = ("nodes", "status")
+        tree = ttk.Treeview(win, columns=columns, show="tree headings")
+        tree.heading("nodes", text="Nodes")
+        tree.heading("status", text="Status")
+        tree.column("nodes", width=160, anchor="w")
+        tree.column("status", width=260, anchor="w")
+
+        for entry in data.get("runs", []):
+            rid = entry.get("run_id") or "(unknown)"
+            nodes_total = entry.get("nodes_total", 0)
+            nodes_running = entry.get("nodes_running", 0)
+            nodes_failed = entry.get("nodes_failed", 0)
+            subset_only = entry.get("subset_only", False)
+            nodes_text = f"{nodes_running} running / {nodes_total} total"
+            status_text = f"failed={nodes_failed}" + (" | subset" if subset_only else "")
+            tree.insert("", "end", text=rid, values=(nodes_text, status_text))
+
+        tree.pack(fill=tk.BOTH, expand=True)
+
+        vsb = tk.Scrollbar(win, orient="vertical", command=tree.yview)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.configure(yscrollcommand=vsb.set)
+
+    def show_server_status(self):
+        try:
+            clients = self.server.get_clients()
+            runs = self.server.get_runs()
+        except Exception as e:
+            messagebox.showerror("Server Status", f"Failed to fetch status: {e}")
+            return
+
+        gui_count = len(clients.get("gui", []))
+        runner_count = len(clients.get("runner", []))
+        run_count = len(runs.get("runs", []))
+        message = (
+            f"GUI clients: {gui_count}\n"
+            f"Runner clients: {runner_count}\n"
+            f"Active runs: {run_count}"
+        )
+        messagebox.showinfo("Server Status", message)
 
     # ----------------------
     # Graph loading / saving

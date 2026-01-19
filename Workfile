@@ -1,8 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d7" for="edge" attr.name="edge_type" attr.type="string" />
-  <key id="d6" for="edge" attr.name="status" attr.type="string" />
-  <key id="d5" for="edge" attr.name="id" attr.type="string" />
+  <key id="d12" for="edge" attr.name="edge_type" attr.type="string" />
+  <key id="d11" for="edge" attr.name="status" attr.type="string" />
+  <key id="d10" for="edge" attr.name="id" attr.type="string" />
+  <key id="d9" for="node" attr.name="error_code" attr.type="string" />
+  <key id="d8" for="node" attr.name="pid" attr.type="string" />
+  <key id="d7" for="node" attr.name="stderr" attr.type="string" />
+  <key id="d6" for="node" attr.name="stdout" attr.type="string" />
+  <key id="d5" for="node" attr.name="command" attr.type="string" />
   <key id="d4" for="node" attr.name="status" attr.type="string" />
   <key id="d3" for="node" attr.name="y" attr.type="string" />
   <key id="d2" for="node" attr.name="x" attr.type="string" />
@@ -13,37 +18,116 @@
       <data key="d1">echo asdfad</data>
       <data key="d2">649.9523809523811</data>
       <data key="d3">313.2380952380952</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; echo asdfad"</data>
+      <data key="d6">asdfad
+</data>
+      <data key="d7" />
+      <data key="d8">16844</data>
+      <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
       <data key="d2">534.6666666666666</data>
       <data key="d3">364.33333333333326</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls"</data>
+      <data key="d6">AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">16960</data>
+      <data key="d9">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d1">ls -lta</data>
-      <data key="d2">441.75</data>
-      <data key="d3">109.33333333333331</data>
-      <data key="d4" />
-    </node>
-    <node id="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
-      <data key="d1">echo test</data>
-      <data key="d2">-45.734848484848385</data>
-      <data key="d3">107.45202020202025</data>
-      <data key="d4" />
+      <data key="d2">439.75</data>
+      <data key="d3">100.33333333333331</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls -lta"</data>
+      <data key="d6">total 208
+drwxr-xr-x 14 tpor598 tpor598  4096 Jan 19 21:17 .
+-rw-------  1 tpor598 tpor598 10900 Jan 19 21:17 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jan 19 21:15 .git
+-rw-r--r--  1 tpor598 tpor598  9633 Jan 19 21:09 README.rst
+drwxr-x--- 62 tpor598 tpor598  4096 Jan 19 20:43 ..
+drwxr-xr-x  2 tpor598 tpor598  4096 Jan 17 20:54 scripts
+-rw-r--r--  1 tpor598 tpor598  3711 Jan 17 20:38 todo.md
+-rw-r--r--  1 tpor598 tpor598  1517 Jan 16 15:24 pyproject.toml
+drwxr-xr-x  2 tpor598 tpor598  4096 Jan 16 15:22 workforce.egg-info
+drwxr-xr-x  7 tpor598 tpor598  4096 Jan 16 14:10 workforce
+-rw-r--r--  1 tpor598 tpor598  2491 Jan 16 13:29 BUILD_INSTALLER.md
+-rw-r--r--  1 tpor598 tpor598   796 Jan 16 13:29 installer.iss
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan 16 11:14 tests
+drwxr-xr-x  2 tpor598 tpor598  4096 Jan 16 11:14 .vscode
+drwxr-xr-x  8 tpor598 tpor598  4096 Jan 15 10:50 docs
+-rw-r--r--  1 tpor598 tpor598     0 Jan 11 21:12 Workfile.lock
+drwxr-xr-x  5 tpor598 tpor598  4096 Jan  6 12:42 .venv
+drwxr-xr-x  4 tpor598 tpor598  4096 Jan  5 13:34 build
+drwxr-xr-x  5 tpor598 tpor598  4096 Jan  5 12:04 venv
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan  3 11:15 .github
+-rwxr-xr-x  1 tpor598 tpor598  1177 Jan  3 10:03 HISTORY.rst
+-rw-r--r--  1 tpor598 tpor598   598 Jan  2 15:48 .readthedocs.yaml
+-rw-r--r--  1 tpor598 tpor598  1585 Dec 29 21:07 prompt.txt
+-rw-r--r--  1 tpor598 tpor598 69632 Dec 16 12:42 .coverage
+-rwxr-xr-x  1 tpor598 tpor598   426 Nov 13 11:55 env.sh
+drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
+-rwxr-xr-x  1 tpor598 tpor598  1072 Aug 13 11:03 LICENSE
+-rwxr-xr-x  1 tpor598 tpor598   161 Aug 12 20:34 AUTHORS.rst
+-rw-r--r--  1 tpor598 tpor598  1994 Aug 12 20:34 CODE_OF_CONDUCT.rst
+-rw-r--r--  1 tpor598 tpor598  2349 Aug 12 20:34 CONTRIBUTING.rst
+-rwxr-xr-x  1 tpor598 tpor598  1237 Aug 12 20:34 .gitignore
+-rw-r--r--  1 tpor598 tpor598  2302 Aug 12 20:34 Makefile
+-rwxr-xr-x  1 tpor598 tpor598   262 Aug 12 20:34 MANIFEST.in
+</data>
+      <data key="d7" />
+      <data key="d8">16741</data>
+      <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d1">pwd</data>
       <data key="d2">161.6666666666667</data>
       <data key="d3">276.41666666666674</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; pwd"</data>
+      <data key="d6">/home/tpor598/workforce
+</data>
+      <data key="d7" />
+      <data key="d8">17008</data>
+      <data key="d9">0</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">52.88888888888895</data>
-      <data key="d3">-23.444444444444372</data>
-      <data key="d4" />
+      <data key="d2">-73.11111111111103</data>
+      <data key="d3">11.555555555555628</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; pwd"</data>
+      <data key="d6">/home/tpor598/workforce
+</data>
+      <data key="d7" />
+      <data key="d8">16694</data>
+      <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
       <data key="d1">echo "teststet"
@@ -51,101 +135,272 @@ ls
 ls</data>
       <data key="d2">765.6271216705998</data>
       <data key="d3">47.29018324670528</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; echo "teststet"
+ls
+ls"</data>
+      <data key="d6">teststet
+AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">16580</data>
+      <data key="d9">0</data>
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
       <data key="d1">pwd</data>
       <data key="d2">579.3333333333333</data>
       <data key="d3">480.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; pwd"</data>
+      <data key="d6">/home/tpor598/workforce
+</data>
+      <data key="d7" />
+      <data key="d8">17052</data>
+      <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
       <data key="d2">293.0</data>
       <data key="d3">308.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; sleep 5"</data>
+      <data key="d6" />
+      <data key="d7" />
+      <data key="d8">16860</data>
+      <data key="d9">0</data>
     </node>
     <node id="d360ce50-d72e-41e4-9781-eef28404d72a">
       <data key="d1">sleep 5</data>
       <data key="d2">409.0</data>
       <data key="d3">385.0</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; sleep 5"</data>
+      <data key="d6" />
+      <data key="d7" />
+      <data key="d8">17128</data>
+      <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls</data>
       <data key="d2">174.25</data>
       <data key="d3">108.24999999999994</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls"</data>
+      <data key="d6">AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">16916</data>
+      <data key="d9">0</data>
     </node>
     <node id="3326a2b5-f09f-44e1-956c-e78a8489f9e3">
       <data key="d1">ls</data>
       <data key="d2">70.28571428571426</data>
       <data key="d3">-131.71428571428578</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls"</data>
+      <data key="d6">AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">16597</data>
+      <data key="d9">0</data>
     </node>
     <node id="0d9519f9-c2ae-440c-99c5-f74a610f3e4b">
       <data key="d1">curl google.com</data>
       <data key="d2">410.3333333333333</data>
       <data key="d3">-97.66666666666666</data>
-      <data key="d4" />
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; curl google.com"</data>
+      <data key="d6">&lt;HTML&gt;&lt;HEAD&gt;&lt;meta http-equiv="content-type" content="text/html;charset=utf-8"&gt;
+&lt;TITLE&gt;301 Moved&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;
+&lt;H1&gt;301 Moved&lt;/H1&gt;
+The document has moved
+&lt;A HREF="http://www.google.com/"&gt;here&lt;/A&gt;.
+&lt;/BODY&gt;&lt;/HTML&gt;
+</data>
+      <data key="d7">  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100   219  100   219    0     0    812      0 --:--:-- --:--:-- --:--:--   817
+</data>
+      <data key="d8">16614</data>
+      <data key="d9">0</data>
+    </node>
+    <node id="84aded15-4233-4d63-b327-155b735aa379">
+      <data key="d1">ls</data>
+      <data key="d2">193.0</data>
+      <data key="d3">-2.0</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls"</data>
+      <data key="d6">AUTHORS.rst
+build
+BUILD_INSTALLER.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+docs
+env.sh
+HISTORY.rst
+installer.iss
+LICENSE
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+scripts
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">16788</data>
+      <data key="d9">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
-      <data key="d5">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
-      <data key="d6" />
+      <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
+      <data key="d11" />
     </edge>
     <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
-      <data key="d5">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
-      <data key="d6" />
+      <data key="d10">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
+      <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d5">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
-      <data key="d6" />
+      <data key="d10">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
+      <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d5">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
-      <data key="d6" />
+      <data key="d10">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
+      <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
-      <data key="d5">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>
-      <data key="d6" />
+      <data key="d10">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>
+      <data key="d11" />
     </edge>
-    <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
-      <data key="d5">850f7d6e-98f0-4c8f-b1a9-baba87cf3450</data>
-      <data key="d7">non-blocking</data>
-      <data key="d6" />
-    </edge>
-    <edge source="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d5">d47e3883-2ff8-48c3-91d3-d0939e46aff2</data>
-      <data key="d7">blocking</data>
-      <data key="d6" />
-    </edge>
-    <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
-      <data key="d5">bd1cec78-a331-4e81-8105-c2c736970f72</data>
-      <data key="d7">blocking</data>
-      <data key="d6" />
+    <edge source="10980c67-0b82-4c2f-b8b7-cce4309faf0c" target="84aded15-4233-4d63-b327-155b735aa379">
+      <data key="d10">b9036132-8af1-41db-8685-e5b7c812ebaf</data>
+      <data key="d12">blocking</data>
+      <data key="d11" />
     </edge>
     <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d5">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
-      <data key="d6" />
+      <data key="d10">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
+      <data key="d11" />
     </edge>
     <edge source="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71" target="d360ce50-d72e-41e4-9781-eef28404d72a">
-      <data key="d5">62a52192-15ee-4d53-b24c-b0927ad1c3cf</data>
-      <data key="d6" />
+      <data key="d10">62a52192-15ee-4d53-b24c-b0927ad1c3cf</data>
+      <data key="d11" />
     </edge>
-    <edge source="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d" target="6dcb2c6d-2e84-4e90-9ec1-a8ac752ff589">
-      <data key="d5">bf449f1f-ca6b-4956-92c0-b45f44a9200f</data>
-      <data key="d7">blocking</data>
-      <data key="d6" />
+    <edge source="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
+      <data key="d10">3ea98dfe-1da8-4c48-9792-c150e18d69b9</data>
+      <data key="d12">blocking</data>
+      <data key="d11" />
     </edge>
     <edge source="3326a2b5-f09f-44e1-956c-e78a8489f9e3" target="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
-      <data key="d5">695da950-a9c2-49f7-bb71-a62a8635acbf</data>
-      <data key="d7">blocking</data>
-      <data key="d6" />
+      <data key="d10">8317c9e9-90a5-4ced-8ab7-ce748469e1e1</data>
+      <data key="d12">blocking</data>
+      <data key="d11" />
     </edge>
     <edge source="0d9519f9-c2ae-440c-99c5-f74a610f3e4b" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d5">161e44f6-8802-41a2-9969-40de9654ecdd</data>
-      <data key="d7">non-blocking</data>
-      <data key="d6" />
+      <data key="d10">161e44f6-8802-41a2-9969-40de9654ecdd</data>
+      <data key="d12">non-blocking</data>
+      <data key="d11" />
+    </edge>
+    <edge source="84aded15-4233-4d63-b327-155b735aa379" target="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
+      <data key="d10">8bd06d37-2e8c-4f4e-9c36-2f6829d362cc</data>
+      <data key="d12">blocking</data>
+      <data key="d11" />
     </edge>
     <data key="d0">bash -c "sleep 1; {}"</data>
   </graph>

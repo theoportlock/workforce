@@ -37,7 +37,7 @@ To add a non-blocking edge:
 
 .. code-block:: bash
 
-    curl -X POST http://localhost:5000/workspace/abc123def456/add-edge \
+    curl -X POST http://localhost:5049/workspace/abc123def456/add-edge \
       -H "Content-Type: application/json" \
       -d '{
         "source_id": "node-uuid-1",
@@ -52,7 +52,7 @@ Python client example (blocking edge):
     import requests
     
     response = requests.post(
-        "http://localhost:5000/workspace/abc123def456/add-edge",
+        "http://localhost:5049/workspace/abc123def456/add-edge",
         json={
             "source_id": "node-uuid-1",
             "target_id": "node-uuid-2",
@@ -68,7 +68,7 @@ Python client example (non-blocking edge):
     import requests
     
     response = requests.post(
-        "http://localhost:5000/workspace/abc123def456/add-edge",
+        "http://localhost:5049/workspace/abc123def456/add-edge",
         json={
             "source_id": "node-uuid-1",
             "target_id": "node-uuid-2",
@@ -83,7 +83,7 @@ To change an existing edge's type from blocking to non-blocking:
 
 .. code-block:: bash
 
-    curl -X POST http://localhost:5000/workspace/abc123def456/edit-edge-type \
+    curl -X POST http://localhost:5049/workspace/abc123def456/edit-edge-type \
       -H "Content-Type: application/json" \
       -d '{
         "source_id": "node-uuid-1",
@@ -98,7 +98,7 @@ Python client example:
     import requests
     
     response = requests.post(
-        "http://localhost:5000/workspace/abc123def456/edit-edge-type",
+        "http://localhost:5049/workspace/abc123def456/edit-edge-type",
         json={
             "source_id": "node-uuid-1",
             "target_id": "node-uuid-2",
@@ -113,7 +113,7 @@ When retrieving the workflow graph, the ``edge_type`` attribute is included in e
 
 .. code-block:: bash
 
-    curl http://localhost:5000/workspace/abc123def456/get-graph
+    curl http://localhost:5049/workspace/abc123def456/get-graph
 
 Response includes edges with type information:
 

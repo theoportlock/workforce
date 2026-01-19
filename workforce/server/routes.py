@@ -1,6 +1,7 @@
 import uuid
 import logging
 import os
+import signal
 from flask import current_app, request, g, jsonify
 from workforce import edit
 import networkx as nx
@@ -27,6 +28,43 @@ def serialize_graph_lightweight(G):
     data["graph"] = {}
     
     return data
+
+
+def _kill_nodes_for_run(ctx, run_id: str) -> dict:
+    """Kill running processes for a specific run and mark nodes as failed."""
+    from workforce import edit
+
+    try:
+        G = edit.load_graph(ctx.workfile_path)
+    except Exception:
+        return {"killed": 0, "errors": ["graph_load_failed"], "stopped_nodes": []}
+
+    running_nodes = []
+    killed = 0
+    errors = []
+
+    for node_id, attrs in G.nodes(data=True):
+        if attrs.get("status") != "running":
+            continue
+        mapped_run = ctx.active_node_run.get(node_id)
+        if mapped_run and mapped_run != run_id:
+            continue
+
+        running_nodes.append(node_id)
+        pid_raw = attrs.get("pid", "")
+        pid_str = str(pid_raw).strip() if pid_raw is not None else ""
+        if pid_str.isdigit():
+            try:
+                os.kill(int(pid_str), signal.SIGKILL)
+                killed += 1
+            except Exception as e:
+                errors.append(f"{node_id}:{pid_str}:{e}")
+
+    for node_id in running_nodes:
+        ctx.enqueue_status(ctx.workfile_path, "node", node_id, "fail", run_id)
+        ctx.active_node_run.pop(node_id, None)
+
+    return {"killed": killed, "errors": errors, "stopped_nodes": running_nodes}
 
 def register_routes(app):
     """Register all routes with workspace routing middleware."""
@@ -68,10 +106,12 @@ def register_routes(app):
         lan_enabled = bool(bind_host and bind_host not in ("127.0.0.1", "localhost"))
         workspaces = []
         for ws_id, ctx in _contexts.items():
+            summary = ctx.client_summary
             workspaces.append({
                 "workspace_id": ws_id,
                 "workfile_path": ctx.workfile_path,
-                "client_count": ctx.client_count,
+                "client_count": summary.get("gui", 0) + summary.get("runner", 0),
+                "clients": summary,
                 "created_at": ctx.created_at,
             })
         return jsonify({
@@ -99,7 +139,7 @@ def register_routes(app):
         except Exception as e:
             return jsonify({"error": f"Failed to load graph: {e}"}), 500
 
-        ctx = get_or_create_context(workspace_id, abs_path, increment_client=False)
+        ctx = get_or_create_context(workspace_id, abs_path)
 
         from workforce.server import get_bind_info
         host, port = get_bind_info()
@@ -113,7 +153,8 @@ def register_routes(app):
             "workspace_id": workspace_id,
             "url": url,
             "path": abs_path,
-            "client_count": ctx.client_count
+            "client_count": ctx.client_summary.get("gui", 0) + ctx.client_summary.get("runner", 0),
+            "clients": ctx.client_summary,
         }), 200
     
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
@@ -377,19 +418,23 @@ def register_routes(app):
 
     @app.route("/workspace/<workspace_id>/client-connect", methods=["POST"])
     def client_connect(workspace_id):
-        """Called when a client connects. Creates context if needed."""
+        """Called when a GUI client connects. Creates context if needed."""
         try:
             data = request.get_json(force=True) if request.data else {}
             workfile_path = data.get("workfile_path")
-            
+            client_type = data.get("client_type", "")
+            socketio_sid = data.get("socketio_sid")
+
             if not workfile_path:
                 return jsonify({"error": "workfile_path required"}), 400
-            
-            # Create or get context (client count incremented inside under lock)
-            ctx = get_or_create_context(workspace_id, workfile_path, increment_client=True)
-            
-            log.info(f"Client connected to {workspace_id}; clients: {ctx.client_count}")
-            return jsonify({"status": "connected", "workspace_id": workspace_id}), 200
+            if client_type not in ("gui", "GUI", "Gui"):
+                return jsonify({"error": "client_type must be 'gui'"}), 400
+
+            ctx = get_or_create_context(workspace_id, workfile_path)
+            gui_id = str(uuid.uuid4())
+            ctx.add_gui_client(gui_id, socketio_sid)
+
+            return jsonify({"status": "connected", "workspace_id": workspace_id, "client_id": gui_id}), 200
         except Exception as e:
             log.exception("Error in client_connect: %s", e)
             return jsonify({"error": str(e)}), 500
@@ -401,15 +446,24 @@ def register_routes(app):
             ctx = get_context(workspace_id)
             if not ctx:
                 return jsonify({"status": "disconnected"}), 200
-            
-            new_count = ctx.decrement_clients()
-            log.info(f"Client disconnected from {workspace_id}; clients: {new_count}")
-            
+
+            data = request.get_json(force=True) if request.data else {}
+            client_type = data.get("client_type")
+            client_id = data.get("client_id")
+
+            if client_type == "gui" and client_id:
+                ctx.remove_gui_client(client_id)
+            elif client_type == "runner" and client_id:
+                _kill_nodes_for_run(ctx, client_id)
+                ctx.remove_runner_client(client_id)
+                ctx.active_runs.pop(client_id, None)
+                # Drop node->run mappings for this run
+                to_remove = [nid for nid, rid in ctx.active_node_run.items() if rid == client_id]
+                for nid in to_remove:
+                    ctx.active_node_run.pop(nid, None)
             # If no clients remain, destroy context
             if ctx.should_destroy():
                 destroy_context(workspace_id)
-                log.info(f"Destroyed context for {workspace_id} (no clients)")
-            
             return jsonify({"status": "disconnected", "workspace_id": workspace_id}), 200
         except Exception as e:
             log.exception("Error in client_disconnect: %s", e)
@@ -420,14 +474,20 @@ def register_routes(app):
         """Start or resume a workflow run."""
         try:
             ctx = g.ctx
-            if not ctx:
-                return jsonify({"error": "Workspace not found"}), 404
-            
             data = request.get_json(force=True) if request.data else {}
+            if not ctx:
+                workfile_path = data.get("workfile_path")
+                if not workfile_path:
+                    return jsonify({"error": "Workspace not found"}), 404
+                ctx = get_or_create_context(workspace_id, workfile_path)
+                g.ctx = ctx
+
+            socketio_sid = data.get("socketio_sid")
             selected_nodes = data.get("nodes")
 
             # create run id and register
             run_id = str(uuid.uuid4())
+            ctx.add_runner_client(run_id, socketio_sid)
             G = edit.load_graph(ctx.workfile_path)
 
             # Blocking cycle prevention (only consider blocking edges)
@@ -496,10 +556,92 @@ def register_routes(app):
                 ctx.enqueue(edit.edit_status_in_graph, ctx.workfile_path, "node", node_id, "")
                 ctx.enqueue_status(ctx.workfile_path, "node", node_id, "run", run_id)
 
-            return jsonify({"status": "started", "run_id": run_id}), 202
+            return jsonify({"status": "started", "run_id": run_id, "client_id": run_id}), 202
         except Exception as e:
             log.exception("Error in /run endpoint")
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route("/workspace/<workspace_id>/clients", methods=["GET"])
+    def list_clients(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+
+        gui = []
+        for gid, meta in ctx.gui_clients.items():
+            gui.append({
+                "client_id": gid,
+                "connected_at": meta.get("connected_at"),
+                "socketio_sid": meta.get("socketio_sid"),
+            })
+
+        runner = []
+        try:
+            G = edit.load_graph(ctx.workfile_path)
+        except Exception:
+            G = None
+
+        for rid, meta in ctx.runner_clients.items():
+            nodes_total = len(ctx.active_runs.get(rid, {}).get("nodes", set()) or []) or (len(G.nodes) if G else 0)
+            nodes_running = 0
+            nodes_failed = 0
+            if G:
+                for node_id, attrs in G.nodes(data=True):
+                    if ctx.active_node_run.get(node_id) != rid:
+                        continue
+                    if attrs.get("status") == "running":
+                        nodes_running += 1
+                    if attrs.get("status") == "fail":
+                        nodes_failed += 1
+            runner.append({
+                "client_id": rid,
+                "run_id": rid,
+                "connected_at": meta.get("connected_at"),
+                "socketio_sid": meta.get("socketio_sid"),
+                "nodes_total": nodes_total,
+                "nodes_running": nodes_running,
+                "nodes_failed": nodes_failed,
+            })
+
+        return jsonify({"gui": gui, "runner": runner})
+
+    @app.route("/workspace/<workspace_id>/runs", methods=["GET"])
+    def list_runs(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+
+        runs = []
+        try:
+            G = edit.load_graph(ctx.workfile_path)
+        except Exception:
+            G = None
+
+        for rid, meta in ctx.active_runs.items():
+            nodes_scope = meta.get("nodes") or set()
+            subset_only = bool(meta.get("subset_only"))
+            nodes_running = 0
+            nodes_failed = 0
+            nodes_total = len(nodes_scope) if nodes_scope else (len(G.nodes) if G else 0)
+            if G:
+                for node_id, attrs in G.nodes(data=True):
+                    if nodes_scope and node_id not in nodes_scope:
+                        continue
+                    if ctx.active_node_run.get(node_id) not in (None, rid) and ctx.active_node_run.get(node_id) != rid:
+                        continue
+                    if attrs.get("status") == "running":
+                        nodes_running += 1
+                    if attrs.get("status") == "fail":
+                        nodes_failed += 1
+            runs.append({
+                "run_id": rid,
+                "subset_only": subset_only,
+                "nodes_total": nodes_total,
+                "nodes_running": nodes_running,
+                "nodes_failed": nodes_failed,
+            })
+
+        return jsonify({"runs": runs})
 
     @app.route("/workspace/<workspace_id>/stop", methods=["POST"])
     def stop_runs(workspace_id):

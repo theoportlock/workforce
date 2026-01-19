@@ -4,9 +4,9 @@
 - Primary entrypoints: wf CLI dispatches GUI/RUN/SERVER/EDIT subcommands (workforce/__main__.py); tests live in tests/ and expect pytest.
 
 ## Core architecture
-- Server discovery: Single machine-wide server discovered via find_running_server() which scans ports 5000-5100 with health checks. resolve_server() finds or auto-starts server. default_workfile() opens ./Workfile if present.
+- Server discovery: Single machine-wide server discovered via PID file registry. resolve_server() finds or auto-starts server on default port 5049. default_workfile() opens ./Workfile if present.
 - Workspace contexts: Each workfile gets deterministic workspace ID via compute_workspace_id() (SHA256 hash of absolute path). Server maintains dict of ServerContext objects keyed by workspace ID, created on-demand when first client connects.
-- Server start: start_server in workforce/server/__init__.py checks for existing server via find_running_server(), returns early if found. Otherwise sets up Flask + Socket.IO, background option via subprocess, and starts listening on dynamic port (5000-5100).
+- Server start: start_server in workforce/server/__init__.py checks PID file registry for existing server, returns early if found. Otherwise sets up Flask + Socket.IO, background option via subprocess, and starts listening on configured port (default 5049).
 - REST API: routes in workforce/server/routes.py provide workspace-scoped graph CRUD (URLs: /workspace/{workspace_id}/...), status edits, wrapper updates, node log upload, and /run which seeds run_id and decides roots (failed nodes → otherwise 0 in-degree or selected subset roots).
 - Socket layer: workforce/server/sockets.py registers connect/subscribe and translates domain events to Socket.IO events (graph_update, node_ready, status_change, run_complete). Each workspace has dedicated Socket.IO room for event isolation.
 - Event bus + graph worker: ServerContext holds mod_queue, active_runs, active_node_run, and dedicated worker thread per workspace. start_graph_worker in workforce/server/queue.py processes queued mutations, emits EventBus events, and enforces subset-only propagation: completed nodes mark outgoing edges to_run (only if target in run set); edges reaching all-ready targets set node status to run; RUN_COMPLETE emitted when no nodes left.
@@ -69,13 +69,11 @@ The unified command-line interface that routes all commands:
 ### 3. **`workforce/utils.py`** - Shared Utilities
 
 **Server Discovery**:
-- `find_running_server()`: Scans ports 5000-5100 with /workspaces health checks
-- `resolve_server()`: Finds running server or auto-starts one, returns server URL
+- `resolve_server()`: Finds running server via PID file or auto-starts one on default port 5049, returns server URL
 - `compute_workspace_id()`: Deterministic workspace ID from absolute file path (SHA256 hash)
 - `get_workspace_url()`: Constructs workspace URL from workspace ID and server URL
 
 **Network Helpers**:
-- `find_free_port()`: Scans 5000-5100 range for available ports
 - `is_port_in_use()`: Socket-based port availability check
 - `_post()`: HTTP POST wrapper using urllib
 
