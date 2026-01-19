@@ -43,9 +43,10 @@ deb-package:
 windows: pyinstaller-windows inno-setup
 
 pyinstaller-windows:
-	pyinstaller --onefile --windowed --icon=$(ICON_WIN) \
+	pyinstaller --onefile --windowed --name=$(APP_NAME) --icon=$(ICON_WIN) \
 		--hidden-import engineio.async_drivers.threading \
 		--hidden-import dns.resolver \
+		--hidden-import threading \
 		--distpath $(DIST_DIR)/windows --workpath $(BUILD_DIR)/windows \
 		$(MAIN_SCRIPT)
 

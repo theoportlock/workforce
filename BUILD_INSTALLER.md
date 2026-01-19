@@ -18,11 +18,12 @@
 
 From the workspace root (`c:\Users\tpor598\workforce`), run:
 
+
 ```powershell
-python -m PyInstaller --onefile --windowed --icon=docs/images/icon.ico --distpath dist/windows --workpath build/windows workforce/__main__.py
+python -m PyInstaller --onefile --windowed --name workforce --icon=docs/images/icon.ico --hidden-import=threading --distpath dist/windows --workpath build/windows workforce/__main__.py
 ```
 
-This creates `dist\windows\__main__.exe`.
+This creates `dist\windows\workforce.exe`.
 
 ### Step 2: Compile the Installer
 
@@ -48,7 +49,7 @@ The Windows installer is ready for distribution as `dist\workforce_setup.exe`.
 - **Solution**: Ensure Inno Setup 6 is installed. You can download it from https://jrsoftware.org/isdl.php
 
 **Problem**: Missing executable in installer
-- **Solution**: Make sure you ran Step 1 to build the executable first. The executable must exist at `dist\windows\__main__.exe`.
+- **Solution**: Make sure you ran Step 1 to build the executable first. The executable must exist at `dist\windows\workforce.exe`.
 
 **Problem**: Icon not found
 - **Solution**: The icon file `docs/images/icon.ico` must exist. If missing, rebuild from Windows or create a .ico file from `docs/images/icon.xbm`.
@@ -74,6 +75,6 @@ make windows
 ## Notes
 
 - The installer requires admin privileges for installation (standard for Program Files)
-- The executable is renamed from `__main__.exe` to `workforce.exe` during installation
 - All dependencies are bundled in the single executable
 - No Python runtime or additional files needed on target machine
+- The server automatically starts in-process when running from the frozen executable
