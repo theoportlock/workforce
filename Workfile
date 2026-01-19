@@ -349,40 +349,6 @@ workforce.egg-info
       <data key="d8">18010</data>
       <data key="d9">0</data>
     </node>
-    <node id="afd95b10-b1c9-4291-8ceb-a7817622c36a">
-      <data key="d1">ls</data>
-      <data key="d2">248.0</data>
-      <data key="d3">437.0</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; ls"</data>
-      <data key="d6">AUTHORS.rst
-build
-BUILD_INSTALLER.md
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-docs
-env.sh
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-scripts
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-</data>
-      <data key="d7" />
-      <data key="d8">17823</data>
-      <data key="d9">0</data>
-    </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
       <data key="d11" />
