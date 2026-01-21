@@ -269,7 +269,7 @@ class WorkflowApp:
 
         win = tk.Toplevel(self.master)
         win.title("Connected Clients")
-        win.geometry("500x400")
+        win.geometry("700x400")
 
         columns = ("details",)
         tree = ttk.Treeview(win, columns=columns, show="tree headings")
@@ -308,7 +308,7 @@ class WorkflowApp:
 
         win = tk.Toplevel(self.master)
         win.title("Active Runs")
-        win.geometry("500x400")
+        win.geometry("700x400")
 
         columns = ("nodes", "status")
         tree = ttk.Treeview(win, columns=columns, show="tree headings")
