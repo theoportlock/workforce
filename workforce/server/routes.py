@@ -81,10 +81,6 @@ def register_routes(app):
     )
     from workforce.utils import compute_workspace_id
     
-    @app.route("/health", methods=["GET"])
-    def health():
-        return {"status": "ok"}, 200
-
     @app.before_request
     def extract_workspace_id():
         """Extract workspace_id from URL and load context into g."""

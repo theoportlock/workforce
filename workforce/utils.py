@@ -1,17 +1,3 @@
-def _wait_for_server_ready(host: str, port: int, timeout: float = 10.0):
-    """Poll /health endpoint until server responds with 200 OK or timeout."""
-    import requests
-    url = f"http://{host}:{port}/health"
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            r = requests.get(url, timeout=0.5)
-            if r.status_code == 200:
-                return
-        except Exception:
-            pass
-        time.sleep(0.1)
-    raise RuntimeError(f"Server did not become ready within {timeout} seconds")
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -472,16 +458,7 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
         )
 
     # Step 5: Start new server on candidate port
-    # Frozen executables (PyInstaller) cannot spawn subprocesses with sys.executable
-    # because sys.executable points to the frozen EXE itself. In this case,
-    # run the server in-process (foreground) to avoid recursion and subprocess failures.
-    is_frozen = getattr(sys, "frozen", False)
-    if is_frozen:
-        # In-process server startup (background thread, non-blocking)
-        start_server(in_process=True, host=host, port=port, log_dir=log_dir)
-    else:
-        # Normal background subprocess startup
-        start_server(background=True, host=host, port=port, log_dir=log_dir)
+    start_server(background=True, host=host, port=port, log_dir=log_dir)
 
     # Return expected URL immediately - server will start in background
     return normalized
