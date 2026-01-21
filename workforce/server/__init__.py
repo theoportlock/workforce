@@ -384,8 +384,17 @@ def _is_compatible_server(host: str, port: int) -> bool:
         return False
 
 
-def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5049, log_dir: str | None = None):
+def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5049, log_dir: str | None = None, in_process: bool = False, foreground: bool = False):
     """Start the single machine-wide server with explicit host/port.
+    
+    Args:
+        background: If True, spawn subprocess. If False, run in current process (foreground).
+        host: Bind address for server.
+        port: Bind port for server.
+        log_dir: Directory for log files.
+        in_process: If True (frozen executables only), run server in-thread without subprocess.
+                    Forces foreground=True behavior but guarantees same interpreter.
+        foreground: If True, block until server is ready (no subprocess spawn).
     
     Environment variable precedence:
     - Server binds to WORKFORCE_HOST (if set) or host parameter
@@ -393,6 +402,8 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     - Health checks use WORKFORCE_URL (if set), else derive from host/port
     - Logs written to WORKFORCE_LOG_DIR (if set) or log_dir parameter
     """
+
+    global _bind_host, _bind_port
 
     log_dir = log_dir or os.environ.get("WORKFORCE_LOG_DIR")
     skip_lock = os.environ.get("WORKFORCE_SKIP_LOCK", "0") in ("1", "true", "True")
@@ -444,6 +455,48 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         _release_lock()
         raise RuntimeError(f"Port {port} on {host} is already in use")
 
+    # In-process execution for frozen executables: run server in a background thread, not blocking main thread
+    if in_process:
+        import threading
+        def _run():
+            _setup_logging(log_dir)
+            app, socketio = get_app()
+            global _bind_host, _bind_port
+            _bind_host, _bind_port = host, port
+            _write_pid_file(host, port, os.getpid())
+            log.info(f"Starting Workforce server in-process on http://{host}:{port}")
+            log.info("Server ready. Waiting for client connections...")
+            try:
+                socketio.run(app, host=host, port=port, use_reloader=False, debug=False, allow_unsafe_werkzeug=True)
+            except KeyboardInterrupt:
+                log.info("Server interrupted, triggering graceful shutdown...")
+                graceful_shutdown()
+            finally:
+                _release_lock()
+                log.info("Server shutdown complete.")
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        # Wait for server to be ready before returning
+        _wait_for_server_ready(host, port)
+        return
+
+def _wait_for_server_ready(host, port, timeout=10):
+    import time, urllib.request
+    server_url = f"http://{host}:{port}/workspaces"
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with urllib.request.urlopen(server_url, timeout=1) as resp:
+                if resp.status == 200:
+                    return
+        except Exception:
+            pass
+        time.sleep(0.2)
+    raise RuntimeError(f"Server did not become ready at {server_url} within {timeout} seconds")
+        from workforce.utils import _wait_for_server_ready as _wait_health
+        _wait_health(host, port, timeout)
+
     if background and sys.platform != "emscripten":
         env = os.environ.copy()
         env["WORKFORCE_SKIP_LOCK"] = "1"
@@ -480,7 +533,7 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         print(f"Starting background server on http://{host}:{port}")
         server_url = f"http://{host}:{port}"
         start_time = time.time()
-        timeout = 10
+        timeout = 30
         
         while time.time() - start_time < timeout:
             try:
@@ -501,7 +554,6 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     # Foreground server
     app, socketio = get_app()
 
-    global _bind_host, _bind_port
     _bind_host, _bind_port = host, port
 
     _write_pid_file(host, port, os.getpid())

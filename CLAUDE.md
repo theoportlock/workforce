@@ -98,6 +98,13 @@ wf edit edit-status <workfile> edge <edge_id> "to_run"
 wf edit edit-wrapper <workfile> 'bash -c "{}"'
 ```
 
+## Environment Variables
+
+- `WORKFORCE_STARTUP_TIMEOUT`: Maximum seconds to wait for server startup (default: 30)
+- `WORKFORCE_SERVER_URL`: Override default server URL (default: http://127.0.0.1:5049)
+- `WORKFORCE_LOG_DIR`: Custom directory for server logs (default: ~/.workforce)
+- `WORKFORCE_SKIP_LOCK`: Skip server startup lock check (use with caution)
+
 ## Architecture
 
 ### Server (workforce/server/)
