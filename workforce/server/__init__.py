@@ -405,12 +405,18 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         except OSError:
             pass
         pid_info = None  # Treat as no PID file now
-    
-    # If PID file exists and process IS alive, we're done
+
+    # If PID file exists and process IS alive, ensure it's a compatible server
     if pid_info and _pid_alive(pid_info[2]):
         existing_host, existing_port, existing_pid = pid_info
-        print(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
-        return
+        if _is_compatible_server(existing_host, existing_port):
+            print(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
+            return
+        try:
+            os.remove(_pid_file())
+        except OSError:
+            pass
+        pid_info = None
 
     lock_acquired = True if skip_lock else _acquire_lock()
     if not lock_acquired:
@@ -714,4 +720,3 @@ def cmd_stop(args):
 
 def cmd_list(args):
     list_servers(server_url=getattr(args, 'server_url', None))
-

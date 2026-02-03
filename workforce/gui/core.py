@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
 import requests
@@ -16,12 +17,52 @@ from .recent import RecentFileManager
 
 log = logging.getLogger(__name__)
 
+def _select_font_family(available_families, candidates):
+    available = set(available_families)
+    for family in candidates:
+        if family in available:
+            return family
+    return None
+
+
+def configure_default_fonts(root: tk.Tk) -> None:
+    windowing_system = root.tk.call("tk", "windowingsystem")
+    if windowing_system == "win32":
+        sans_candidates = ["Segoe UI", "Arial", "Helvetica", "Noto Sans", "DejaVu Sans"]
+        mono_candidates = ["Cascadia Mono", "Consolas", "Courier New", "DejaVu Sans Mono"]
+    elif windowing_system == "aqua":
+        sans_candidates = ["SF Pro Text", "Helvetica Neue", "Helvetica", "Arial", "Noto Sans", "DejaVu Sans"]
+        mono_candidates = ["SF Mono", "Menlo", "Monaco", "Courier New", "DejaVu Sans Mono"]
+    else:
+        sans_candidates = ["Noto Sans", "DejaVu Sans", "Ubuntu", "Arial", "Helvetica"]
+        mono_candidates = ["DejaVu Sans Mono", "Liberation Mono", "Ubuntu Mono", "Courier New"]
+
+    available = tkfont.families(root)
+    sans_family = _select_font_family(available, sans_candidates)
+    mono_family = _select_font_family(available, mono_candidates)
+
+    available_names = set(tkfont.names(root))
+    if sans_family:
+        for font_name in (
+            "TkDefaultFont",
+            "TkTextFont",
+            "TkMenuFont",
+            "TkHeadingFont",
+            "TkCaptionFont",
+            "TkTooltipFont",
+        ):
+            if font_name in available_names:
+                tkfont.nametofont(font_name).configure(family=sans_family)
+    if mono_family and "TkFixedFont" in available_names:
+        tkfont.nametofont("TkFixedFont").configure(family=mono_family)
+
 
 class WorkflowApp:
     def __init__(self, master, base_url: str, wf_path: str = None, workspace_id: str = None):
         self.master = master
         # Single source of truth for UI state
         self.state = GUIState()
+        configure_default_fonts(self.master)
         # Lock to protect state mutations from concurrent threads (SocketIO + HTTP)
         self._state_lock = threading.Lock()
         self._pending_add_ids: set[str] | None = None

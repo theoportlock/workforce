@@ -356,6 +356,14 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _server_responding(host: str, port: int, timeout: float = 0.1) -> bool:
+    try:
+        with urllib.request.urlopen(f"http://{host}:{port}/workspaces", timeout=timeout) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
 def _normalize_server_url(url: str) -> tuple[str, int, str]:
     """Normalize URL, preserving scheme, returning (host, port, normalized_url).
 
@@ -426,7 +434,7 @@ def resolve_server(server_url: str | None = None, start_if_missing: bool = True,
     if pid_info:
         pid_host, pid_port, pid = pid_info
         pid_url = f"http://{pid_host}:{pid_port}"
-        if _pid_alive(pid):
+        if _pid_alive(pid) and _server_responding(pid_host, pid_port):
             return pid_url
         try:
             os.remove(pid_file_path())
@@ -469,7 +477,7 @@ def get_running_server() -> tuple[str, int, int] | None:
     info = _read_pid_file()
     if info:
         host, port, pid = info
-        if _pid_alive(pid):
+        if _pid_alive(pid) and _server_responding(host, port):
             return info
         # PID file points to dead process, clean it up
         try:
