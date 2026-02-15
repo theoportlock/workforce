@@ -1,19 +1,21 @@
+import atexit
 import logging
 import os
 import threading
 import tkinter as tk
+from tkinter import filedialog, messagebox
 from tkinter import font as tkfont
-from tkinter import messagebox, filedialog
 from tkinter.scrolledtext import ScrolledText
-import requests
 from urllib.parse import urlparse
-import atexit
+
+import requests
 
 from workforce import utils
-from .state import GUIState, THEME
-from .client import ServerClient
+
 from .canvas import GraphCanvas
+from .client import ServerClient
 from .recent import RecentFileManager
+from .state import THEME, GUIState
 
 log = logging.getLogger(__name__)
 
@@ -537,7 +539,7 @@ class WorkflowApp:
             try:
                 log.info(f"Saving node label: node_id={node_id}, new_label={new_label}, base_url={self.base_url}")
                 utils._post(self.base_url, "/edit-node-label", {"node_id": node_id, "label": new_label})
-                log.info(f"Node label update request sent successfully")
+                log.info("Node label update request sent successfully")
             except Exception as e:
                 log.exception(f"Failed to update node label: {e}")
                 messagebox.showerror("Update error", str(e))
@@ -593,6 +595,7 @@ class WorkflowApp:
 
     def wrapper_popup(self):
         from tkinter import ttk
+
         from workforce.gui.presets import PresetManager
 
         editor = tk.Toplevel(self.master)
@@ -1705,14 +1708,15 @@ class WorkflowApp:
             log.debug("on_graph_update called with empty data")
             return
         
+        self._handle_server_update(data)
+
+    def _handle_server_update(self, data):
+        """Handle server update - server wins, clear any conflicting pending ops."""
         def apply_update():
-            """Apply update in main thread with lock protection."""
             with self._state_lock:
-                # Check for operation-specific updates
                 op = data.get("op")
                 
                 if op == "position":
-                    # Position update: only update positions, no full redraw
                     log.debug(f"Position update for {len(data.get('nodes', []))} nodes")
                     for node_update in data.get("nodes", []):
                         node_id = node_update.get("id")
@@ -1720,14 +1724,12 @@ class WorkflowApp:
                             if node.get("id") == node_id:
                                 node["x"] = node_update.get("x", node.get("x"))
                                 node["y"] = node_update.get("y", node.get("y"))
-                                # Selective update
                                 if hasattr(self, "canvas_view") and self.canvas_view:
                                     self.canvas_view.update_node_position(node_id, node)
                                 break
-                    return  # Don't do full redraw
+                    return
                 
                 elif op == "status":
-                    # Status update: only update status, no full redraw
                     log.debug(f"Status update for {len(data.get('nodes', []))} nodes")
                     for node_update in data.get("nodes", []):
                         node_id = node_update.get("id")
@@ -1735,14 +1737,12 @@ class WorkflowApp:
                         for node in self.state.graph.get("nodes", []):
                             if node.get("id") == node_id:
                                 node["status"] = status
-                                # Selective update
                                 if hasattr(self, "canvas_view") and self.canvas_view:
                                     self.canvas_view.update_node_status(node_id, node)
                                 break
-                    return  # Don't do full redraw
+                    return
                 
                 elif op == "label":
-                    # Label update: only update label, selective redraw
                     log.debug(f"Label update for {len(data.get('nodes', []))} nodes")
                     for node_update in data.get("nodes", []):
                         node_id = node_update.get("id")
@@ -1750,41 +1750,35 @@ class WorkflowApp:
                         for node in self.state.graph.get("nodes", []):
                             if node.get("id") == node_id:
                                 node["label"] = label
-                                # Selective update (requires edge redraw too)
                                 if hasattr(self, "canvas_view") and self.canvas_view:
                                     self.canvas_view.update_node_label(node_id, node)
                                 break
-                    return  # Don't do full redraw
+                    return
                 
                 elif op == "wrapper":
-                    # Wrapper update: only update cached wrapper
                     log.debug("Wrapper update received")
                     wrapper = data.get("graph", {}).get("wrapper")
                     if wrapper is not None:
                         self.state.wrapper = wrapper
-                    return  # No redraw needed
+                    return
                 
                 elif "node_id" in data and "status" in data:
-                    # Legacy status_change event format (from NODE_STARTED/FINISHED/FAILED)
                     node_id = data.get("node_id")
                     status = data.get("status")
                     log.debug(f"Legacy status update: node_id={node_id}, status={status}")
                     for node in self.state.graph.get("nodes", []):
                         if node.get("id") == node_id:
                             node["status"] = status
-                            # Selective update
                             if hasattr(self, "canvas_view") and self.canvas_view:
                                 self.canvas_view.update_node_status(node_id, node)
                             break
-                    return  # Don't do full redraw
+                    return
                 
                 elif "nodes" in data or "links" in data:
-                    # Full graph update (structure change or initial load)
                     log.info(f"Full graph update received with {len(data.get('nodes', []))} nodes")
                     pending_ids = self._pending_add_ids
                     prev_ids = pending_ids if pending_ids is not None else {n.get("id") for n in self.state.graph.get("nodes", []) if n.get("id")}
                     self.state.graph = data
-                    # Extract and cache wrapper if present
                     if "graph" in data and "wrapper" in data["graph"]:
                         self.state.wrapper = data["graph"]["wrapper"]
                     new_ids = {n.get("id") for n in self.state.graph.get("nodes", []) if n.get("id")}
@@ -1795,10 +1789,8 @@ class WorkflowApp:
                         self._pending_add_ids = None
                 else:
                     log.debug(f"Ignoring unexpected graph update format: {list(data.keys())}")
-                    return  # Don't redraw if we didn't update anything
+                    return
             
-            # Full redraw after releasing lock (only for structure changes)
             self._redraw_graph()
         
-        # Queue update to main thread
         self.master.after(0, apply_update)

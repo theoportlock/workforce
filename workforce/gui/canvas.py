@@ -1,7 +1,9 @@
 import tkinter as tk
-from typing import Callable, Dict, Any
 import uuid
+from typing import Any, Callable, Dict
+
 from .state import THEME
+
 
 class GraphCanvas:
     def __init__(self, tk_canvas: tk.Canvas, state, callbacks: Dict[str, Callable]):
@@ -14,11 +16,15 @@ class GraphCanvas:
         self.canvas = tk_canvas
         self.state = state
         self.node_widgets: Dict[str, tuple] = {}
+        self.edge_widgets: list = []
+        self.edge_to_widgets: Dict[tuple, int] = {}
         self.callbacks = callbacks or {}
 
     def redraw(self, graph: Dict[str, Any]):
         self.canvas.delete("all")
         self.node_widgets.clear()
+        self.edge_widgets.clear()
+        self.edge_to_widgets.clear()
         for node in graph.get("nodes", []):
             self.draw_node(node.get("id"), node_data=node)
         for link in graph.get("links", []):
@@ -84,7 +90,7 @@ class GraphCanvas:
         edge_type = edge_data.get("edge_type", "blocking") if isinstance(edge_data, dict) else "blocking"
         scale_width = self.state.base_edge_width * self.state.scale
         width = scale_width * (2.5 if edge_type == "non-blocking" else 1.0)
-        dash = (4, 3) if edge_type == "non-blocking" else None
+        dash: tuple[int, int] | None = (4, 3) if edge_type == "non-blocking" else None
         line = self.canvas.create_line(
             x1a,
             y1a,
@@ -94,9 +100,11 @@ class GraphCanvas:
             fill=THEME["colors"]["edge"]["line"],
             tags="edge",
             width=width,
-            dash=dash,
+            dash=dash if dash else None,
         )
         self.canvas.tag_lower(line)
+        self.edge_widgets.append(line)
+        self.edge_to_widgets[(src, tgt)] = line
 
     def get_node_bounds(self, node_id):
         rect, _ = self.node_widgets[node_id]
@@ -201,6 +209,32 @@ class GraphCanvas:
         
         # Update text position
         self.canvas.coords(txt, x1 + pad_x, y1 + pad_y)
+    
+    def remove_node(self, node_id):
+        """Remove a node's canvas widgets without full redraw."""
+        if node_id not in self.node_widgets:
+            return
+        
+        rect, txt = self.node_widgets[node_id]
+        self.canvas.delete(rect)
+        self.canvas.delete(txt)
+        del self.node_widgets[node_id]
+        
+        edges_to_remove = []
+        for (src, tgt), line_id in list(self.edge_to_widgets.items()):
+            if src == node_id or tgt == node_id:
+                self.canvas.delete(line_id)
+                edges_to_remove.append((src, tgt))
+        for edge_key in edges_to_remove:
+            self.edge_to_widgets.pop(edge_key, None)
+
+    def remove_edge(self, source, target):
+        """Remove an edge's canvas widget without full redraw."""
+        edge_key = (source, target)
+        if edge_key in self.edge_to_widgets:
+            line_id = self.edge_to_widgets[edge_key]
+            self.canvas.delete(line_id)
+            del self.edge_to_widgets[edge_key]
 
 class Canvas:
     """
