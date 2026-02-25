@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useMemo, useState } from 'react';
+import { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -34,6 +34,41 @@ const seededGraph: BackendNodeLinkGraph = {
   ]
 };
 
+type BridgeRequest = { id: string; method: string; params: Record<string, unknown>; protocolVersion: string };
+type BridgeResponse<T = Record<string, unknown>> = {
+  id: string;
+  ok: boolean;
+  result?: T;
+  error?: { type: string; message: string };
+};
+
+declare global {
+  interface Window {
+    workforceBridge?: {
+      handleRequest?: (request: BridgeRequest) => Promise<BridgeResponse> | BridgeResponse;
+    };
+  }
+}
+
+async function bridgeCall<T = Record<string, unknown>>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  const request: BridgeRequest = {
+    id: `${method}-${Date.now()}`,
+    method,
+    params,
+    protocolVersion: '1.0'
+  };
+  const handler = window.workforceBridge?.handleRequest;
+  if (!handler) {
+    throw new Error('Bridge API is unavailable in this environment.');
+  }
+
+  const response = await Promise.resolve(handler(request));
+  if (!response.ok) {
+    throw new Error(response.error?.message ?? `Bridge request failed for ${method}`);
+  }
+  return (response.result ?? {}) as T;
+}
+
 function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
   const color = statusColorMap[data.status];
   return (
@@ -64,6 +99,23 @@ function AppContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [currentPath, setCurrentPath] = useState<string | undefined>();
+
+  const refreshGraph = useCallback(async () => {
+    try {
+      const graph = await bridgeCall<BackendNodeLinkGraph>('getGraph');
+      const adapted = adaptBackendGraph(graph);
+      setNodes(adapted.nodes);
+      setEdges(adapted.edges);
+    } catch {
+      // Ignore bridge fetch in dev mode; seeded graph remains visible.
+    }
+  }, [setEdges, setNodes]);
+
+  useEffect(() => {
+    void refreshGraph();
+  }, [refreshGraph]);
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId),
@@ -87,6 +139,34 @@ function AppContent() {
     event.preventDefault();
     setContextMenu({ x: event.clientX, y: event.clientY });
   }, []);
+
+  const handleOpenWorkflow = useCallback(async () => {
+    try {
+      const result = await bridgeCall<{ cancelled?: boolean; path?: string }>('openWorkflowDialog', {
+        current_path: currentPath
+      });
+      if (result.cancelled) return;
+      if (result.path) setCurrentPath(result.path);
+      await refreshGraph();
+      setStatusMessage('Opened workflow successfully.');
+    } catch (error) {
+      setStatusMessage(`Open failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, [currentPath, refreshGraph]);
+
+  const handleSaveWorkflowAs = useCallback(async () => {
+    try {
+      const result = await bridgeCall<{ cancelled?: boolean; new_path?: string }>('saveWorkflowAsDialog', {
+        current_path: currentPath
+      });
+      if (result.cancelled) return;
+      if (result.new_path) setCurrentPath(result.new_path);
+      await refreshGraph();
+      setStatusMessage('Saved workflow copy successfully.');
+    } catch (error) {
+      setStatusMessage(`Save As failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, [currentPath, refreshGraph]);
 
   const menuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return [];
@@ -151,8 +231,14 @@ function AppContent() {
           padding: '0 16px'
         }}
       >
-        <strong>Workforce Editor (Dev)</strong>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>Drag • Connect • Right click • Multi-select</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <strong>Workforce Editor (Dev)</strong>
+          <div style={{ display: 'inline-flex', gap: 8 }}>
+            <button onClick={() => void handleOpenWorkflow()}>File ▸ Open</button>
+            <button onClick={() => void handleSaveWorkflowAs()}>File ▸ Save As</button>
+          </div>
+        </div>
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
       <main style={{ display: 'grid', gridTemplateColumns: '1fr 320px' }}>
