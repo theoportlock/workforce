@@ -71,6 +71,18 @@ To run tests with coverage:
 
    pytest --cov=workforce
 
+
+Frontend Release Artifacts
+--------------------------
+
+The web frontend build output is treated as a release artifact and is **not**
+built as part of normal package installation.
+
+- During frontend development, build assets in your frontend toolchain/repo.
+- Before cutting a release, copy the built files into ``workforce/web/static/``.
+- Ensure ``workforce/web/static/index.html`` exists before building wheel/sdist;
+  CI contains a guard test for this.
+
 Documentation
 -------------
 
