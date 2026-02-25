@@ -92,5 +92,7 @@ The bridge maps methods to existing workspace HTTP endpoints.
 - `runWorkflow` → `POST /workspace/<id>/run`
 - `getNodeLog` → `GET /workspace/<id>/get-node-log/<node_id>`
 - `saveWorkflowAs` → `POST /workspace/<id>/save-as`
+- `saveWorkflowAsDialog` → native save-file picker (`*.graphml`) then `saveWorkflowAs`
 - `openWorkflow` → `POST /workspace/register`
+- `openWorkflowDialog` → native open-file picker (`*.graphml`) then `openWorkflow`
 - `stopRuns` → `POST /workspace/<id>/stop`

@@ -1,3 +1,5 @@
+import os
+
 from workforce.web.bridge import PROTOCOL_VERSION, WebBridge, make_event_envelope
 
 
@@ -99,11 +101,12 @@ def test_unsupported_protocol_version_returns_error():
 
 def test_open_workflow_updates_workspace_id(monkeypatch):
     bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+    expected_path = os.path.abspath("/tmp/new.wf")
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
         assert base_url == "http://127.0.0.1:5042"
         assert endpoint == "/workspace/register"
-        assert payload == {"path": "/tmp/new.wf"}
+        assert payload == {"path": expected_path}
         return {"workspace_id": "ws_new", "url": "http://127.0.0.1:5042/workspace/ws_new"}
 
     monkeypatch.setattr("workforce.web.bridge._post", fake_post)
@@ -119,6 +122,65 @@ def test_open_workflow_updates_workspace_id(monkeypatch):
 
     assert response["ok"] is True
     assert bridge.workspace_id == "ws_new"
+
+
+def test_open_workflow_dialog_registers_workspace(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+
+    monkeypatch.setattr("workforce.web.bridge._choose_open_graphml_path", lambda current_path=None: "/tmp/open.graphml")
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        assert base_url == "http://127.0.0.1:5042"
+        assert endpoint == "/workspace/register"
+        assert payload == {"path": os.path.abspath("/tmp/open.graphml")}
+        return {"workspace_id": "ws_opened", "path": "/tmp/open.graphml"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "open-dialog",
+            "method": "openWorkflowDialog",
+            "params": {},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["result"]["cancelled"] is False
+    assert bridge.workspace_id == "ws_opened"
+
+
+def test_save_workflow_as_dialog_updates_workspace(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+
+    monkeypatch.setattr("workforce.web.bridge._choose_save_graphml_path", lambda current_path=None: "/tmp/saved.graphml")
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        assert base_url == "http://127.0.0.1:5042/workspace/ws_old"
+        assert endpoint == "/save-as"
+        assert payload == {"new_path": "/tmp/saved.graphml"}
+        return {
+            "status": "saved",
+            "new_path": "/tmp/saved.graphml",
+            "new_workspace_id": "ws_saved",
+            "new_base_url": "http://127.0.0.1:5042/workspace/ws_saved",
+        }
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "save-dialog",
+            "method": "saveWorkflowAsDialog",
+            "params": {},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert response["result"]["cancelled"] is False
+    assert bridge.workspace_id == "ws_saved"
 
 
 def test_make_event_envelope_shape():
