@@ -46,6 +46,15 @@ wf = "workforce.__main__:main"
 [tool.setuptools.packages.find]
 where = ["."]
 
+
+[tool.setuptools.package-data]
+"workforce.web" = [
+  "static/**/*.html",
+  "static/**/*.css",
+  "static/**/*.js",
+  "static/assets/**/*"
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py39']
