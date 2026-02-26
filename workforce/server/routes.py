@@ -13,25 +13,26 @@ log = logging.getLogger(__name__)
 
 WORKSPACE_ID_PATTERN = re.compile(r"^ws_[A-Za-z0-9]{8,}$")
 
+
 def serialize_graph_lightweight(G):
     """Serialize graph excluding heavyweight attributes (logs, wrapper).
-    
+
     Returns node-link format with only essential rendering data:
     - nodes: id, label, x, y, status (excludes log, stdout, stderr, pid, etc.)
     - links: source, target, id, status
     - graph: empty dict (no wrapper)
     """
     data = nx.node_link_data(G, edges="links")
-    
+
     # Strip heavyweight attributes from nodes
     heavyweight_attrs = {"log", "stdout", "stderr", "pid", "command", "error_code"}
     for node in data.get("nodes", []):
         for attr in heavyweight_attrs:
             node.pop(attr, None)
-    
+
     # Remove wrapper from graph metadata
     data["graph"] = {}
-    
+
     return data
 
 
@@ -71,9 +72,10 @@ def _kill_nodes_for_run(ctx, run_id: str) -> dict:
 
     return {"killed": killed, "errors": errors, "stopped_nodes": running_nodes}
 
+
 def register_routes(app):
     """Register all routes with workspace routing middleware."""
-    
+
     # Import here to avoid circular dependency
     from workforce.server import (
         get_context,
@@ -85,29 +87,30 @@ def register_routes(app):
         _stop_nodes_for_workspace,
     )
     from workforce.utils import compute_workspace_id
-    
+
     @app.before_request
     def extract_workspace_id():
         """Extract workspace_id from URL and load context into g."""
-        path_parts = request.path.strip('/').split('/')
-        
+        path_parts = request.path.strip("/").split("/")
+
         # Check if this is a workspace-routed request
-        if len(path_parts) >= 2 and path_parts[0] == 'workspace':
+        if len(path_parts) >= 2 and path_parts[0] == "workspace":
             workspace_id = path_parts[1]
             g.workspace_id = workspace_id
             g.ctx = get_context(workspace_id)
-        elif request.path == '/workspaces':
+        elif request.path == "/workspaces":
             # Diagnostic endpoint, no context needed
             pass
         else:
             g.workspace_id = None
             g.ctx = None
-    
+
     @app.route("/workspaces", methods=["GET"])
     def list_workspaces():
         """Diagnostic endpoint: list active workspaces."""
         # Import inside to avoid circulars at import time
         from workforce.server import get_bind_info
+
         bind_host, bind_port = get_bind_info()
         lan_enabled = bool(bind_host and bind_host not in ("127.0.0.1", "localhost"))
         workspaces = []
@@ -115,21 +118,26 @@ def register_routes(app):
         with _contexts_lock:
             for ws_id, ctx in _contexts.items():
                 summary = ctx.client_summary
-                workspaces.append({
-                    "workspace_id": ws_id,
-                    "workfile_path": ctx.workfile_path,
-                    "client_count": summary.get("gui", 0) + summary.get("runner", 0),
-                    "clients": summary,
-                    "created_at": ctx.created_at,
-                })
-        return jsonify({
-            "server": {
-                "host": bind_host,
-                "port": bind_port,
-                "lan_enabled": lan_enabled,
-            },
-            "workspaces": workspaces
-        })
+                workspaces.append(
+                    {
+                        "workspace_id": ws_id,
+                        "workfile_path": ctx.workfile_path,
+                        "client_count": summary.get("gui", 0)
+                        + summary.get("runner", 0),
+                        "clients": summary,
+                        "created_at": ctx.created_at,
+                    }
+                )
+        return jsonify(
+            {
+                "server": {
+                    "host": bind_host,
+                    "port": bind_port,
+                    "lan_enabled": lan_enabled,
+                },
+                "workspaces": workspaces,
+            }
+        )
 
     @app.route("/workspace/register", methods=["POST"])
     def register_workspace():
@@ -150,6 +158,7 @@ def register_routes(app):
         ctx = get_or_create_context(workspace_id, abs_path)
 
         from workforce.server import get_bind_info
+
         host, port = get_bind_info()
         if not host or not port:
             # Fallback if bind info not yet set
@@ -157,29 +166,32 @@ def register_routes(app):
             port = 5000
         url = f"http://{host}:{port}/workspace/{workspace_id}"
 
-        return jsonify({
-            "workspace_id": workspace_id,
-            "url": url,
-            "path": abs_path,
-            "client_count": ctx.client_summary.get("gui", 0) + ctx.client_summary.get("runner", 0),
-            "clients": ctx.client_summary,
-        }), 200
-    
+        return jsonify(
+            {
+                "workspace_id": workspace_id,
+                "url": url,
+                "path": abs_path,
+                "client_count": ctx.client_summary.get("gui", 0)
+                + ctx.client_summary.get("runner", 0),
+                "clients": ctx.client_summary,
+            }
+        ), 200
+
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
     def get_graph(workspace_id):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         G = edit.load_graph(ctx.workfile_path)
         data = nx.node_link_data(G, edges="links")
-        
+
         # Strip heavyweight attributes from nodes (logs)
         heavyweight_attrs = {"log", "stdout", "stderr", "pid", "command", "error_code"}
         for node in data.get("nodes", []):
             for attr in heavyweight_attrs:
                 node.pop(attr, None)
-        
+
         # Include wrapper in initial load
         data["graph"] = G.graph
         data["graph"].setdefault("wrapper", "{}")
@@ -190,28 +202,31 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         G = edit.load_graph(ctx.workfile_path)
         if node_id in G.nodes:
             node = G.nodes[node_id]
-            
+
             # Check if node has new structured execution data
-            if any(key in node for key in ["command", "stdout", "stderr", "pid", "error_code"]):
+            if any(
+                key in node
+                for key in ["command", "stdout", "stderr", "pid", "error_code"]
+            ):
                 command = node.get("command", "")
                 stdout = node.get("stdout", "")
                 stderr = node.get("stderr", "")
                 pid = node.get("pid", "")
                 error_code = node.get("error_code", "")
-                
+
                 # Format as requested: COMMAND:\n... STDOUT:\n... STDERR:\n... PID:\n... Error code:\n...
                 log_text = f"COMMAND:\n{command}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}\n\nPID:\n{pid}\n\nError code:\n{error_code}"
                 return jsonify({"log": log_text})
-            
+
             # Fallback to old log format if present
             if "log" in node:
                 log_text = node.get("log", "[No log available for this node]")
                 return jsonify({"log": log_text})
-            
+
             return jsonify({"log": "[No log available for this node]"})
         else:
             return jsonify({"error": "Node not found"}), 404
@@ -221,10 +236,12 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         # Extract idempotency key from header or request data
-        idempotency_key = request.headers.get("X-Idempotency-Key") or data.get("idempotency_key")
+        idempotency_key = request.headers.get("X-Idempotency-Key") or data.get(
+            "idempotency_key"
+        )
         result = ctx.enqueue(
             edit.add_node_to_graph,
             ctx.workfile_path,
@@ -232,7 +249,7 @@ def register_routes(app):
             data.get("x", 0),
             data.get("y", 0),
             data.get("status", ""),
-            idempotency_key=idempotency_key
+            idempotency_key=idempotency_key,
         )
         return jsonify(result), 202
 
@@ -241,9 +258,11 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.remove_node_from_graph, ctx.workfile_path, data["node_id"])
+        result = ctx.enqueue(
+            edit.remove_node_from_graph, ctx.workfile_path, data["node_id"]
+        )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/add-edge", methods=["POST"])
@@ -251,14 +270,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         result = ctx.enqueue(
             edit.add_edge_to_graph,
             ctx.workfile_path,
             data["source"],
             data["target"],
-            data.get("edge_type", "blocking")
+            data.get("edge_type", "blocking"),
         )
         return jsonify(result), 202
 
@@ -267,14 +286,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         result = ctx.enqueue(
             edit.edit_edge_type_in_graph,
             ctx.workfile_path,
             data["source"],
             data["target"],
-            data.get("edge_type", "blocking")
+            data.get("edge_type", "blocking"),
         )
         return jsonify(result), 202
 
@@ -283,9 +302,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.remove_edge_from_graph, ctx.workfile_path, data["source"], data["target"])
+        result = ctx.enqueue(
+            edit.remove_edge_from_graph,
+            ctx.workfile_path,
+            data["source"],
+            data["target"],
+        )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/edit-status", methods=["POST"])
@@ -293,11 +317,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         result = ctx.enqueue_status(
-            ctx.workfile_path, data["element_type"], data["element_id"],
-            data.get("value", ""), data.get("run_id")
+            ctx.workfile_path,
+            data["element_type"],
+            data["element_id"],
+            data.get("value", ""),
+            data.get("run_id"),
         )
         return jsonify(result), 202
 
@@ -307,19 +334,15 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         updates = data.get("updates", [])
-        
+
         if not updates:
             return jsonify({"error": "updates array required"}), 400
-        
+
         # Queue batch operation (no run tracking for batch clears)
-        result = ctx.enqueue(
-            edit.edit_statuses_in_graph,
-            ctx.workfile_path,
-            updates
-        )
+        result = ctx.enqueue(edit.edit_statuses_in_graph, ctx.workfile_path, updates)
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/remove-node-logs", methods=["POST"])
@@ -328,17 +351,15 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         node_ids = data.get("node_ids", [])
-        
+
         if not node_ids:
             return jsonify({"error": "node_ids array required"}), 400
-        
+
         result = ctx.enqueue(
-            edit.remove_node_logs_in_graph,
-            ctx.workfile_path,
-            node_ids
+            edit.remove_node_logs_in_graph, ctx.workfile_path, node_ids
         )
         return jsonify(result), 202
 
@@ -347,14 +368,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         result = ctx.enqueue(
             edit.edit_node_position_in_graph,
             ctx.workfile_path,
             data["node_id"],
             data["x"],
-            data["y"]
+            data["y"],
         )
         return jsonify(result), 202
 
@@ -364,17 +385,15 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
         positions = data.get("positions", [])
-        
+
         if not positions:
             return jsonify({"error": "positions array required"}), 400
-        
+
         result = ctx.enqueue(
-            edit.edit_node_positions_in_graph,
-            ctx.workfile_path,
-            positions
+            edit.edit_node_positions_in_graph, ctx.workfile_path, positions
         )
         return jsonify(result), 202
 
@@ -383,9 +402,11 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.edit_wrapper_in_graph, ctx.workfile_path, data.get("wrapper"))
+        result = ctx.enqueue(
+            edit.edit_wrapper_in_graph, ctx.workfile_path, data.get("wrapper")
+        )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/edit-node-label", methods=["POST"])
@@ -393,9 +414,14 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
-        result = ctx.enqueue(edit.edit_node_label_in_graph, ctx.workfile_path, data["node_id"], data["label"])
+        result = ctx.enqueue(
+            edit.edit_node_label_in_graph,
+            ctx.workfile_path,
+            data["node_id"],
+            data["label"],
+        )
         return jsonify(result), 202
 
     @app.route("/workspace/<workspace_id>/save-node-log", methods=["POST"])
@@ -403,13 +429,18 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         data = request.get_json(force=True)
-        
+
         # Handle both old format (single "log" field) and new format (structured fields)
         if "log" in data and len(data) == 2:  # Old format: node_id + log
             # Backward compatibility: single log string
-            result = ctx.enqueue(edit.save_node_log_in_graph, ctx.workfile_path, data["node_id"], data["log"])
+            result = ctx.enqueue(
+                edit.save_node_log_in_graph,
+                ctx.workfile_path,
+                data["node_id"],
+                data["log"],
+            )
         else:
             # New format: structured execution data
             result = ctx.enqueue(
@@ -420,7 +451,7 @@ def register_routes(app):
                 data.get("stdout", ""),
                 data.get("stderr", ""),
                 data.get("pid", ""),
-                data.get("error_code", "")
+                data.get("error_code", ""),
             )
         return jsonify(result), 202
 
@@ -452,7 +483,14 @@ def register_routes(app):
                 client_id = str(uuid.uuid4())
                 ctx.add_gui_client(client_id, socketio_sid)
 
-            return jsonify({"status": "connected", "workspace_id": workspace_id, "client_id": client_id, "client_type": client_type}), 200
+            return jsonify(
+                {
+                    "status": "connected",
+                    "workspace_id": workspace_id,
+                    "client_id": client_id,
+                    "client_type": client_type,
+                }
+            ), 200
         except Exception as e:
             log.exception("Error in client_connect: %s", e)
             return jsonify({"error": str(e)}), 500
@@ -478,7 +516,9 @@ def register_routes(app):
                 _kill_nodes_for_run(ctx, client_id)
                 ctx.remove_runner_client(client_id)
                 ctx.active_runs.pop(client_id, None)
-                to_remove = [nid for nid, rid in ctx.active_node_run.items() if rid == client_id]
+                to_remove = [
+                    nid for nid, rid in ctx.active_node_run.items() if rid == client_id
+                ]
                 for nid in to_remove:
                     ctx.active_node_run.pop(nid, None)
             else:
@@ -489,7 +529,9 @@ def register_routes(app):
 
             if ctx.should_destroy():
                 destroy_context(workspace_id)
-            return jsonify({"status": "disconnected", "workspace_id": workspace_id}), 200
+            return jsonify(
+                {"status": "disconnected", "workspace_id": workspace_id}
+            ), 200
         except Exception as e:
             log.exception("Error in client_disconnect: %s", e)
             return jsonify({"error": str(e)}), 500
@@ -519,8 +561,11 @@ def register_routes(app):
             if selected_nodes:
                 # Build blocking-only subgraph restricted to selected nodes
                 blocking_edges = [
-                    (u, v, data) for u, v, data in G.edges(data=True)
-                    if data.get("edge_type", "blocking") == "blocking" and u in selected_nodes and v in selected_nodes
+                    (u, v, data)
+                    for u, v, data in G.edges(data=True)
+                    if data.get("edge_type", "blocking") == "blocking"
+                    and u in selected_nodes
+                    and v in selected_nodes
                 ]
                 sub = nx.DiGraph()
                 sub.add_nodes_from((n, G.nodes[n]) for n in selected_nodes if n in G)
@@ -530,44 +575,65 @@ def register_routes(app):
                 has_cycle = edit.has_blocking_cycle(ctx.workfile_path)
 
             if has_cycle:
-                return jsonify({"error": "Run blocked: blocking edges contain a cycle"}), 400
+                return jsonify(
+                    {"error": "Run blocked: blocking edges contain a cycle"}
+                ), 400
 
             # Determine which nodes to start and which are in scope for this run
             if selected_nodes:
                 # Subset run: only run selected nodes in dependency order
                 selected_set = set(selected_nodes)
                 log.info("Starting subset run with selected nodes: %s", selected_nodes)
-                
+
                 # Create subgraph of only selected nodes
                 subgraph = G.subgraph(selected_nodes)
-                
+
                 # Find root nodes: nodes with in-degree 0 in the subgraph
                 nodes_to_start = [n for n, d in subgraph.in_degree() if d == 0]
-                
+
                 if not nodes_to_start:
-                    log.warning("No root nodes found in subgraph, starting all selected nodes")
+                    log.warning(
+                        "No root nodes found in subgraph, starting all selected nodes"
+                    )
                     nodes_to_start = list(selected_nodes)
-                
-                log.info("Starting from subset roots (0 in-degree in subgraph): %s", nodes_to_start)
+
+                log.info(
+                    "Starting from subset roots (0 in-degree in subgraph): %s",
+                    nodes_to_start,
+                )
                 # For subset runs, track exactly which nodes to execute
                 ctx.active_runs[run_id] = {"nodes": selected_set, "subset_only": True}
             else:
                 # Full pipeline run: all nodes from roots onwards
                 # First try failed nodes
-                failed_nodes = [n for n, attr in G.nodes(data=True) if attr.get("status") == "fail"]
+                failed_nodes = [
+                    n for n, attr in G.nodes(data=True) if attr.get("status") == "fail"
+                ]
                 if failed_nodes:
                     nodes_to_start = failed_nodes
                     log.info("Resuming from failed nodes: %s", failed_nodes)
                 else:
                     # Otherwise start from nodes with 0 in-degree AND no status (clean start)
-                    nodes_to_start = [n for n, d in G.in_degree() if d == 0 and not G.nodes[n].get("status")]
+                    nodes_to_start = [
+                        n
+                        for n, d in G.in_degree()
+                        if d == 0 and not G.nodes[n].get("status")
+                    ]
                     if not nodes_to_start:
                         # If all root nodes have status, clear them and start
                         nodes_to_start = [n for n, d in G.in_degree() if d == 0]
                         log.info("Clearing status on root nodes: %s", nodes_to_start)
                         for node_id in nodes_to_start:
-                            ctx.enqueue(edit.edit_status_in_graph, ctx.workfile_path, "node", node_id, "")
-                    log.info("Starting from root nodes (0 in-degree): %s", nodes_to_start)
+                            ctx.enqueue(
+                                edit.edit_status_in_graph,
+                                ctx.workfile_path,
+                                "node",
+                                node_id,
+                                "",
+                            )
+                    log.info(
+                        "Starting from root nodes (0 in-degree): %s", nodes_to_start
+                    )
                 # For full pipeline, don't restrict which nodes can run (empty "nodes" set means no restriction)
                 ctx.active_runs[run_id] = {"nodes": set(), "subset_only": False}
 
@@ -578,10 +644,14 @@ def register_routes(app):
             log.info("Queuing initial nodes for run %s: %s", run_id, nodes_to_start)
             for node_id in nodes_to_start:
                 # Always clear status first, then set to 'run'
-                ctx.enqueue(edit.edit_status_in_graph, ctx.workfile_path, "node", node_id, "")
+                ctx.enqueue(
+                    edit.edit_status_in_graph, ctx.workfile_path, "node", node_id, ""
+                )
                 ctx.enqueue_status(ctx.workfile_path, "node", node_id, "run", run_id)
 
-            return jsonify({"status": "started", "run_id": run_id, "client_id": run_id}), 202
+            return jsonify(
+                {"status": "started", "run_id": run_id, "client_id": run_id}
+            ), 202
         except Exception as e:
             log.exception("Error in /run endpoint")
             return jsonify({"status": "error", "message": str(e)}), 500
@@ -594,11 +664,13 @@ def register_routes(app):
 
         gui = []
         for gid, meta in ctx.gui_clients.items():
-            gui.append({
-                "client_id": gid,
-                "connected_at": meta.get("connected_at"),
-                "socketio_sid": meta.get("socketio_sid"),
-            })
+            gui.append(
+                {
+                    "client_id": gid,
+                    "connected_at": meta.get("connected_at"),
+                    "socketio_sid": meta.get("socketio_sid"),
+                }
+            )
 
         runner = []
         try:
@@ -607,7 +679,9 @@ def register_routes(app):
             G = None
 
         for rid, meta in ctx.runner_clients.items():
-            nodes_total = len(ctx.active_runs.get(rid, {}).get("nodes", set()) or []) or (len(G.nodes) if G else 0)
+            nodes_total = len(
+                ctx.active_runs.get(rid, {}).get("nodes", set()) or []
+            ) or (len(G.nodes) if G else 0)
             nodes_running = 0
             nodes_failed = 0
             if G:
@@ -618,15 +692,17 @@ def register_routes(app):
                         nodes_running += 1
                     if attrs.get("status") == "fail":
                         nodes_failed += 1
-            runner.append({
-                "client_id": rid,
-                "run_id": rid,
-                "connected_at": meta.get("connected_at"),
-                "socketio_sid": meta.get("socketio_sid"),
-                "nodes_total": nodes_total,
-                "nodes_running": nodes_running,
-                "nodes_failed": nodes_failed,
-            })
+            runner.append(
+                {
+                    "client_id": rid,
+                    "run_id": rid,
+                    "connected_at": meta.get("connected_at"),
+                    "socketio_sid": meta.get("socketio_sid"),
+                    "nodes_total": nodes_total,
+                    "nodes_running": nodes_running,
+                    "nodes_failed": nodes_failed,
+                }
+            )
 
         return jsonify({"gui": gui, "runner": runner})
 
@@ -647,24 +723,31 @@ def register_routes(app):
             subset_only = bool(meta.get("subset_only"))
             nodes_running = 0
             nodes_failed = 0
-            nodes_total = len(nodes_scope) if nodes_scope else (len(G.nodes) if G else 0)
+            nodes_total = (
+                len(nodes_scope) if nodes_scope else (len(G.nodes) if G else 0)
+            )
             if G:
                 for node_id, attrs in G.nodes(data=True):
                     if nodes_scope and node_id not in nodes_scope:
                         continue
-                    if ctx.active_node_run.get(node_id) not in (None, rid) and ctx.active_node_run.get(node_id) != rid:
+                    if (
+                        ctx.active_node_run.get(node_id) not in (None, rid)
+                        and ctx.active_node_run.get(node_id) != rid
+                    ):
                         continue
                     if attrs.get("status") == "running":
                         nodes_running += 1
                     if attrs.get("status") == "fail":
                         nodes_failed += 1
-            runs.append({
-                "run_id": rid,
-                "subset_only": subset_only,
-                "nodes_total": nodes_total,
-                "nodes_running": nodes_running,
-                "nodes_failed": nodes_failed,
-            })
+            runs.append(
+                {
+                    "run_id": rid,
+                    "subset_only": subset_only,
+                    "nodes_total": nodes_total,
+                    "nodes_running": nodes_running,
+                    "nodes_failed": nodes_failed,
+                }
+            )
 
         return jsonify({"runs": runs})
 
@@ -700,12 +783,12 @@ def register_routes(app):
                 run_id = ctx.active_node_run.get(node_id)
                 ctx.enqueue_status(ctx.workfile_path, "node", node_id, "fail", run_id)
 
-            log.info(f"Stop runs: killed {killed} processes, stopped {len(running_nodes)} nodes")
-            return jsonify({
-                "killed": killed,
-                "errors": errors,
-                "stopped_nodes": running_nodes
-            }), 200
+            log.info(
+                f"Stop runs: killed {killed} processes, stopped {len(running_nodes)} nodes"
+            )
+            return jsonify(
+                {"killed": killed, "errors": errors, "stopped_nodes": running_nodes}
+            ), 200
         except Exception as e:
             log.exception("Error in /stop endpoint")
             return jsonify({"error": str(e)}), 500
@@ -724,19 +807,23 @@ def register_routes(app):
     def workspace_shell(workspace_id):
         """Serve frontend shell for a known workspace."""
         if not WORKSPACE_ID_PATTERN.match(workspace_id):
-            return jsonify({
-                "error": "Invalid workspace ID format",
-                "workspace_id": workspace_id,
-                "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
-            }), 404
+            return jsonify(
+                {
+                    "error": "Invalid workspace ID format",
+                    "workspace_id": workspace_id,
+                    "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
+                }
+            ), 404
 
         ctx = g.ctx or get_context(workspace_id)
         if not ctx:
-            return jsonify({
-                "error": "Workspace not found",
-                "workspace_id": workspace_id,
-                "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
-            }), 404
+            return jsonify(
+                {
+                    "error": "Workspace not found",
+                    "workspace_id": workspace_id,
+                    "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+                }
+            ), 404
 
         html_path = frontend_file("index.html")
         with open(html_path, "r", encoding="utf-8") as f:
@@ -756,23 +843,34 @@ def register_routes(app):
 
         return current_app.response_class(html, mimetype="text/html")
 
+    @app.route("/workspace/<workspace_id>/", methods=["GET"])
+    def workspace_shell_trailing_slash(workspace_id):
+        """Redirect trailing slash to non-trailing slash variant."""
+        from flask import redirect
+
+        return redirect(f"/workspace/{workspace_id}", code=302)
+
     @app.route("/workspace/<workspace_id>/static/<path:asset_path>", methods=["GET"])
     def workspace_static_asset(workspace_id, asset_path):
         """Serve packaged frontend assets scoped to a workspace URL."""
         if not WORKSPACE_ID_PATTERN.match(workspace_id):
-            return jsonify({
-                "error": "Invalid workspace ID format",
-                "workspace_id": workspace_id,
-                "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
-            }), 404
+            return jsonify(
+                {
+                    "error": "Invalid workspace ID format",
+                    "workspace_id": workspace_id,
+                    "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
+                }
+            ), 404
 
         ctx = g.ctx or get_context(workspace_id)
         if not ctx:
-            return jsonify({
-                "error": "Workspace not found",
-                "workspace_id": workspace_id,
-                "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
-            }), 404
+            return jsonify(
+                {
+                    "error": "Workspace not found",
+                    "workspace_id": workspace_id,
+                    "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+                }
+            ), 404
 
         static_root = frontend_file()
         return send_from_directory(static_root, asset_path)
@@ -783,38 +881,45 @@ def register_routes(app):
         ctx = g.ctx
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
-        
+
         # Check for active runs
         if ctx.active_runs:
-            return jsonify({"error": "Cannot save during active workflow execution"}), 409
-        
+            return jsonify(
+                {"error": "Cannot save during active workflow execution"}
+            ), 409
+
         data = request.get_json(force=True)
         new_path = data.get("new_path")
-        
+
         if not new_path:
             return jsonify({"error": "new_path required"}), 400
-        
+
         try:
             # Get absolute path
             new_path = os.path.abspath(new_path)
-            
+
             # Load current graph (with all statuses intact) and save to new location
             G = edit.load_graph(ctx.workfile_path)
             edit.save_graph(G, new_path)
-            
+
             # Compute new workspace identifiers
             from workforce.utils import compute_workspace_id, get_workspace_url
+
             new_workspace_id = compute_workspace_id(new_path)
             new_base_url = get_workspace_url(new_workspace_id)
-            
-            log.info(f"Saved workflow from {ctx.workfile_path} to {new_path} (new workspace: {new_workspace_id})")
-            
-            return jsonify({
-                "status": "saved",
-                "new_path": new_path,
-                "new_workspace_id": new_workspace_id,
-                "new_base_url": new_base_url
-            }), 200
+
+            log.info(
+                f"Saved workflow from {ctx.workfile_path} to {new_path} (new workspace: {new_workspace_id})"
+            )
+
+            return jsonify(
+                {
+                    "status": "saved",
+                    "new_path": new_path,
+                    "new_workspace_id": new_workspace_id,
+                    "new_base_url": new_base_url,
+                }
+            ), 200
         except Exception as e:
             log.exception("Error in /save-as endpoint")
             return jsonify({"status": "error", "message": str(e)}), 500
