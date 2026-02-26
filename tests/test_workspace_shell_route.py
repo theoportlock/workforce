@@ -34,6 +34,7 @@ def test_workspace_shell_returns_html_for_known_workspace():
     assert '<div id="app"></div>' in html
     assert f'window.__WORKSPACE_ID__ = "{workspace_id}"' in html
     assert f'window.__WORKSPACE_BASE_URL__ = "/workspace/{workspace_id}"' in html
+    assert '<script src="./static/app.js"></script>' in html
 
 
 def test_workspace_shell_returns_404_for_invalid_workspace_id():
@@ -56,3 +57,27 @@ def test_workspace_shell_returns_404_for_unknown_workspace():
     assert response.status_code == 404
     data = response.get_json()
     assert data["error"] == "Workspace not found"
+
+
+def test_workspace_static_asset_route_serves_loader_for_known_workspace():
+    workspace_id = "ws_abc12345"
+    app = build_test_app(ctx_map={workspace_id: object()})
+
+    with app.test_client() as client:
+        response = client.get(f"/workspace/{workspace_id}/static/app.js")
+
+    assert response.status_code == 200
+    assert response.mimetype in {"text/javascript", "application/javascript"}
+    body = response.get_data(as_text=True)
+    assert 'assets/manifest.json' in body
+
+
+def test_workspace_static_asset_route_rejects_unknown_workspace():
+    app = build_test_app()
+
+    with app.test_client() as client:
+        response = client.get('/workspace/ws_deadbeef/static/app.js')
+
+    assert response.status_code == 404
+    data = response.get_json()
+    assert data['error'] == 'Workspace not found'
