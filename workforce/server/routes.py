@@ -829,6 +829,12 @@ def register_routes(app):
         with open(html_path, "r", encoding="utf-8") as f:
             html = f.read()
 
+        html = html.replace(
+            '<script src="./static/app.js"></script>',
+            f'<script src="/workspace/{workspace_id}/static/app.js"></script>',
+            1,
+        )
+
         bootstrap_script = (
             "<script>"
             f"window.__WORKSPACE_ID__ = {json.dumps(workspace_id)};"
