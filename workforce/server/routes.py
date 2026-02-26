@@ -2,11 +2,16 @@ import uuid
 import logging
 import os
 import signal
+import json
+import re
 from flask import current_app, request, g, jsonify
 from workforce import edit
 import networkx as nx
+from workforce.web import frontend_file
 
 log = logging.getLogger(__name__)
+
+WORKSPACE_ID_PATTERN = re.compile(r"^ws_[A-Za-z0-9]{8,}$")
 
 def serialize_graph_lightweight(G):
     """Serialize graph excluding heavyweight attributes (logs, wrapper).
@@ -714,6 +719,42 @@ def register_routes(app):
             destroy_context(workspace_id)
         _clean_workspace_cache(workspace_id)
         return jsonify({"status": "removed", "workspace_id": workspace_id}), 200
+
+    @app.route("/workspace/<workspace_id>", methods=["GET"])
+    def workspace_shell(workspace_id):
+        """Serve frontend shell for a known workspace."""
+        if not WORKSPACE_ID_PATTERN.match(workspace_id):
+            return jsonify({
+                "error": "Invalid workspace ID format",
+                "workspace_id": workspace_id,
+                "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
+            }), 404
+
+        ctx = g.ctx or get_context(workspace_id)
+        if not ctx:
+            return jsonify({
+                "error": "Workspace not found",
+                "workspace_id": workspace_id,
+                "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+            }), 404
+
+        html_path = frontend_file("index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+
+        bootstrap_script = (
+            "<script>"
+            f"window.__WORKSPACE_ID__ = {json.dumps(workspace_id)};"
+            f"window.__WORKSPACE_BASE_URL__ = {json.dumps(f'/workspace/{workspace_id}')};"
+            "</script>"
+        )
+
+        if "</head>" in html:
+            html = html.replace("</head>", f"{bootstrap_script}</head>", 1)
+        else:
+            html = f"{bootstrap_script}{html}"
+
+        return current_app.response_class(html, mimetype="text/html")
 
     @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])
     def save_as(workspace_id):
