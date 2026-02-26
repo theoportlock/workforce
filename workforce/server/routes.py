@@ -2,11 +2,33 @@ import uuid
 import logging
 import os
 import signal
-from flask import current_app, request, g, jsonify
+from flask import Response, current_app, request, g, jsonify, send_from_directory
 from workforce import edit
 import networkx as nx
+from workforce.web.launcher import frontend_assets
 
 log = logging.getLogger(__name__)
+
+
+def _workspace_base_path(workspace_id: str) -> str:
+    return f"/workspace/{workspace_id}/"
+
+
+def _spa_index_html(workspace_id: str) -> str:
+    """Return index.html with a workspace-scoped base href for relative assets."""
+    with frontend_assets() as static_root:
+        index_path = static_root / "index.html"
+        html = index_path.read_text(encoding="utf-8")
+
+    base_tag = f'<base href="{_workspace_base_path(workspace_id)}">'
+    if "<head>" in html:
+        return html.replace("<head>", f"<head>\n    {base_tag}", 1)
+    return f"{base_tag}\n{html}"
+
+
+def _serve_frontend_asset(filename: str):
+    with frontend_assets() as static_root:
+        return send_from_directory(static_root, filename)
 
 def serialize_graph_lightweight(G):
     """Serialize graph excluding heavyweight attributes (logs, wrapper).
@@ -159,6 +181,24 @@ def register_routes(app):
             "client_count": ctx.client_summary.get("gui", 0) + ctx.client_summary.get("runner", 0),
             "clients": ctx.client_summary,
         }), 200
+
+    @app.route("/workspace/<workspace_id>", methods=["GET"])
+    def workspace_spa_shell(workspace_id):
+        return Response(_spa_index_html(workspace_id), mimetype="text/html")
+
+    @app.route("/workspace/<workspace_id>/assets/<path:filename>", methods=["GET"])
+    def workspace_assets(workspace_id, filename):
+        del workspace_id
+        return _serve_frontend_asset(f"assets/{filename}")
+
+    @app.route("/assets/<path:filename>", methods=["GET"])
+    def root_assets(filename):
+        return _serve_frontend_asset(f"assets/{filename}")
+
+    @app.route("/workspace/<workspace_id>/<path:filename>", methods=["GET"])
+    def workspace_static_file(workspace_id, filename):
+        del workspace_id
+        return _serve_frontend_asset(filename)
     
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
     def get_graph(workspace_id):
