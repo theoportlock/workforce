@@ -34,6 +34,7 @@ def test_workspace_shell_returns_html_for_known_workspace():
     assert '<div id="app"></div>' in html
     assert f'window.__WORKSPACE_ID__ = "{workspace_id}"' in html
     assert f'window.__WORKSPACE_BASE_URL__ = "/workspace/{workspace_id}"' in html
+    # Relative script URLs resolve incorrectly for /workspace/<id> without a trailing slash.
     assert f'<script src="/workspace/{workspace_id}/static/app.js"></script>' in html
     assert '<script src="./static/app.js"></script>' not in html
 
