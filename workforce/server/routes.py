@@ -4,7 +4,7 @@ import os
 import signal
 import json
 import re
-from flask import current_app, request, g, jsonify
+from flask import current_app, request, g, jsonify, send_from_directory
 from workforce import edit
 import networkx as nx
 from workforce.web import frontend_file
@@ -755,6 +755,27 @@ def register_routes(app):
             html = f"{bootstrap_script}{html}"
 
         return current_app.response_class(html, mimetype="text/html")
+
+    @app.route("/workspace/<workspace_id>/static/<path:asset_path>", methods=["GET"])
+    def workspace_static_asset(workspace_id, asset_path):
+        """Serve packaged frontend assets scoped to a workspace URL."""
+        if not WORKSPACE_ID_PATTERN.match(workspace_id):
+            return jsonify({
+                "error": "Invalid workspace ID format",
+                "workspace_id": workspace_id,
+                "hint": "Expected format ws_<hash>. Use GET /workspaces to inspect active workspaces.",
+            }), 404
+
+        ctx = g.ctx or get_context(workspace_id)
+        if not ctx:
+            return jsonify({
+                "error": "Workspace not found",
+                "workspace_id": workspace_id,
+                "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+            }), 404
+
+        static_root = frontend_file()
+        return send_from_directory(static_root, asset_path)
 
     @app.route("/workspace/<workspace_id>/save-as", methods=["POST"])
     def save_as(workspace_id):

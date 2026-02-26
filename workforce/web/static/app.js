@@ -1,6 +1,8 @@
 (() => {
-  const base = new URL(".", window.location.href);
-  const manifestUrl = new URL("assets/manifest.json", base);
+  const scriptBase = document.currentScript?.src
+    ? new URL(".", document.currentScript.src)
+    : new URL("./static/", window.location.href);
+  const manifestUrl = new URL("assets/manifest.json", scriptBase);
 
   const appendStylesheet = (href) => {
     const link = document.createElement("link");
@@ -26,10 +28,10 @@
     .then((manifest) => {
       const entry = manifest?.entry || {};
       if (entry.css) {
-        appendStylesheet(new URL(entry.css, base).toString());
+        appendStylesheet(new URL(entry.css, scriptBase).toString());
       }
       if (entry.js) {
-        appendScript(new URL(entry.js, base).toString());
+        appendScript(new URL(entry.js, scriptBase).toString());
       } else {
         throw new Error("Frontend manifest missing entry.js");
       }
