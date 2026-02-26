@@ -11,3 +11,8 @@ recursive-exclude * *.py[co]
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
 recursive-include workforce/web/static *
+
+# Frontend release artifacts
+include workforce/web/static/index.html
+include workforce/web/static/app.js
+recursive-include workforce/web/static/assets *
