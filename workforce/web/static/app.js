@@ -1,5 +1,7 @@
 (() => {
-  const base = new URL(".", window.location.href);
+  const workspaceMatch = window.location.pathname.match(/^\/workspace\/([^/]+)/);
+  const basePath = workspaceMatch ? `/workspace/${workspaceMatch[1]}/` : "/";
+  const base = new URL(basePath, window.location.origin);
   const manifestUrl = new URL("assets/manifest.json", base);
 
   const appendStylesheet = (href) => {
