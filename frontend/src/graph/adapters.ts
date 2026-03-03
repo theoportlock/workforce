@@ -38,8 +38,6 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
       data: {
         label: node.label || node.id,
         command: node.command ?? node.label ?? '',
-        prefix: node.prefix ?? '',
-        suffix: node.suffix ?? '',
         status: node.status ?? '',
         stdout: node.stdout,
         stderr: node.stderr,

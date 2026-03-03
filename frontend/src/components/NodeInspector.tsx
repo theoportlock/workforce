@@ -13,7 +13,7 @@ export function NodeInspector({ node, onUpdate }: NodeInspectorProps) {
   }
 
   const handleText =
-    (field: keyof Pick<WorkflowNodeData, 'command' | 'prefix' | 'suffix'>) =>
+    (field: keyof Pick<WorkflowNodeData, 'command'>) =>
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       onUpdate({ [field]: event.target.value });
     };
@@ -26,16 +26,6 @@ export function NodeInspector({ node, onUpdate }: NodeInspectorProps) {
       <label>
         <div>Command</div>
         <textarea rows={4} value={node.data.command} onChange={handleText('command')} style={{ width: '100%' }} />
-      </label>
-
-      <label>
-        <div>Prefix</div>
-        <textarea rows={2} value={node.data.prefix} onChange={handleText('prefix')} style={{ width: '100%' }} />
-      </label>
-
-      <label>
-        <div>Suffix</div>
-        <textarea rows={2} value={node.data.suffix} onChange={handleText('suffix')} style={{ width: '100%' }} />
       </label>
     </div>
   );
