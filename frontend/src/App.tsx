@@ -21,6 +21,26 @@ import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph
 import { NodeInspector } from './components/NodeInspector';
 import { LogPanel } from './components/LogPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
+import { connectWorkspaceSocket, SocketLike } from './runtime/socketClient';
+
+
+
+type GraphUpdatePayload = BackendNodeLinkGraph & {
+  op?: string;
+};
+
+type NodeStatusPayload = {
+  node_id?: string;
+  status?: WorkforceStatus;
+};
+
+type NodeReadyPayload = {
+  node_id?: string;
+};
+
+type RunCompletePayload = {
+  run_id?: string;
+};
 
 const seededGraph: BackendNodeLinkGraph = {
   nodes: [
@@ -44,10 +64,24 @@ type BridgeResponse<T = Record<string, unknown>> = {
 
 declare global {
   interface Window {
+    __WORKSPACE_BASE_URL__?: string;
     workforceBridge?: {
       handleRequest?: (request: BridgeRequest) => Promise<BridgeResponse> | BridgeResponse;
     };
   }
+}
+
+function resolveWorkspaceBaseUrl(): string | null {
+  if (window.__WORKSPACE_BASE_URL__) {
+    return window.__WORKSPACE_BASE_URL__.replace(/\/$/, '');
+  }
+
+  const pathMatch = window.location.pathname.match(/^\/workspace\/[^/]+/);
+  if (pathMatch) {
+    return pathMatch[0];
+  }
+
+  return null;
 }
 
 async function bridgeCall<T = Record<string, unknown>>(method: string, params: Record<string, unknown> = {}): Promise<T> {
@@ -59,6 +93,19 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
   };
   const handler = window.workforceBridge?.handleRequest;
   if (!handler) {
+    if (method === 'getGraph') {
+      const workspaceBaseUrl = resolveWorkspaceBaseUrl();
+      if (!workspaceBaseUrl) {
+        throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
+      }
+
+      const response = await fetch(`${workspaceBaseUrl}/get-graph`);
+      if (!response.ok) {
+        throw new Error(`Graph fetch failed: ${response.status}`);
+      }
+      return (await response.json()) as T;
+    }
+
     throw new Error('Bridge API is unavailable in this environment.');
   }
 
@@ -154,6 +201,95 @@ function AppContent() {
     }
   }, [currentPath, refreshGraph]);
 
+  const applyGraphUpdate = useCallback(
+    (payload: GraphUpdatePayload) => {
+      if (payload.links) {
+        const adapted = adaptBackendGraph(payload);
+        setNodes(adapted.nodes);
+        setEdges(adapted.edges);
+        return;
+      }
+
+      if (payload.nodes?.length) {
+        setNodes((existing) =>
+          existing.map((node) => {
+            const update = payload.nodes.find((entry) => entry.id === node.id);
+            if (!update) return node;
+            return {
+              ...node,
+              position: {
+                x: typeof update.x === 'undefined' ? node.position.x : Number(update.x),
+                y: typeof update.y === 'undefined' ? node.position.y : Number(update.y)
+              },
+              data: {
+                ...node.data,
+                label: update.label ?? node.data.label,
+                command: update.command ?? node.data.command,
+                status: update.status ?? node.data.status,
+                stdout: update.stdout ?? node.data.stdout,
+                stderr: update.stderr ?? node.data.stderr,
+                log: update.log ?? node.data.log
+              }
+            };
+          })
+        );
+      }
+    },
+    [setEdges, setNodes]
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    let socketRef: SocketLike | null = null;
+
+    const onGraphUpdate = (payload: GraphUpdatePayload) => applyGraphUpdate(payload);
+    const onStatusChange = (payload: NodeStatusPayload) => {
+      if (!payload.node_id || !payload.status) return;
+      setNodes((existing) =>
+        existing.map((node) =>
+          node.id === payload.node_id ? { ...node, data: { ...node.data, status: payload.status ?? node.data.status } } : node
+        )
+      );
+    };
+    const onNodeReady = (payload: NodeReadyPayload) => {
+      if (!payload.node_id) return;
+      setNodes((existing) =>
+        existing.map((node) =>
+          node.id === payload.node_id && node.data.status !== 'running'
+            ? { ...node, data: { ...node.data, status: 'run' } }
+            : node
+        )
+      );
+    };
+    const onRunComplete = (payload: RunCompletePayload) => {
+      setStatusMessage(payload.run_id ? `Run ${payload.run_id} complete.` : 'Run complete.');
+      void refreshGraph();
+    };
+
+    void connectWorkspaceSocket().then((socket) => {
+      if (!mounted || !socket) {
+        socket?.disconnect();
+        return;
+      }
+
+      socketRef = socket;
+      socket.on('graph_update', onGraphUpdate);
+      socket.on('status_change', onStatusChange);
+      socket.on('node_ready', onNodeReady);
+      socket.on('run_complete', onRunComplete);
+    });
+
+    return () => {
+      mounted = false;
+      if (!socketRef) return;
+      socketRef.off('graph_update', onGraphUpdate);
+      socketRef.off('status_change', onStatusChange);
+      socketRef.off('node_ready', onNodeReady);
+      socketRef.off('run_complete', onRunComplete);
+      socketRef.disconnect();
+    };
+  }, [applyGraphUpdate, refreshGraph, setNodes]);
+
   const handleSaveWorkflowAs = useCallback(async () => {
     try {
       const result = await bridgeCall<{ cancelled?: boolean; new_path?: string }>('saveWorkflowAsDialog', {
@@ -210,7 +346,7 @@ function AppContent() {
               id,
               type: 'workflowNode',
               position: { x: 200, y: 180 },
-              data: { label: `node-${existing.length + 1}`, command: '', prefix: '', suffix: '', status: '' }
+              data: { label: `node-${existing.length + 1}`, command: '', status: '' }
             }
           ]);
         }

@@ -7,8 +7,6 @@ export interface BackendGraphNode {
   y?: string | number;
   status?: WorkforceStatus;
   command?: string;
-  prefix?: string;
-  suffix?: string;
   stdout?: string;
   stderr?: string;
   log?: string;
@@ -33,8 +31,6 @@ export interface BackendNodeLinkGraph {
 export interface WorkflowNodeData {
   label: string;
   command: string;
-  prefix: string;
-  suffix: string;
   status: WorkforceStatus;
   stdout?: string;
   stderr?: string;
