@@ -59,6 +59,34 @@ def test_update_node_command_maps_command_to_label(monkeypatch):
     assert called["payload"] == {"node_id": "n1", "label": "echo hi"}
 
 
+def test_update_status_dispatches_to_edit_status(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    called = {}
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        called["base_url"] = base_url
+        called["endpoint"] = endpoint
+        called["payload"] = payload
+        called["retry"] = retry_on_connect_error
+        return {"status": "queued"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "r-status",
+            "method": "updateStatus",
+            "params": {"kind": "node", "id": "n1", "status": "run"},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert called["base_url"] == "http://127.0.0.1:5042/workspace/ws_abc12345"
+    assert called["endpoint"] == "/edit-status"
+    assert called["payload"] == {"kind": "node", "id": "n1", "status": "run"}
+
+
 def test_legacy_request_without_protocol_version_is_accepted(monkeypatch):
     bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
 
