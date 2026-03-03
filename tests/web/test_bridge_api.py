@@ -18,11 +18,21 @@ def test_bridge_method_dispatch_to_http_endpoints(monkeypatch):
 
     r1 = bridge.handle_request({"id": "1", "method": "getGraph", "params": {}, "protocolVersion": PROTOCOL_VERSION})
     r2 = bridge.handle_request({"id": "2", "method": "addEdge", "params": {"source": "a", "target": "b"}, "protocolVersion": PROTOCOL_VERSION})
+    r3 = bridge.handle_request(
+        {
+            "id": "3",
+            "method": "updateStatuses",
+            "params": {"updates": [{"element_type": "node", "element_id": "a", "value": "run"}]},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
 
     assert r1["ok"] is True
     assert r2["ok"] is True
+    assert r3["ok"] is True
     assert calls[0] == ("GET", "http://127.0.0.1:5042/workspace/ws_abc12345", "/get-graph")
     assert calls[1][0:3] == ("POST", "http://127.0.0.1:5042/workspace/ws_abc12345", "/add-edge")
+    assert calls[2][0:3] == ("POST", "http://127.0.0.1:5042/workspace/ws_abc12345", "/edit-statuses")
 
 
 def test_bridge_envelope_validation_and_error_shape():

@@ -95,6 +95,7 @@ class WebBridge:
             "updateNodeLabel": self._update_node_label,
             "updateNodeCommand": self._update_node_command,
             "updateStatus": self._update_status,
+            "updateStatuses": self._update_statuses,
             "updateWrapper": self._update_wrapper,
             "runWorkflow": self._run_workflow,
             "getNodeLog": self._get_node_log,
@@ -167,6 +168,9 @@ class WebBridge:
 
     def _update_status(self, params: dict[str, Any]) -> dict[str, Any]:
         return _post(self.workspace_url, "/edit-status", params)
+
+    def _update_statuses(self, params: dict[str, Any]) -> dict[str, Any]:
+        return _post(self.workspace_url, "/edit-statuses", params)
 
     def _update_wrapper(self, params: dict[str, Any]) -> dict[str, Any]:
         return _post(self.workspace_url, "/edit-wrapper", params)

@@ -22,6 +22,7 @@ import { NodeInspector } from './components/NodeInspector';
 import { LogPanel } from './components/LogPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
+import { FrontendOperationQueue } from './runtime/operationQueue';
 
 type GraphUpdatePayload = BackendNodeLinkGraph & {
   op?: string;
@@ -93,10 +94,30 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
     params,
     protocolVersion: '1.0'
   };
+
+  const workspaceBaseUrl = resolveWorkspaceBaseUrl();
+  const callWorkspaceEndpoint = async (endpoint: string): Promise<T> => {
+    const payload = method === 'updateNodeCommand'
+      ? { node_id: params['node_id'], label: params['command'] }
+      : params;
+    if (!workspaceBaseUrl) {
+      throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
+    }
+
+    const response = await fetch(`${workspaceBaseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      throw new Error(`Bridge fallback failed for ${method}: ${response.status}`);
+    }
+    return (await response.json()) as T;
+  };
+
   const handler = window.workforceBridge?.handleRequest;
   if (!handler) {
     if (method === 'getGraph') {
-      const workspaceBaseUrl = resolveWorkspaceBaseUrl();
       if (!workspaceBaseUrl) {
         throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
       }
@@ -108,7 +129,29 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
       return (await response.json()) as T;
     }
 
-    throw new Error('Bridge API is unavailable in this environment.');
+    const fallbackEndpoints: Record<string, string> = {
+      addNode: '/add-node',
+      removeNode: '/remove-node',
+      addEdge: '/add-edge',
+      removeEdge: '/remove-edge',
+      updateNodePosition: '/edit-node-position',
+      updateNodePositions: '/edit-node-positions',
+      updateNodeLabel: '/edit-node-label',
+      updateNodeCommand: '/edit-node-label',
+      updateStatus: '/edit-status',
+      updateStatuses: '/edit-statuses',
+      runWorkflow: '/run',
+      stopRuns: '/stop',
+      saveWorkflowAs: '/save-as',
+      clientConnect: '/client-connect',
+      clientDisconnect: '/client-disconnect'
+    };
+
+    const endpoint = fallbackEndpoints[method];
+    if (!endpoint) {
+      throw new Error('Bridge API is unavailable in this environment.');
+    }
+    return callWorkspaceEndpoint(endpoint);
   }
 
   const response = await Promise.resolve(handler(request));
@@ -151,6 +194,20 @@ function AppContent() {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const opQueueRef = useRef(
+    new FrontendOperationQueue(
+      {
+        flushPositions: async (positions) => {
+          await bridgeCall('updateNodePositions', { positions });
+        },
+        flushStatuses: async (updates) => {
+          await bridgeCall('updateStatuses', { updates });
+        },
+        onFlushError: (message) => setStatusMessage(message)
+      },
+      100
+    )
+  );
 
   const refreshGraph = useCallback(async () => {
     try {
@@ -166,6 +223,13 @@ function AppContent() {
   useEffect(() => {
     void refreshGraph();
   }, [refreshGraph]);
+
+  useEffect(
+    () => () => {
+      opQueueRef.current.dispose();
+    },
+    []
+  );
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId),
@@ -233,25 +297,9 @@ function AppContent() {
 
   const onNodeDragStop = useCallback(
     (_: MouseEvent, node: Node<WorkflowNodeData>) => {
-      const previous = dragStartPositionsRef.current[node.id];
-      void bridgeCall('updateNodePosition', {
-        node_id: node.id,
-        x: node.position.x,
-        y: node.position.y
-      }).catch((error) => {
-        if (!previous) {
-          void refreshGraph();
-        } else {
-          setNodes((existing) =>
-            existing.map((entry) =>
-              entry.id === node.id ? { ...entry, position: { x: previous.x, y: previous.y } } : entry
-            )
-          );
-        }
-        setStatusMessage(`Move failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-      });
+      opQueueRef.current.enqueuePosition({ node_id: node.id, x: node.position.x, y: node.position.y });
     },
-    [refreshGraph, setNodes]
+    []
   );
 
   const onSelectionDragStart = useCallback((_: MouseEvent, draggedNodes: Node<WorkflowNodeData>[]) => {
@@ -262,23 +310,16 @@ function AppContent() {
 
   const onSelectionDragStop = useCallback(
     (_: MouseEvent, draggedNodes: Node<WorkflowNodeData>[]) => {
-      const updates = draggedNodes.map((node) => ({ node_id: node.id, x: node.position.x, y: node.position.y }));
-      void bridgeCall('updateNodePositions', { updates }).catch((error) => {
-        setNodes((existing) =>
-          existing.map((node) => {
-            const previous = dragStartPositionsRef.current[node.id];
-            if (!previous) return node;
-            return { ...node, position: { x: previous.x, y: previous.y } };
-          })
-        );
-        setStatusMessage(`Batch move failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      draggedNodes.forEach((node) => {
+        opQueueRef.current.enqueuePosition({ node_id: node.id, x: node.position.x, y: node.position.y });
       });
     },
-    [setNodes]
+    []
   );
 
   const handleOpenWorkflow = useCallback(async () => {
     try {
+      await opQueueRef.current.flush();
       const result = await bridgeCall<{ cancelled?: boolean; path?: string }>('openWorkflowDialog', {
         current_path: currentPath
       });
@@ -293,6 +334,15 @@ function AppContent() {
 
   const applyGraphUpdate = useCallback(
     (payload: GraphUpdatePayload) => {
+      payload.nodes?.forEach((node) => {
+        if (typeof node.x === 'number' && typeof node.y === 'number') {
+          opQueueRef.current.clearPendingPosition(node.id);
+        }
+        if (typeof node.status === 'string') {
+          opQueueRef.current.clearPendingStatus('node', node.id);
+        }
+      });
+
       if (payload.links) {
         const adapted = adaptBackendGraph(payload);
         setNodes(adapted.nodes);
@@ -337,6 +387,7 @@ function AppContent() {
     const onGraphUpdate = (payload: GraphUpdatePayload) => applyGraphUpdate(payload);
     const onStatusChange = (payload: NodeStatusPayload) => {
       if (!payload.node_id || !payload.status) return;
+      opQueueRef.current.clearPendingStatus('node', payload.node_id);
       setNodes((existing) =>
         existing.map((node) =>
           node.id === payload.node_id ? { ...node, data: { ...node.data, status: payload.status ?? node.data.status } } : node
@@ -345,6 +396,7 @@ function AppContent() {
     };
     const onNodeReady = (payload: NodeReadyPayload) => {
       if (!payload.node_id) return;
+      opQueueRef.current.clearPendingStatus('node', payload.node_id);
       setNodes((existing) =>
         existing.map((node) =>
           node.id === payload.node_id && node.data.status !== 'running'
@@ -415,6 +467,7 @@ function AppContent() {
 
   const handleSaveWorkflowAs = useCallback(async () => {
     try {
+      await opQueueRef.current.flush();
       const result = await bridgeCall<{ cancelled?: boolean; new_path?: string }>('saveWorkflowAsDialog', {
         current_path: currentPath
       });
@@ -432,22 +485,14 @@ function AppContent() {
 
     if (contextMenu.nodeId) {
       const setNodeStatus = (status: WorkforceStatus) => {
-        const previousNode = nodes.find((node) => node.id === contextMenu.nodeId);
+        const nodeId = contextMenu.nodeId;
+        if (!nodeId) return;
         setNodes((existing) =>
           existing.map((node) =>
-            node.id === contextMenu.nodeId ? { ...node, data: { ...node.data, status } } : node
+            node.id === nodeId ? { ...node, data: { ...node.data, status } } : node
           )
         );
-        void bridgeCall('updateStatus', { kind: 'node', id: contextMenu.nodeId, status }).catch((error) => {
-          if (previousNode) {
-            setNodes((existing) =>
-              existing.map((node) =>
-                node.id === previousNode.id ? { ...node, data: { ...node.data, status: previousNode.data.status } } : node
-              )
-            );
-          }
-          setStatusMessage(`Status update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-        });
+        opQueueRef.current.enqueueStatus({ element_type: 'node', element_id: nodeId, value: status });
       };
 
       return [
