@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -22,8 +22,6 @@ import { NodeInspector } from './components/NodeInspector';
 import { LogPanel } from './components/LogPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
 import { connectWorkspaceSocket, SocketLike } from './runtime/socketClient';
-
-
 
 type GraphUpdatePayload = BackendNodeLinkGraph & {
   op?: string;
@@ -148,6 +146,7 @@ function AppContent() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
+  const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
 
   const refreshGraph = useCallback(async () => {
     try {
@@ -171,9 +170,46 @@ function AppContent() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((existing) => addEdge({ ...connection, animated: false }, existing));
+      if (!connection.source || !connection.target) return;
+      const optimisticEdge: Edge = {
+        id: `${connection.source}-${connection.target}`,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
+        animated: false
+      };
+      setEdges((existing) => addEdge(optimisticEdge, existing));
+      void bridgeCall('addEdge', { source: connection.source, target: connection.target }).catch((error) => {
+        setEdges((existing) => existing.filter((edge) => !(edge.source === optimisticEdge.source && edge.target === optimisticEdge.target)));
+        setStatusMessage(`Connect failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      });
     },
     [setEdges]
+  );
+
+  const onEdgesDelete = useCallback(
+    (deletedEdges: Edge[]) => {
+      deletedEdges.forEach((edge) => {
+        void bridgeCall('removeEdge', { source: edge.source, target: edge.target }).catch((error) => {
+          setEdges((existing) => addEdge({ ...edge, animated: false }, existing));
+          setStatusMessage(`Disconnect failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+        });
+      });
+    },
+    [setEdges]
+  );
+
+  const onNodesDelete = useCallback(
+    (deletedNodes: Node<WorkflowNodeData>[]) => {
+      deletedNodes.forEach((node) => {
+        void bridgeCall('removeNode', { node_id: node.id }).catch((error) => {
+          setNodes((existing) => [...existing, node]);
+          setStatusMessage(`Delete failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+        });
+      });
+    },
+    [setNodes]
   );
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node<WorkflowNodeData>) => {
@@ -186,6 +222,56 @@ function AppContent() {
     event.preventDefault();
     setContextMenu({ x: event.clientX, y: event.clientY });
   }, []);
+
+  const onNodeDragStart = useCallback((_: MouseEvent, node: Node<WorkflowNodeData>) => {
+    dragStartPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
+  }, []);
+
+  const onNodeDragStop = useCallback(
+    (_: MouseEvent, node: Node<WorkflowNodeData>) => {
+      const previous = dragStartPositionsRef.current[node.id];
+      void bridgeCall('updateNodePosition', {
+        node_id: node.id,
+        x: node.position.x,
+        y: node.position.y
+      }).catch((error) => {
+        if (!previous) {
+          void refreshGraph();
+        } else {
+          setNodes((existing) =>
+            existing.map((entry) =>
+              entry.id === node.id ? { ...entry, position: { x: previous.x, y: previous.y } } : entry
+            )
+          );
+        }
+        setStatusMessage(`Move failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      });
+    },
+    [refreshGraph, setNodes]
+  );
+
+  const onSelectionDragStart = useCallback((_: MouseEvent, draggedNodes: Node<WorkflowNodeData>[]) => {
+    draggedNodes.forEach((node) => {
+      dragStartPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
+    });
+  }, []);
+
+  const onSelectionDragStop = useCallback(
+    (_: MouseEvent, draggedNodes: Node<WorkflowNodeData>[]) => {
+      const updates = draggedNodes.map((node) => ({ node_id: node.id, x: node.position.x, y: node.position.y }));
+      void bridgeCall('updateNodePositions', { updates }).catch((error) => {
+        setNodes((existing) =>
+          existing.map((node) => {
+            const previous = dragStartPositionsRef.current[node.id];
+            if (!previous) return node;
+            return { ...node, position: { x: previous.x, y: previous.y } };
+          })
+        );
+        setStatusMessage(`Batch move failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      });
+    },
+    [setNodes]
+  );
 
   const handleOpenWorkflow = useCallback(async () => {
     try {
@@ -308,12 +394,24 @@ function AppContent() {
     if (!contextMenu) return [];
 
     if (contextMenu.nodeId) {
-      const setNodeStatus = (status: WorkforceStatus) =>
+      const setNodeStatus = (status: WorkforceStatus) => {
+        const previousNode = nodes.find((node) => node.id === contextMenu.nodeId);
         setNodes((existing) =>
           existing.map((node) =>
             node.id === contextMenu.nodeId ? { ...node, data: { ...node.data, status } } : node
           )
         );
+        void bridgeCall('updateStatus', { kind: 'node', id: contextMenu.nodeId, status }).catch((error) => {
+          if (previousNode) {
+            setNodes((existing) =>
+              existing.map((node) =>
+                node.id === previousNode.id ? { ...node, data: { ...node.data, status: previousNode.data.status } } : node
+              )
+            );
+          }
+          setStatusMessage(`Status update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+        });
+      };
 
       return [
         { id: 'queued', label: 'Set status: queued', onSelect: () => setNodeStatus('run') },
@@ -324,11 +422,18 @@ function AppContent() {
           id: 'delete-node',
           label: 'Delete node',
           onSelect: () => {
+            const previousNodes = nodes;
+            const previousEdges = edges;
             setNodes((existing) => existing.filter((node) => node.id !== contextMenu.nodeId));
             setEdges((existing) =>
               existing.filter((edge) => edge.source !== contextMenu.nodeId && edge.target !== contextMenu.nodeId)
             );
             if (selectedNodeId === contextMenu.nodeId) setSelectedNodeId(undefined);
+            void bridgeCall('removeNode', { node_id: contextMenu.nodeId }).catch((error) => {
+              setNodes(previousNodes);
+              setEdges(previousEdges);
+              setStatusMessage(`Delete failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+            });
           }
         }
       ];
@@ -340,20 +445,27 @@ function AppContent() {
         label: 'Add node',
         onSelect: () => {
           const id = crypto.randomUUID();
-          setNodes((existing) => [
-            ...existing,
-            {
-              id,
-              type: 'workflowNode',
-              position: { x: 200, y: 180 },
-              data: { label: `node-${existing.length + 1}`, command: '', status: '' }
-            }
-          ]);
+          const node = {
+            id,
+            type: 'workflowNode',
+            position: { x: 200, y: 180 },
+            data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
+          };
+          setNodes((existing) => [...existing, node]);
+          void bridgeCall('addNode', {
+            node_id: id,
+            label: node.data.label,
+            x: node.position.x,
+            y: node.position.y
+          }).catch((error) => {
+            setNodes((existing) => existing.filter((entry) => entry.id !== id));
+            setStatusMessage(`Add node failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+          });
         }
       },
       { id: 'clear-selection', label: 'Clear selection', onSelect: () => setSelectedNodeId(undefined) }
     ];
-  }, [contextMenu, selectedNodeId, setEdges, setNodes]);
+  }, [contextMenu, edges, nodes, selectedNodeId, setEdges, setNodes]);
 
   return (
     <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr 220px', background: '#020617' }}>
@@ -385,6 +497,12 @@ function AppContent() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onEdgesDelete={onEdgesDelete}
+            onNodesDelete={onNodesDelete}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDragStop={onNodeDragStop}
+            onSelectionDragStart={onSelectionDragStart}
+            onSelectionDragStop={onSelectionDragStop}
             onNodeClick={(_, node) => setSelectedNodeId(node.id)}
             onPaneClick={() => setSelectedNodeId(undefined)}
             onNodeContextMenu={onNodeContextMenu}
@@ -408,11 +526,42 @@ function AppContent() {
             node={selectedNode}
             onUpdate={(updates) => {
               if (!selectedNodeId) return;
+              const previousNode = nodes.find((node) => node.id === selectedNodeId);
               setNodes((existing) =>
                 existing.map((node) =>
                   node.id === selectedNodeId ? { ...node, data: { ...node.data, ...updates } } : node
                 )
               );
+
+              if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
+                void bridgeCall('updateNodeLabel', { node_id: selectedNodeId, label: updates.label }).catch((error) => {
+                  if (previousNode) {
+                    setNodes((existing) =>
+                      existing.map((node) =>
+                        node.id === selectedNodeId
+                          ? { ...node, data: { ...node.data, label: previousNode.data.label } }
+                          : node
+                      )
+                    );
+                  }
+                  setStatusMessage(`Label update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+                });
+              }
+
+              if (Object.prototype.hasOwnProperty.call(updates, 'command')) {
+                void bridgeCall('updateNodeCommand', { node_id: selectedNodeId, command: updates.command }).catch((error) => {
+                  if (previousNode) {
+                    setNodes((existing) =>
+                      existing.map((node) =>
+                        node.id === selectedNodeId
+                          ? { ...node, data: { ...node.data, command: previousNode.data.command } }
+                          : node
+                      )
+                    );
+                  }
+                  setStatusMessage(`Command update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+                });
+              }
             }}
           />
         </aside>

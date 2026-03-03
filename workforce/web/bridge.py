@@ -92,6 +92,7 @@ class WebBridge:
             "updateNodePositions": self._update_node_positions,
             "updateNodeLabel": self._update_node_label,
             "updateNodeCommand": self._update_node_command,
+            "updateStatus": self._update_status,
             "updateWrapper": self._update_wrapper,
             "runWorkflow": self._run_workflow,
             "getNodeLog": self._get_node_log,
@@ -133,6 +134,9 @@ class WebBridge:
         if node_id is None or label is None:
             raise BridgeProtocolError("updateNodeCommand requires node_id and command")
         return _post(self.workspace_url, "/edit-node-label", {"node_id": node_id, "label": label})
+
+    def _update_status(self, params: dict[str, Any]) -> dict[str, Any]:
+        return _post(self.workspace_url, "/edit-status", params)
 
     def _update_wrapper(self, params: dict[str, Any]) -> dict[str, Any]:
         return _post(self.workspace_url, "/edit-wrapper", params)
