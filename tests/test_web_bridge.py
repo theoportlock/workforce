@@ -4,7 +4,7 @@ from workforce.web.bridge import PROTOCOL_VERSION, WebBridge, make_event_envelop
 
 
 def test_get_graph_dispatches_get(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
     called = {}
 
     def fake_get(base_url, endpoint):
@@ -26,13 +26,13 @@ def test_get_graph_dispatches_get(monkeypatch):
     assert response["ok"] is True
     assert response["result"] == {"nodes": [], "links": []}
     assert called == {
-        "base_url": "http://127.0.0.1:5042/workspace/ws_abc12345",
+        "base_url": "http://127.0.0.1:5049/workspace/ws_abc12345",
         "endpoint": "/get-graph",
     }
 
 
 def test_update_node_command_maps_command_to_label(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
     called = {}
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
@@ -54,13 +54,13 @@ def test_update_node_command_maps_command_to_label(monkeypatch):
     )
 
     assert response["ok"] is True
-    assert called["base_url"] == "http://127.0.0.1:5042/workspace/ws_abc12345"
+    assert called["base_url"] == "http://127.0.0.1:5049/workspace/ws_abc12345"
     assert called["endpoint"] == "/edit-node-label"
     assert called["payload"] == {"node_id": "n1", "label": "echo hi"}
 
 
 def test_update_status_dispatches_to_edit_status(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
     called = {}
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
@@ -82,13 +82,76 @@ def test_update_status_dispatches_to_edit_status(monkeypatch):
     )
 
     assert response["ok"] is True
-    assert called["base_url"] == "http://127.0.0.1:5042/workspace/ws_abc12345"
+    assert called["base_url"] == "http://127.0.0.1:5049/workspace/ws_abc12345"
     assert called["endpoint"] == "/edit-status"
     assert called["payload"] == {"kind": "node", "id": "n1", "status": "run"}
 
 
+def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+    called = {}
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        called["base_url"] = base_url
+        called["endpoint"] = endpoint
+        called["payload"] = payload
+        return {"status": "connected", "client_id": "gui-1"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "connect-1",
+            "method": "clientConnect",
+            "params": {
+                "socketio_sid": "sid-123",
+                "workfile_path": "/tmp/test.graphml",
+                "client_type": "gui",
+            },
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert called["endpoint"] == "/client-connect"
+    assert called["payload"] == {
+        "socketio_sid": "sid-123",
+        "workfile_path": "/tmp/test.graphml",
+        "client_type": "gui",
+    }
+
+
+def test_client_disconnect_defaults_to_gui(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+    called = {}
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        called["endpoint"] = endpoint
+        called["payload"] = payload
+        return {"status": "disconnected"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "disconnect-1",
+            "method": "clientDisconnect",
+            "params": {"client_id": "gui-1"},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert called["endpoint"] == "/client-disconnect"
+    assert called["payload"] == {
+        "client_type": "gui",
+        "client_id": "gui-1",
+        "socketio_sid": None,
+    }
+
+
 def test_legacy_request_without_protocol_version_is_accepted(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
 
     monkeypatch.setattr(
         "workforce.web.bridge._post",
@@ -111,7 +174,7 @@ def test_legacy_request_without_protocol_version_is_accepted(monkeypatch):
 
 
 def test_unsupported_protocol_version_returns_error():
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_abc12345")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
 
     response = bridge.handle_request(
         {
@@ -128,14 +191,14 @@ def test_unsupported_protocol_version_returns_error():
 
 
 def test_open_workflow_updates_workspace_id(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_old")
     expected_path = os.path.abspath("/tmp/new.wf")
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
-        assert base_url == "http://127.0.0.1:5042"
+        assert base_url == "http://127.0.0.1:5049"
         assert endpoint == "/workspace/register"
         assert payload == {"path": expected_path}
-        return {"workspace_id": "ws_new", "url": "http://127.0.0.1:5042/workspace/ws_new"}
+        return {"workspace_id": "ws_new", "url": "http://127.0.0.1:5049/workspace/ws_new"}
 
     monkeypatch.setattr("workforce.web.bridge._post", fake_post)
 
@@ -153,12 +216,12 @@ def test_open_workflow_updates_workspace_id(monkeypatch):
 
 
 def test_open_workflow_dialog_registers_workspace(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_old")
 
     monkeypatch.setattr("workforce.web.bridge._choose_open_graphml_path", lambda current_path=None: "/tmp/open.graphml")
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
-        assert base_url == "http://127.0.0.1:5042"
+        assert base_url == "http://127.0.0.1:5049"
         assert endpoint == "/workspace/register"
         assert payload == {"path": os.path.abspath("/tmp/open.graphml")}
         return {"workspace_id": "ws_opened", "path": "/tmp/open.graphml"}
@@ -180,19 +243,19 @@ def test_open_workflow_dialog_registers_workspace(monkeypatch):
 
 
 def test_save_workflow_as_dialog_updates_workspace(monkeypatch):
-    bridge = WebBridge(server_url="http://127.0.0.1:5042", workspace_id="ws_old")
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_old")
 
     monkeypatch.setattr("workforce.web.bridge._choose_save_graphml_path", lambda current_path=None: "/tmp/saved.graphml")
 
     def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
-        assert base_url == "http://127.0.0.1:5042/workspace/ws_old"
+        assert base_url == "http://127.0.0.1:5049/workspace/ws_old"
         assert endpoint == "/save-as"
         assert payload == {"new_path": "/tmp/saved.graphml"}
         return {
             "status": "saved",
             "new_path": "/tmp/saved.graphml",
             "new_workspace_id": "ws_saved",
-            "new_base_url": "http://127.0.0.1:5042/workspace/ws_saved",
+            "new_base_url": "http://127.0.0.1:5049/workspace/ws_saved",
         }
 
     monkeypatch.setattr("workforce.web.bridge._post", fake_post)

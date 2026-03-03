@@ -1,6 +1,7 @@
 export interface LaunchContext {
   workspaceId?: string;
   serverRoot: string;
+  workfilePath?: string;
 }
 
 export interface SocketLike {
@@ -18,6 +19,8 @@ declare global {
     workforceLaunchContext?: {
       workspaceId?: string;
       workspace_id?: string;
+      workfilePath?: string;
+      workfile_path?: string;
       serverRoot?: string;
       server_root?: string;
       baseUrl?: string;
@@ -53,6 +56,7 @@ export function getLaunchContext(): LaunchContext {
   const baseUrl = launch?.baseUrl ?? launch?.base_url ?? shellBaseUrl;
   const explicitRoot = launch?.serverRoot ?? launch?.server_root;
   const queryWorkspace = new URLSearchParams(window.location.search).get('workspace_id') ?? undefined;
+  const workfilePath = launch?.workfilePath ?? launch?.workfile_path;
 
   const workspaceId =
     launch?.workspaceId ??
@@ -68,7 +72,7 @@ export function getLaunchContext(): LaunchContext {
     return window.location.origin;
   })();
 
-  return { workspaceId, serverRoot };
+  return { workspaceId, serverRoot, workfilePath };
 }
 
 let ioLibraryPromise: Promise<Window['io']> | null = null;

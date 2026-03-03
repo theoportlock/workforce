@@ -84,6 +84,8 @@ class WebBridge:
     def _handlers(self) -> dict[str, Any]:
         return {
             "getGraph": self._get_graph,
+            "clientConnect": self._client_connect,
+            "clientDisconnect": self._client_disconnect,
             "addNode": self._add_node,
             "removeNode": self._remove_node,
             "addEdge": self._add_edge,
@@ -109,6 +111,34 @@ class WebBridge:
 
     def _add_node(self, params: dict[str, Any]) -> dict[str, Any]:
         return _post(self.workspace_url, "/add-node", params)
+
+    def _client_connect(self, params: dict[str, Any]) -> dict[str, Any]:
+        socketio_sid = params.get("socketio_sid")
+        workfile_path = params.get("workfile_path")
+        client_type = params.get("client_type")
+        if not socketio_sid:
+            raise BridgeProtocolError("clientConnect requires socketio_sid")
+        if not workfile_path:
+            raise BridgeProtocolError("clientConnect requires workfile_path")
+        if client_type != "gui":
+            raise BridgeProtocolError("clientConnect requires client_type: gui")
+        return _post(
+            self.workspace_url,
+            "/client-connect",
+            {
+                "socketio_sid": socketio_sid,
+                "workfile_path": workfile_path,
+                "client_type": client_type,
+            },
+        )
+
+    def _client_disconnect(self, params: dict[str, Any]) -> dict[str, Any]:
+        payload = {
+            "client_type": params.get("client_type", "gui"),
+            "client_id": params.get("client_id"),
+            "socketio_sid": params.get("socketio_sid"),
+        }
+        return _post(self.workspace_url, "/client-disconnect", payload)
 
     def _remove_node(self, params: dict[str, Any]) -> dict[str, Any]:
         return _post(self.workspace_url, "/remove-node", params)

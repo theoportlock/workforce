@@ -839,6 +839,9 @@ def register_routes(app):
             "<script>"
             f"window.__WORKSPACE_ID__ = {json.dumps(workspace_id)};"
             f"window.__WORKSPACE_BASE_URL__ = {json.dumps(f'/workspace/{workspace_id}')};"
+            "window.workforceLaunchContext = Object.assign({}, window.workforceLaunchContext || {}, "
+            f"{{ workspaceId: {json.dumps(workspace_id)}, baseUrl: {json.dumps(f'/workspace/{workspace_id}')}, workfilePath: {json.dumps(getattr(ctx, 'workfile_path', None))} }}"
+            ");"
             "</script>"
         )
 
