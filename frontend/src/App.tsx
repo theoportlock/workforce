@@ -21,7 +21,7 @@ import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph
 import { NodeInspector } from './components/NodeInspector';
 import { LogPanel } from './components/LogPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
-import { connectWorkspaceSocket, SocketLike } from './runtime/socketClient';
+import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 
 type GraphUpdatePayload = BackendNodeLinkGraph & {
   op?: string;
@@ -38,6 +38,10 @@ type NodeReadyPayload = {
 
 type RunCompletePayload = {
   run_id?: string;
+};
+
+type ClientConnectResult = {
+  client_id?: string;
 };
 
 const seededGraph: BackendNodeLinkGraph = {
@@ -327,6 +331,8 @@ function AppContent() {
   useEffect(() => {
     let mounted = true;
     let socketRef: SocketLike | null = null;
+    let clientId: string | undefined;
+    let disconnectRequested = false;
 
     const onGraphUpdate = (payload: GraphUpdatePayload) => applyGraphUpdate(payload);
     const onStatusChange = (payload: NodeStatusPayload) => {
@@ -352,7 +358,36 @@ function AppContent() {
       void refreshGraph();
     };
 
-    void connectWorkspaceSocket().then((socket) => {
+    const disconnectClientBestEffort = () => {
+      if (disconnectRequested || !clientId) return;
+      disconnectRequested = true;
+      void bridgeCall('clientDisconnect', { client_type: 'gui', client_id: clientId }).catch(() => {
+        // Best-effort disconnect path during app shutdown.
+      });
+    };
+
+    const onWindowBeforeUnload = () => {
+      disconnectClientBestEffort();
+    };
+
+    window.addEventListener('beforeunload', onWindowBeforeUnload);
+
+    void connectWorkspaceSocket(async (socket) => {
+      const context = getLaunchContext();
+      const socketSid = (socket as SocketLike & { id?: string }).id;
+      if (!context.workfilePath || !socketSid) return;
+
+      try {
+        const response = await bridgeCall<ClientConnectResult>('clientConnect', {
+          socketio_sid: socketSid,
+          workfile_path: context.workfilePath,
+          client_type: 'gui'
+        });
+        clientId = response.client_id;
+      } catch {
+        // Keep websocket active even if bridge registration fails.
+      }
+    }).then((socket) => {
       if (!mounted || !socket) {
         socket?.disconnect();
         return;
@@ -367,6 +402,8 @@ function AppContent() {
 
     return () => {
       mounted = false;
+      window.removeEventListener('beforeunload', onWindowBeforeUnload);
+      disconnectClientBestEffort();
       if (!socketRef) return;
       socketRef.off('graph_update', onGraphUpdate);
       socketRef.off('status_change', onStatusChange);

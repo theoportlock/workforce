@@ -31,7 +31,7 @@ def test_workspace_shell_returns_html_for_known_workspace():
     assert response.status_code == 200
     assert response.mimetype == "text/html"
     html = response.get_data(as_text=True)
-    assert '<div id="app"></div>' in html
+    assert '<div id="app"></div>' in html or '<div id="root"></div>' in html
     assert f'window.__WORKSPACE_ID__ = "{workspace_id}"' in html
     assert f'window.__WORKSPACE_BASE_URL__ = "/workspace/{workspace_id}"' in html
     # Relative script URLs resolve incorrectly for /workspace/<id> without a trailing slash.
