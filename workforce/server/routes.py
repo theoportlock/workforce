@@ -836,8 +836,12 @@ def register_routes(app):
         )
 
         # Support Vite-built index shells that emit absolute /assets/* URLs.
-        html = html.replace('src="/assets/', f'src="/workspace/{workspace_id}/static/assets/')
-        html = html.replace('href="/assets/', f'href="/workspace/{workspace_id}/static/assets/')
+        html = html.replace(
+            'src="/assets/', f'src="/workspace/{workspace_id}/static/assets/'
+        )
+        html = html.replace(
+            'href="/assets/', f'href="/workspace/{workspace_id}/static/assets/'
+        )
 
         bootstrap_script = (
             "<script>"
@@ -866,6 +870,18 @@ def register_routes(app):
     @app.route("/workspace/<workspace_id>/static/<path:asset_path>", methods=["GET"])
     def workspace_static_asset(workspace_id, asset_path):
         """Serve packaged frontend assets scoped to a workspace URL."""
+        # Guard: reject non-workspace IDs early
+        log.warning(
+            f"[STATIC] Request: workspace_id={workspace_id}, asset_path={asset_path}"
+        )
+        if workspace_id == "socket.io":
+            log.warning(
+                "[STATIC] Rejecting socket.io request - should be handled by Flask-SocketIO"
+            )
+            from flask import abort
+
+            abort(404)
+
         if not WORKSPACE_ID_PATTERN.match(workspace_id):
             return jsonify(
                 {

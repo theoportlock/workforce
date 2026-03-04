@@ -75,6 +75,10 @@ declare global {
 }
 
 function resolveWorkspaceBaseUrl(): string | null {
+  console.log('[LaunchContext] Resolving base URL from:', {
+    __WORKSPACE_BASE_URL__: window.__WORKSPACE_BASE_URL__,
+    pathname: window.location.pathname
+  });
   if (window.__WORKSPACE_BASE_URL__) {
     return window.__WORKSPACE_BASE_URL__.replace(/\/$/, '');
   }
@@ -88,6 +92,8 @@ function resolveWorkspaceBaseUrl(): string | null {
 }
 
 async function bridgeCall<T = Record<string, unknown>>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  console.log(`[Bridge] Calling method: ${method}`, params);
+  
   const request: BridgeRequest = {
     id: `${method}-${Date.now()}`,
     method,
@@ -98,6 +104,7 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
   const handler = window.workforceBridge?.handleRequest;
   if (!handler) {
     const workspaceBaseUrl = resolveWorkspaceBaseUrl();
+    console.log(`[Bridge] No bridge handler, using fallback. workspaceBaseUrl: ${workspaceBaseUrl}`);
     if (!workspaceBaseUrl) {
       throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
     }
@@ -139,6 +146,7 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
 
     if (fallback.httpMethod === 'GET') {
       const response = await fetch(`${workspaceBaseUrl}${fallback.path}`);
+      console.log(`[Bridge] GET ${method} response:`, response.status);
       if (!response.ok) {
         throw new Error(`Bridge fallback failed for ${method}: ${response.status}`);
       }
@@ -146,11 +154,13 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
     }
 
     const payload = method === 'updateNodeCommand' ? { node_id: params['node_id'], label: params['command'] } : params;
+    console.log(`[Bridge] POST ${method} to ${workspaceBaseUrl}${fallback.path}`, payload);
     const response = await fetch(`${workspaceBaseUrl}${fallback.path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    console.log(`[Bridge] POST ${method} response:`, response.status);
     if (!response.ok) {
       throw new Error(`Bridge fallback failed for ${method}: ${response.status}`);
     }
@@ -158,6 +168,7 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
   }
 
   const response = await Promise.resolve(handler(request));
+  console.log(`[Bridge] ${method} bridge response:`, response);
   if (!response.ok) {
     throw new Error(response.error?.message ?? `Bridge request failed for ${method}`);
   }
@@ -333,6 +344,7 @@ function AppContent() {
 
   const applyGraphUpdate = useCallback(
     (payload: GraphUpdatePayload) => {
+      console.log('[App] applyGraphUpdate called with payload:', JSON.stringify(payload));
       payload.nodes?.forEach((node) => {
         if (typeof node.x === 'number' && typeof node.y === 'number') {
           opQueueRef.current.clearPendingPosition(node.id);
@@ -343,6 +355,7 @@ function AppContent() {
       });
 
       if (payload.links) {
+        console.log('[App] Processing links update, nodes count:', payload.nodes?.length);
         const adapted = adaptBackendGraph(payload);
         setNodes(adapted.nodes);
         setEdges(adapted.edges);
@@ -350,6 +363,7 @@ function AppContent() {
       }
 
       if (payload.nodes?.length) {
+        console.log('[App] Processing nodes update, count:', payload.nodes.length);
         setNodes((existing) =>
           existing.map((node) => {
             const update = payload.nodes.find((entry) => entry.id === node.id);
@@ -383,8 +397,21 @@ function AppContent() {
     let clientId: string | undefined;
     let disconnectRequested = false;
 
-    const onGraphUpdate = (payload: GraphUpdatePayload) => applyGraphUpdate(payload);
+    console.log('[App] Setting up socket event handlers');
+
+    const onGraphUpdate = (payload: GraphUpdatePayload) => {
+      console.log('[App] Received graph_update:', payload);
+      applyGraphUpdate(payload);
+    };
+    const onInitialState = (payload: BackendNodeLinkGraph) => {
+      console.log('[App] Received initial_state:', JSON.stringify(payload));
+      const adapted = adaptBackendGraph(payload);
+      console.log('[App] Adapted nodes:', adapted.nodes.length, 'edges:', adapted.edges.length);
+      setNodes(adapted.nodes);
+      setEdges(adapted.edges);
+    };
     const onStatusChange = (payload: NodeStatusPayload) => {
+      console.log('[App] Received status_change:', payload);
       if (!payload.node_id || !payload.status) return;
       opQueueRef.current.clearPendingStatus('node', payload.node_id);
       setNodes((existing) =>
@@ -394,6 +421,7 @@ function AppContent() {
       );
     };
     const onNodeReady = (payload: NodeReadyPayload) => {
+      console.log('[App] Received node_ready:', payload);
       if (!payload.node_id) return;
       opQueueRef.current.clearPendingStatus('node', payload.node_id);
       setNodes((existing) =>
@@ -405,6 +433,7 @@ function AppContent() {
       );
     };
     const onRunComplete = (payload: RunCompletePayload) => {
+      console.log('[App] Received run_complete:', payload);
       setStatusMessage(payload.run_id ? `Run ${payload.run_id} complete.` : 'Run complete.');
       void refreshGraph();
     };
@@ -440,15 +469,28 @@ function AppContent() {
       }
     }).then((socket) => {
       if (!mounted || !socket) {
+        console.log('[App] Socket connection aborted - mounted:', mounted, 'socket:', socket);
         socket?.disconnect();
         return;
       }
 
+      console.log('[App] Socket connected, registering event handlers');
       socketRef = socket;
+      socket.on('initial_state', onInitialState);
       socket.on('graph_update', onGraphUpdate);
       socket.on('status_change', onStatusChange);
       socket.on('node_ready', onNodeReady);
       socket.on('run_complete', onRunComplete);
+      
+      // Debug: also listen for ANY event to catch everything
+      const socketWithAny = socket as SocketLike & { onAny: (handler: (eventName: string, ...args: any[]) => void) => void };
+      if (socketWithAny.onAny) {
+        socketWithAny.onAny((eventName, ...args) => {
+          console.log('[App] Socket received event:', eventName, args);
+        });
+      }
+      
+      console.log('[App] Event handlers registered successfully');
     });
 
     return () => {
@@ -456,13 +498,14 @@ function AppContent() {
       window.removeEventListener('beforeunload', onWindowBeforeUnload);
       disconnectClientBestEffort();
       if (!socketRef) return;
+      socketRef.off('initial_state', onInitialState);
       socketRef.off('graph_update', onGraphUpdate);
       socketRef.off('status_change', onStatusChange);
       socketRef.off('node_ready', onNodeReady);
       socketRef.off('run_complete', onRunComplete);
       socketRef.disconnect();
     };
-  }, [applyGraphUpdate, refreshGraph, setNodes]);
+  }, [applyGraphUpdate, refreshGraph, setNodes, setEdges]);
 
   const handleSaveWorkflowAs = useCallback(async () => {
     try {
