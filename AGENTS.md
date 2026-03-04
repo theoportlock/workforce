@@ -1,87 +1,103 @@
-# AGENTS.md
+## Purpose
 
-## Project Overview
+Workforce is a graph-based workflow execution system.
 
-Graph-based workflow execution system: Flask/Socket.IO server, Tkinter GUI, GraphML storage. Nodes contain bash commands, edges define dependencies.
+- GraphML-backed scheduler (like a DAG)
+- Flask + Socket.IO server (port 5049)
+- Tkinter GUI
+- React Flow frontend (Vite build)
+- Local shell execution engine
+- Optional execution wrapper (`{}` substitution)
 
-- Single server (port 5049) manages multiple workspaces (one per file, SHA256 ID)
-- All mutations serialized through per-workspace queue worker
-- Subset execution: every run is an induced subgraph
+---
 
-## Commands
+## Non-Negotiable Rules
 
-### Development
-```bash
-pip install -e .     # Install dev mode
-pytest               # Run tests (ALWAYS before/after changes)
-pytest tests/test_runner.py
-ruff check workforce/
-mypy workforce/
-./build-frontend.sh   # Build & deploy frontend changes
-```
+### 1. All Graph Mutations Go Through the Server Queue
 
-### Running
-```bash
-wf                                    # Launch GUI
-wf gui <file.graphml>
-wf run <workfile>                     # Run failed/pending
-wf run <workfile> --nodes node1       # Run specific nodes
-wf run <workfile> --wrapper 'docker run image bash -c "{}"'
-```
+Never:
+- Write GraphML directly
+- Mutate graph state outside `ServerContext.enqueue()`
 
-### Server
-```bash
-wf server start           # Start (bg)
-wf server start --foreground
-wf server stop
-wf server ls
-```
+All mutations are serialized per workspace via `server/queue.py`.
 
-### Edit CLI
-```bash
-wf edit add-node <file> "cmd" --x 100 --y 200
-wf edit add-edge <file> <src> <tgt>
-wf edit edit-status <file> node <id> "run"
-```
+---
 
-## Critical Patterns
+### 2. Runs Operate on an Induced Subgraph
 
-### Testing
-Run `pytest` before AND after ANY changes.
+Each run defines allowed nodes:
 
-### Mutations
-Always use server queue: `ctx.enqueue()` or REST API. Never write GraphML directly.
+    ctx.active_runs[run_id]["nodes"]
 
-### Subset Boundaries
-`ctx.active_runs[run_id]["nodes"]` defines allowed nodes. Edge propagation filtered by this set.
+- Only these nodes may transition state
+- Only edges within this set may propagate readiness
+- No global execution side effects
 
-### Wrapper
-Template needs `{}` placeholder: `wrapper.replace('{}', cmd)`. Fallback: `wrapper + ' ' + cmd`.
+---
 
-### Status
-- `""` (empty): Initial
-- `"run"`: Queued → emits NODE_READY
-- `"running"`: Executing
-- `"ran"`: Success
-- `"fail"`: Failed
+### 3. Node State Machine
+
+Valid states:
+
+    "" ΓåÆ "run" ΓåÆ "running" ΓåÆ "ran"
+                            Γåÿ "fail"
+    "fail" ΓåÆ "run"
+
+No other transitions allowed.
+
+---
+
+### 4. Wrapper Semantics
+
+Wrapper must contain `{}`:
+
+    wrapper.replace("{}", cmd)
+
+Fallback:
+
+    wrapper + " " + cmd
+
+---
 
 ## Architecture
 
-| Module | Purpose |
-|--------|---------|
-| `server/context.py` | ServerContext, enqueue methods |
-| `server/routes.py` | REST API |
-| `server/sockets.py` | Socket.IO + EventBus bridge |
-| `server/queue.py` | Per-workspace mutation worker |
-| `run/` | Execution engine |
-| `gui/` | Tkinter UI (state.py, canvas.py, core.py) |
+### Server
+- `server/context.py` ΓÇö authoritative graph + enqueue
+- `server/queue.py` ΓÇö serialized mutation worker
+- `server/routes.py` ΓÇö REST API
+- `server/sockets.py` ΓÇö Socket.IO bridge
 
-## Socket Events
+### Execution
+- `run/` ΓÇö dependency resolution + shell execution
 
-`GRAPH_UPDATED` → `graph_update` | `NODE_READY` → `node_ready` | `RUN_COMPLETE` → `run_complete`
+### GUI (Tkinter)
+- `gui/state.py` ΓÇö canonical UI state
+- `gui/canvas.py` ΓÇö rendering
+- `gui/core.py` ΓÇö bootstrap
 
-## Environment
+### Web Frontend
+- `frontend/` ΓÇö React Flow app (Vite)
+- Built via `./build-frontend.sh`
 
-- `WORKFORCE_SERVER_URL`: http://127.0.0.1:5049
-- `WORKFORCE_STARTUP_TIMEOUT`: 30
-- `WORKFORCE_LOG_DIR`: ~/.workforce
+---
+
+## Development
+
+Always run before and after changes:
+
+    pytest
+    ruff check workforce/
+    mypy workforce/
+
+Frontend rebuild:
+
+    ./build-frontend.sh
+
+---
+
+## Key Principle
+
+Single authoritative graph per workspace.
+All mutations serialized.
+All execution bounded to a run-specific subgraph.
+
