@@ -250,11 +250,6 @@ def start_graph_worker(ctx):
                 log.info(f"Emitting GRAPH_UPDATED event for workspace {ctx.workspace_id} with operation={operation}")
                 ctx.events.emit(Event(type="GRAPH_UPDATED", payload=data))
 
-                # Emit domain event
-                from workforce.server.events import Event
-                log.info(f"Emitting GRAPH_UPDATED event for workspace {ctx.workspace_id} with operation={operation}")
-                ctx.events.emit(Event(type="GRAPH_UPDATED", payload=data))
-
                 # Lifecycle handling for status changes
                 if name in ("edit_status_in_graph",):
                     _, el_type, el_id, status = args
