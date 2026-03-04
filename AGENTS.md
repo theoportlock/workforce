@@ -17,6 +17,7 @@ pytest               # Run tests (ALWAYS before/after changes)
 pytest tests/test_runner.py
 ruff check workforce/
 mypy workforce/
+./build-frontend.sh   # Build & deploy frontend changes
 ```
 
 ### Running

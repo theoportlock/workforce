@@ -16,7 +16,7 @@ import ReactFlow, {
   useNodesState
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { adaptBackendGraph, statusColorMap, workforceStatusLabel } from './graph/adapters';
+import { adaptBackendGraph, statusColorMap } from './graph/adapters';
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { NodeInspector } from './components/NodeInspector';
 import { LogPanel } from './components/LogPanel';
@@ -169,20 +169,16 @@ function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
   return (
     <div
       style={{
-        border: selected ? '2px solid #60a5fa' : '1px solid #334155',
-        borderRadius: 10,
-        background: '#111827',
-        color: '#f9fafb',
+        border: selected ? '2px solid #FFFFFF' : '1px solid #37474F',
+        borderRadius: 4,
+        background: color,
+        color: '#FFFFFF',
         minWidth: 190,
         padding: 10
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontWeight: 600 }}>{data.label}</div>
-      <div style={{ display: 'inline-flex', marginTop: 8, gap: 6, alignItems: 'center' }}>
-        <span style={{ width: 9, height: 9, borderRadius: 9999, background: color }} />
-        <span style={{ fontSize: 12, color: '#cbd5e1' }}>{workforceStatusLabel(data.status)}</span>
-      </div>
+      <div style={{ fontSize: 12 }}>{data.command}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );

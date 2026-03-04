@@ -10,11 +10,11 @@ const statusLabelMap: Record<WorkforceStatus, string> = {
 };
 
 export const statusColorMap: Record<WorkforceStatus, string> = {
-  '': '#6b7280',
-  run: '#f59e0b',
-  running: '#2563eb',
-  ran: '#16a34a',
-  fail: '#dc2626'
+  '': '#37474F',
+  run: '#0D47A1',
+  running: '#0D47A1',
+  ran: '#1B5E20',
+  fail: '#B71C1C'
 };
 
 const toNum = (value: string | number | undefined) => {
