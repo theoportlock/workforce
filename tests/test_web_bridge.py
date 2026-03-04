@@ -84,7 +84,7 @@ def test_update_status_dispatches_to_edit_status(monkeypatch):
     assert response["ok"] is True
     assert called["base_url"] == "http://127.0.0.1:5049/workspace/ws_abc12345"
     assert called["endpoint"] == "/edit-status"
-    assert called["payload"] == {"kind": "node", "id": "n1", "status": "run"}
+    assert called["payload"] == {"element_type": "node", "element_id": "n1", "value": "run"}
 
 
 def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
@@ -119,6 +119,56 @@ def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
         "workfile_path": "/tmp/test.graphml",
         "client_type": "gui",
     }
+
+
+def test_add_node_requires_only_label(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+    called = {}
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        called["endpoint"] = endpoint
+        called["payload"] = payload
+        return {"status": "queued"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "add-min",
+            "method": "addNode",
+            "params": {"label": "hello"},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert called["endpoint"] == "/add-node"
+    assert called["payload"] == {"label": "hello"}
+
+
+def test_client_disconnect_without_identifiers_is_allowed(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+    called = {}
+
+    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
+        called["endpoint"] = endpoint
+        called["payload"] = payload
+        return {"status": "disconnected"}
+
+    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
+
+    response = bridge.handle_request(
+        {
+            "id": "disconnect-empty",
+            "method": "clientDisconnect",
+            "params": {},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is True
+    assert called["endpoint"] == "/client-disconnect"
+    assert called["payload"] == {"client_type": "gui", "client_id": None, "socketio_sid": None}
 
 
 def test_client_disconnect_defaults_to_gui(monkeypatch):
@@ -283,3 +333,58 @@ def test_make_event_envelope_shape():
         "workspaceId": "ws_abc12345",
         "ts": 1234.5,
     }
+
+
+def test_get_runs_and_get_clients_dispatch_get(monkeypatch):
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+    calls = []
+
+    def fake_get(base_url, endpoint):
+        calls.append((base_url, endpoint))
+        return {"ok": True}
+
+    monkeypatch.setattr("workforce.web.bridge._get_json", fake_get)
+
+    runs_response = bridge.handle_request(
+        {
+            "id": "runs-1",
+            "method": "getRuns",
+            "params": {},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+    clients_response = bridge.handle_request(
+        {
+            "id": "clients-1",
+            "method": "getClients",
+            "params": {},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert runs_response["ok"] is True
+    assert clients_response["ok"] is True
+    assert calls == [
+        ("http://127.0.0.1:5049/workspace/ws_abc12345", "/runs"),
+        ("http://127.0.0.1:5049/workspace/ws_abc12345", "/clients"),
+    ]
+
+
+def test_update_status_validation_error_message():
+    bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
+
+    response = bridge.handle_request(
+        {
+            "id": "bad-status",
+            "method": "updateStatus",
+            "params": {"id": "n1", "status": "run"},
+            "protocolVersion": PROTOCOL_VERSION,
+        }
+    )
+
+    assert response["ok"] is False
+    assert response["error"]["type"] == "BridgeProtocolError"
+    assert (
+        response["error"]["message"]
+        == "updateStatus requires element_type/kind, element_id/id, and value/status"
+    )
