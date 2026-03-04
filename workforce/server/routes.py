@@ -835,6 +835,10 @@ def register_routes(app):
             1,
         )
 
+        # Support Vite-built index shells that emit absolute /assets/* URLs.
+        html = html.replace('src="/assets/', f'src="/workspace/{workspace_id}/static/assets/')
+        html = html.replace('href="/assets/', f'href="/workspace/{workspace_id}/static/assets/')
+
         bootstrap_script = (
             "<script>"
             f"window.__WORKSPACE_ID__ = {json.dumps(workspace_id)};"

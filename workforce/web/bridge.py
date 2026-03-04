@@ -104,6 +104,8 @@ class WebBridge:
             "openWorkflow": self._open_workflow,
             "openWorkflowDialog": self._open_workflow_dialog,
             "stopRuns": self._stop_runs,
+            "getRuns": self._get_runs,
+            "getClients": self._get_clients,
         }
 
     def _get_graph(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -111,6 +113,7 @@ class WebBridge:
         return _get_json(self.workspace_url, "/get-graph")
 
     def _add_node(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("addNode", params, "label")
         return _post(self.workspace_url, "/add-node", params)
 
     def _client_connect(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -134,29 +137,38 @@ class WebBridge:
         )
 
     def _client_disconnect(self, params: dict[str, Any]) -> dict[str, Any]:
-        payload = {
-            "client_type": params.get("client_type", "gui"),
-            "client_id": params.get("client_id"),
-            "socketio_sid": params.get("socketio_sid"),
-        }
+        client_type = params.get("client_type", "gui")
+        client_id = params.get("client_id")
+        socketio_sid = params.get("socketio_sid")
+        if client_type not in {"gui", "runner"}:
+            raise BridgeProtocolError("clientDisconnect requires client_type to be 'gui' or 'runner'")
+        payload = {"client_type": client_type, "client_id": client_id, "socketio_sid": socketio_sid}
         return _post(self.workspace_url, "/client-disconnect", payload)
 
     def _remove_node(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("removeNode", params, "node_id")
         return _post(self.workspace_url, "/remove-node", params)
 
     def _add_edge(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("addEdge", params, "source", "target")
         return _post(self.workspace_url, "/add-edge", params)
 
     def _remove_edge(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("removeEdge", params, "source", "target")
         return _post(self.workspace_url, "/remove-edge", params)
 
     def _update_node_position(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("updateNodePosition", params, "node_id", "x", "y")
         return _post(self.workspace_url, "/edit-node-position", params)
 
     def _update_node_positions(self, params: dict[str, Any]) -> dict[str, Any]:
+        positions = params.get("positions")
+        if not isinstance(positions, list) or not positions:
+            raise BridgeProtocolError("updateNodePositions requires non-empty positions array")
         return _post(self.workspace_url, "/edit-node-positions", params)
 
     def _update_node_label(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("updateNodeLabel", params, "node_id", "label")
         return _post(self.workspace_url, "/edit-node-label", params)
 
     def _update_node_command(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -167,15 +179,46 @@ class WebBridge:
         return _post(self.workspace_url, "/edit-node-label", {"node_id": node_id, "label": label})
 
     def _update_status(self, params: dict[str, Any]) -> dict[str, Any]:
-        return _post(self.workspace_url, "/edit-status", params)
+        element_type, element_id, value = self._coerce_single_status("updateStatus", params)
+        payload = {
+            "element_type": element_type,
+            "element_id": element_id,
+            "value": value,
+        }
+        run_id = params.get("run_id")
+        if run_id:
+            payload["run_id"] = run_id
+        return _post(self.workspace_url, "/edit-status", payload)
 
     def _update_statuses(self, params: dict[str, Any]) -> dict[str, Any]:
-        return _post(self.workspace_url, "/edit-statuses", params)
+        updates = params.get("updates")
+        if not isinstance(updates, list) or not updates:
+            raise BridgeProtocolError("updateStatuses requires non-empty updates array")
+        normalized_updates = []
+        for idx, update in enumerate(updates):
+            if not isinstance(update, dict):
+                raise BridgeProtocolError(f"updateStatuses update at index {idx} must be an object")
+            element_type, element_id, value = self._coerce_single_status("updateStatuses", update)
+            normalized_updates.append(
+                {
+                    "element_type": element_type,
+                    "element_id": element_id,
+                    "value": value,
+                }
+            )
+        return _post(self.workspace_url, "/edit-statuses", {"updates": normalized_updates})
 
     def _update_wrapper(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("updateWrapper", params, "wrapper")
         return _post(self.workspace_url, "/edit-wrapper", params)
 
     def _run_workflow(self, params: dict[str, Any]) -> dict[str, Any]:
+        wrapper = params.get("wrapper")
+        if wrapper is not None and not isinstance(wrapper, str):
+            raise BridgeProtocolError("runWorkflow wrapper must be a string")
+        nodes = params.get("nodes")
+        if nodes is not None and not isinstance(nodes, list):
+            raise BridgeProtocolError("runWorkflow nodes must be an array")
         return _post(self.workspace_url, "/run", params)
 
     def _get_node_log(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -186,6 +229,7 @@ class WebBridge:
         return _get_json(self.workspace_url, f"/get-node-log/{node_id_safe}")
 
     def _save_workflow_as(self, params: dict[str, Any]) -> dict[str, Any]:
+        self._require_params("saveWorkflowAs", params, "new_path")
         result = _post(self.workspace_url, "/save-as", params)
         self._update_workspace_from_result(result)
         new_path = result.get("new_path")
@@ -234,6 +278,32 @@ class WebBridge:
     def _stop_runs(self, params: dict[str, Any]) -> dict[str, Any]:
         del params
         return _post(self.workspace_url, "/stop", {})
+
+    def _get_runs(self, params: dict[str, Any]) -> dict[str, Any]:
+        del params
+        return _get_json(self.workspace_url, "/runs")
+
+    def _get_clients(self, params: dict[str, Any]) -> dict[str, Any]:
+        del params
+        return _get_json(self.workspace_url, "/clients")
+
+    def _require_params(self, method: str, params: dict[str, Any], *keys: str) -> None:
+        missing = [key for key in keys if params.get(key) is None]
+        if missing:
+            joined = ", ".join(missing)
+            raise BridgeProtocolError(f"{method} requires {joined}")
+
+    def _coerce_single_status(self, method: str, payload: dict[str, Any]) -> tuple[str, str, str]:
+        element_type = payload.get("element_type", payload.get("kind"))
+        element_id = payload.get("element_id", payload.get("id"))
+        value = payload.get("value", payload.get("status"))
+        if not element_type or not element_id or value is None:
+            raise BridgeProtocolError(
+                f"{method} requires element_type/kind, element_id/id, and value/status"
+            )
+        if element_type not in {"node", "edge"}:
+            raise BridgeProtocolError(f"{method} element_type/kind must be 'node' or 'edge'")
+        return str(element_type), str(element_id), str(value)
 
 
 def make_event_envelope(event: str, payload: dict[str, Any], workspace_id: str, ts: float) -> dict[str, Any]:

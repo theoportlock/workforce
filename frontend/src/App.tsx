@@ -95,16 +95,58 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
     protocolVersion: '1.0'
   };
 
-  const workspaceBaseUrl = resolveWorkspaceBaseUrl();
-  const callWorkspaceEndpoint = async (endpoint: string): Promise<T> => {
-    const payload = method === 'updateNodeCommand'
-      ? { node_id: params['node_id'], label: params['command'] }
-      : params;
+  const handler = window.workforceBridge?.handleRequest;
+  if (!handler) {
+    const workspaceBaseUrl = resolveWorkspaceBaseUrl();
     if (!workspaceBaseUrl) {
       throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
     }
 
-    const response = await fetch(`${workspaceBaseUrl}${endpoint}`, {
+    if (method === 'getGraph') {
+      const response = await fetch(`${workspaceBaseUrl}/get-graph`);
+      if (!response.ok) {
+        throw new Error(`Graph fetch failed: ${response.status}`);
+      }
+      return (await response.json()) as T;
+    }
+
+    const fallbackEndpoints: Record<string, { path: string; httpMethod?: 'GET' | 'POST' }> = {
+      addNode: { path: '/add-node' },
+      removeNode: { path: '/remove-node' },
+      addEdge: { path: '/add-edge' },
+      removeEdge: { path: '/remove-edge' },
+      updateNodePosition: { path: '/edit-node-position' },
+      updateNodePositions: { path: '/edit-node-positions' },
+      updateNodeLabel: { path: '/edit-node-label' },
+      updateNodeCommand: { path: '/edit-node-label' },
+      updateStatus: { path: '/edit-status' },
+      updateStatuses: { path: '/edit-statuses' },
+      updateWrapper: { path: '/edit-wrapper' },
+      runWorkflow: { path: '/run' },
+      stopRuns: { path: '/stop' },
+      saveWorkflowAs: { path: '/save-as' },
+      clientConnect: { path: '/client-connect' },
+      clientDisconnect: { path: '/client-disconnect' },
+      getNodeLog: { path: `/get-node-log/${encodeURIComponent(String(params.node_id ?? ''))}`, httpMethod: 'GET' },
+      getRuns: { path: '/runs', httpMethod: 'GET' },
+      getClients: { path: '/clients', httpMethod: 'GET' }
+    };
+
+    const fallback = fallbackEndpoints[method];
+    if (!fallback) {
+      throw new Error('Bridge API is unavailable in this environment.');
+    }
+
+    if (fallback.httpMethod === 'GET') {
+      const response = await fetch(`${workspaceBaseUrl}${fallback.path}`);
+      if (!response.ok) {
+        throw new Error(`Bridge fallback failed for ${method}: ${response.status}`);
+      }
+      return (await response.json()) as T;
+    }
+
+    const payload = method === 'updateNodeCommand' ? { node_id: params['node_id'], label: params['command'] } : params;
+    const response = await fetch(`${workspaceBaseUrl}${fallback.path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -113,45 +155,6 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
       throw new Error(`Bridge fallback failed for ${method}: ${response.status}`);
     }
     return (await response.json()) as T;
-  };
-
-  const handler = window.workforceBridge?.handleRequest;
-  if (!handler) {
-    if (method === 'getGraph') {
-      if (!workspaceBaseUrl) {
-        throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
-      }
-
-      const response = await fetch(`${workspaceBaseUrl}/get-graph`);
-      if (!response.ok) {
-        throw new Error(`Graph fetch failed: ${response.status}`);
-      }
-      return (await response.json()) as T;
-    }
-
-    const fallbackEndpoints: Record<string, string> = {
-      addNode: '/add-node',
-      removeNode: '/remove-node',
-      addEdge: '/add-edge',
-      removeEdge: '/remove-edge',
-      updateNodePosition: '/edit-node-position',
-      updateNodePositions: '/edit-node-positions',
-      updateNodeLabel: '/edit-node-label',
-      updateNodeCommand: '/edit-node-label',
-      updateStatus: '/edit-status',
-      updateStatuses: '/edit-statuses',
-      runWorkflow: '/run',
-      stopRuns: '/stop',
-      saveWorkflowAs: '/save-as',
-      clientConnect: '/client-connect',
-      clientDisconnect: '/client-disconnect'
-    };
-
-    const endpoint = fallbackEndpoints[method];
-    if (!endpoint) {
-      throw new Error('Bridge API is unavailable in this environment.');
-    }
-    return callWorkspaceEndpoint(endpoint);
   }
 
   const response = await Promise.resolve(handler(request));
@@ -480,6 +483,16 @@ function AppContent() {
     }
   }, [currentPath, refreshGraph]);
 
+  const handleStopRuns = useCallback(async () => {
+    try {
+      await opQueueRef.current.flush();
+      await bridgeCall('stopRuns');
+      setStatusMessage('Stop requested for active runs.');
+    } catch (error) {
+      setStatusMessage(`Stop failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, []);
+
   const menuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return [];
 
@@ -566,6 +579,7 @@ function AppContent() {
           <div style={{ display: 'inline-flex', gap: 8 }}>
             <button onClick={() => void handleOpenWorkflow()}>File ▸ Open</button>
             <button onClick={() => void handleSaveWorkflowAs()}>File ▸ Save As</button>
+            <button onClick={() => void handleStopRuns()}>Run ▸ Stop</button>
           </div>
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
