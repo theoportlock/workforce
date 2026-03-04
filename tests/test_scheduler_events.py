@@ -231,6 +231,97 @@ def test_graph_update_emitted_on_every_change():
         assert len(graph_updates) >= 3
 
 
+def test_batch_position_update_with_dict_payload_emits_changed_nodes_only():
+    """GRAPH_UPDATED for batch position edits should include node metadata from dict payloads."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "test.graphml")
+
+        node_a = edit.graph.add_node_to_graph(path, "Node A")
+        node_b = edit.graph.add_node_to_graph(path, "Node B")
+        node_a_id = node_a["node_id"]
+        node_b_id = node_b["node_id"]
+
+        ctx = create_test_context(path)
+        graph_updates = []
+
+        def track_graph_update(event):
+            graph_updates.append(event)
+
+        ctx.events.subscribe("GRAPH_UPDATED", track_graph_update)
+
+        worker_thread = threading.Thread(target=start_graph_worker, args=(ctx,), daemon=True)
+        worker_thread.start()
+
+        positions = [
+            {"node_id": node_a_id, "x": 10, "y": 20},
+            {"node_id": node_b_id, "x": 30, "y": 40},
+            {"x": 100, "y": 200},  # Missing node_id
+            {},  # Empty dict
+        ]
+        ctx.enqueue(edit.graph.edit_node_positions_in_graph, path, positions)
+
+        time.sleep(0.2)
+        ctx.mod_queue.join()
+
+        position_updates = [
+            event for event in graph_updates
+            if event.payload.get("op") == "position"
+        ]
+        assert position_updates, "Expected a position GRAPH_UPDATED event"
+
+        nodes = position_updates[-1].payload.get("nodes", [])
+        changed_node_ids = {node["id"] for node in nodes}
+        assert changed_node_ids == {node_a_id, node_b_id}
+
+
+def test_batch_position_metadata_extraction_skips_malformed_entries():
+    """Worker metadata extraction should ignore malformed batch position entries."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "test.graphml")
+
+        node_a = edit.graph.add_node_to_graph(path, "Node A")
+        node_b = edit.graph.add_node_to_graph(path, "Node B")
+        node_a_id = node_a["node_id"]
+        node_b_id = node_b["node_id"]
+
+        ctx = create_test_context(path)
+        graph_updates = []
+
+        def track_graph_update(event):
+            graph_updates.append(event)
+
+        def edit_node_positions_in_graph(*_args, **_kwargs):
+            return None
+
+        ctx.events.subscribe("GRAPH_UPDATED", track_graph_update)
+
+        worker_thread = threading.Thread(target=start_graph_worker, args=(ctx,), daemon=True)
+        worker_thread.start()
+
+        positions = [
+            {"node_id": node_a_id, "x": 10, "y": 20},
+            (node_b_id, 30, 40),
+            {"x": 100, "y": 200},
+            {},
+            None,
+            (),
+        ]
+        ctx.enqueue(edit_node_positions_in_graph, path, positions)
+
+        time.sleep(0.2)
+        ctx.mod_queue.join()
+
+        position_updates = [
+            event for event in graph_updates
+            if event.payload.get("op") == "position"
+        ]
+        assert position_updates, "Expected a position GRAPH_UPDATED event"
+
+        nodes = position_updates[-1].payload.get("nodes", [])
+        changed_node_ids = {node["id"] for node in nodes}
+        assert changed_node_ids == {node_a_id, node_b_id}
+
+
 def test_events_without_socketio():
     """Test that events are emitted even without a real SocketIO server."""
     with tempfile.TemporaryDirectory() as tmpdir:
