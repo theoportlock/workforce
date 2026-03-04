@@ -104,7 +104,6 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
   const handler = window.workforceBridge?.handleRequest;
   if (!handler) {
     const workspaceBaseUrl = resolveWorkspaceBaseUrl();
-    console.log(`[Bridge] No bridge handler, using fallback. workspaceBaseUrl: ${workspaceBaseUrl}`);
     if (!workspaceBaseUrl) {
       throw new Error('Bridge API is unavailable and workspace URL could not be derived.');
     }
@@ -189,7 +188,8 @@ function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 12 }}>{data.command}</div>
+      <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label}</div>
+      <div style={{ fontSize: 12, opacity: 0.9 }}>{data.command}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -346,7 +346,7 @@ function AppContent() {
     (payload: GraphUpdatePayload) => {
       console.log('[App] applyGraphUpdate called with payload:', JSON.stringify(payload));
       payload.nodes?.forEach((node) => {
-        if (typeof node.x === 'number' && typeof node.y === 'number') {
+        if (typeof node.x !== 'undefined' && typeof node.y !== 'undefined') {
           opQueueRef.current.clearPendingPosition(node.id);
         }
         if (typeof node.status === 'string') {
