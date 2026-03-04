@@ -162,8 +162,33 @@ def start_graph_worker(ctx):
                     changed_nodes = [args[1]] if len(args) > 1 else []
                 elif name == "edit_node_positions_in_graph":
                     operation = "position"
-                    # args: (path, positions_list) where positions_list = [(node_id, x, y), ...]
-                    changed_nodes = [pos[0] for pos in args[1]] if len(args) > 1 else []
+                    # args: (path, positions_list) where positions_list entries are
+                    # typically dicts like {"node_id": "...", "x": ..., "y": ...}
+                    # and may also be tuple/list legacy payloads like (node_id, x, y)
+                    positions = args[1] if len(args) > 1 else []
+                    if not isinstance(positions, (list, tuple)):
+                        log.warning("Invalid positions payload type for edit_node_positions_in_graph: %s", type(positions).__name__)
+                        positions = []
+
+                    for pos in positions:
+                        node_id = None
+                        try:
+                            if isinstance(pos, dict):
+                                node_id = pos.get("node_id")
+                            elif isinstance(pos, (tuple, list)):
+                                node_id = pos[0] if pos else None
+                            else:
+                                log.warning("Skipping invalid position entry type: %s", type(pos).__name__)
+                                continue
+                        except Exception:
+                            log.warning("Skipping malformed position entry: %r", pos, exc_info=True)
+                            continue
+
+                        if not node_id:
+                            log.warning("Skipping position entry without node_id: %r", pos)
+                            continue
+
+                        changed_nodes.append(node_id)
                 elif name == "edit_status_in_graph":
                     operation = "status"
                     # args: (path, element_type, element_id, status)
