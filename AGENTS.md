@@ -1,103 +1,144 @@
+# AGENTS.md
+
 ## Purpose
 
-Workforce is a graph-based workflow execution system.
+Workforce is a **graph-based workflow execution system**:
 
-- GraphML-backed scheduler (like a DAG)
-- Flask + Socket.IO server (port 5049)
-- Tkinter GUI
-- React Flow frontend (Vite build)
-- Local shell execution engine
-- Optional execution wrapper (`{}` substitution)
+-   GraphML-backed DAG scheduler
+-   Flask + Socket.IO server (port 5049)
+-   Tkinter desktop GUI
+-   React Flow web frontend (Vite build)
+-   Local shell execution engine
+-   Optional command wrapper (`{}` substitution)
 
----
+------------------------------------------------------------------------
 
-## Non-Negotiable Rules
+# Core Invariants (Non-Negotiable)
 
-### 1. All Graph Mutations Go Through the Server Queue
+## 1. All Graph Mutations Go Through the Server Queues
 
-Never:
-- Write GraphML directly
-- Mutate graph state outside `ServerContext.enqueue()`
+Never: - Modify GraphML files directly - Mutate in-memory graph state
+outside `ServerContext.enqueue()`
 
-All mutations are serialized per workspace via `server/queue.py`.
+All mutations **must** be serialized per workspace via:
 
----
+    server/queue.py
 
-### 2. Runs Operate on an Induced Subgraph
+This guarantees: - Deterministic ordering - Cross-client consistency
+(Tk + Web) - Safe concurrent edits
 
-Each run defines allowed nodes:
+------------------------------------------------------------------------
+
+## 2. Runs Operate on an Induced Subgraph
+
+Each run defines its allowed node set:
 
     ctx.active_runs[run_id]["nodes"]
 
-- Only these nodes may transition state
-- Only edges within this set may propagate readiness
-- No global execution side effects
+Rules:
 
----
+-   Only these nodes may transition state
+-   Only edges within this induced set may propagate readiness
+-   No execution may affect nodes outside the run
+-   No global side effects
 
-### 3. Node State Machine
+Execution is always bounded to the run subgraph.
+
+------------------------------------------------------------------------
+
+## 3. Node State Machine (Strict)
 
 Valid states:
 
-    "" ΓåÆ "run" ΓåÆ "running" ΓåÆ "ran"
-                            Γåÿ "fail"
-    "fail" ΓåÆ "run"
+    "" → "run" → "running" → "ran"
+                      ↘
+                       "fail"
 
-No other transitions allowed.
+    "fail" → "run"
 
----
+No other transitions are allowed.
 
-### 4. Wrapper Semantics
+Invalid transitions must raise errors.
 
-Wrapper must contain `{}`:
+------------------------------------------------------------------------
+
+## 4. Wrapper Semantics
+
+If a wrapper is configured, it must contain `{}`:
 
     wrapper.replace("{}", cmd)
 
-Fallback:
+If `{}` is missing, fallback to:
 
     wrapper + " " + cmd
 
----
+Wrapper logic must remain deterministic and side-effect free.
 
-## Architecture
+------------------------------------------------------------------------
 
-### Server
-- `server/context.py` ΓÇö authoritative graph + enqueue
-- `server/queue.py` ΓÇö serialized mutation worker
-- `server/routes.py` ΓÇö REST API
-- `server/sockets.py` ΓÇö Socket.IO bridge
+# Architecture
 
-### Execution
-- `run/` ΓÇö dependency resolution + shell execution
+## Server (Authoritative)
 
-### GUI (Tkinter)
-- `gui/state.py` ΓÇö canonical UI state
-- `gui/canvas.py` ΓÇö rendering
-- `gui/core.py` ΓÇö bootstrap
+-   `server/context.py` --- canonical graph state + enqueue
+-   `server/queue.py` --- serialized mutation worker
+-   `server/routes.py` --- REST API
+-   `server/sockets.py` --- Socket.IO bridge
 
-### Web Frontend
-- `frontend/` ΓÇö React Flow app (Vite)
-- Built via `./build-frontend.sh`
+The server owns truth.\
+All clients are projections.
 
----
+------------------------------------------------------------------------
 
-## Development
+## Execution Engine
 
-Always run before and after changes:
+-   `run/` --- dependency resolution + shell execution
+
+Execution never mutates graph state directly.\
+It must enqueue mutations.
+
+------------------------------------------------------------------------
+
+## Tkinter GUI
+
+-   `gui/state.py` --- canonical UI state
+-   `gui/canvas.py` --- rendering
+-   `gui/core.py` --- bootstrap
+
+------------------------------------------------------------------------
+
+## Web Frontend
+
+-   `frontend/` --- React Flow app (Vite)
+
+-   Built via:
+
+    ./build-frontend.sh
+
+The web UI is a real-time projection of server state via Socket.IO.
+
+------------------------------------------------------------------------
+
+# Development Discipline
+
+Before and after any change, run:
 
     pytest
     ruff check workforce/
     mypy workforce/
 
-Frontend rebuild:
+If frontend changes were made:
 
     ./build-frontend.sh
 
----
+Never commit broken type checks or lint errors.
 
-## Key Principle
+------------------------------------------------------------------------
 
-Single authoritative graph per workspace.
-All mutations serialized.
-All execution bounded to a run-specific subgraph.
+# Guiding Principle
+
+-   One authoritative graph per workspace.
+-   All mutations serialized.
+-   All execution scoped to a run subgraph.
+-   Clients render --- server decides.
 
