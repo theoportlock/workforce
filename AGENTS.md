@@ -11,8 +11,6 @@ Workforce is a **graph-based workflow execution system**:
 -   Local shell execution engine
 -   Optional command wrapper (`{}` substitution)
 
-------------------------------------------------------------------------
-
 # Core Invariants (Non-Negotiable)
 
 ## 1. All Graph Mutations Go Through the Server Queues
@@ -26,8 +24,6 @@ All mutations **must** be serialized per workspace via:
 
 This guarantees: - Deterministic ordering - Cross-client consistency
 (Tk + Web) - Safe concurrent edits
-
-------------------------------------------------------------------------
 
 ## 2. Runs Operate on an Induced Subgraph
 
@@ -44,8 +40,6 @@ Rules:
 
 Execution is always bounded to the run subgraph.
 
-------------------------------------------------------------------------
-
 ## 3. Node State Machine (Strict)
 
 Valid states:
@@ -60,8 +54,6 @@ No other transitions are allowed.
 
 Invalid transitions must raise errors.
 
-------------------------------------------------------------------------
-
 ## 4. Wrapper Semantics
 
 If a wrapper is configured, it must contain `{}`:
@@ -73,8 +65,6 @@ If `{}` is missing, fallback to:
     wrapper + " " + cmd
 
 Wrapper logic must remain deterministic and side-effect free.
-
-------------------------------------------------------------------------
 
 # Architecture
 
@@ -88,8 +78,6 @@ Wrapper logic must remain deterministic and side-effect free.
 The server owns truth.\
 All clients are projections.
 
-------------------------------------------------------------------------
-
 ## Execution Engine
 
 -   `run/` --- dependency resolution + shell execution
@@ -97,15 +85,11 @@ All clients are projections.
 Execution never mutates graph state directly.\
 It must enqueue mutations.
 
-------------------------------------------------------------------------
-
 ## Tkinter GUI
 
 -   `gui/state.py` --- canonical UI state
 -   `gui/canvas.py` --- rendering
 -   `gui/core.py` --- bootstrap
-
-------------------------------------------------------------------------
 
 ## Web Frontend
 
@@ -116,8 +100,6 @@ It must enqueue mutations.
     ./build-frontend.sh
 
 The web UI is a real-time projection of server state via Socket.IO.
-
-------------------------------------------------------------------------
 
 # Development Discipline
 
@@ -132,8 +114,6 @@ If frontend changes were made:
     ./build-frontend.sh
 
 Never commit broken type checks or lint errors.
-
-------------------------------------------------------------------------
 
 # Guiding Principle
 
