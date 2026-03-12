@@ -4,6 +4,8 @@ import os
 import signal
 import json
 import re
+import subprocess
+import sys
 from flask import current_app, request, g, jsonify, send_from_directory
 from workforce import edit
 import networkx as nx
@@ -71,6 +73,24 @@ def _kill_nodes_for_run(ctx, run_id: str) -> dict:
         ctx.active_node_run.pop(node_id, None)
 
     return {"killed": killed, "errors": errors, "stopped_nodes": running_nodes}
+
+
+def _spawn_runner_for_workspace(workspace_id: str, nodes: list[str] | None, wrapper: str) -> list[str]:
+    """Spawn a detached runner process that connects back to this server."""
+    workspace_url = f"{request.host_url.rstrip('/')}/workspace/{workspace_id}"
+    cmd = [sys.executable, "-m", "workforce", "run", workspace_url, "--wrapper", wrapper]
+    if nodes:
+        cmd.extend(["--nodes", *nodes])
+
+    env = os.environ.copy()
+    subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=os.getcwd(),
+        env=env,
+    )
+    return cmd
 
 
 def register_routes(app):
@@ -551,6 +571,27 @@ def register_routes(app):
 
             socketio_sid = data.get("socketio_sid")
             selected_nodes = data.get("nodes")
+
+            # External API call (e.g. curl/web client) should spawn a runner process.
+            # Runner clients always provide socketio_sid and should continue with normal run registration.
+            if not socketio_sid:
+                try:
+                    G = edit.load_graph(ctx.workfile_path)
+                    wrapper = data.get("wrapper") or G.graph.get("wrapper", "{}")
+                except Exception:
+                    wrapper = data.get("wrapper") or "{}"
+                spawn_cmd = _spawn_runner_for_workspace(
+                    workspace_id=workspace_id,
+                    nodes=selected_nodes,
+                    wrapper=wrapper,
+                )
+                log.info("Spawned runner process for workspace %s: %s", workspace_id, spawn_cmd)
+                return jsonify(
+                    {
+                        "status": "runner_spawned",
+                        "workspace_id": workspace_id,
+                    }
+                ), 202
 
             # create run id and register
             run_id = str(uuid.uuid4())
