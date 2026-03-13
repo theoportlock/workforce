@@ -597,6 +597,9 @@ def register_routes(app):
             run_id = str(uuid.uuid4())
             ctx.add_runner_client(run_id, socketio_sid)
             G = edit.load_graph(ctx.workfile_path)
+            resolved_wrapper = data.get("wrapper")
+            if resolved_wrapper is None:
+                resolved_wrapper = G.graph.get("wrapper", "{}")
 
             # Blocking cycle prevention (only consider blocking edges)
             if selected_nodes:
@@ -680,7 +683,7 @@ def register_routes(app):
 
             if not nodes_to_start:
                 log.warning("No nodes to start the run.")
-                return jsonify({"status": "no nodes to start", "run_id": run_id}), 200
+                return jsonify({"status": "no nodes to start", "run_id": run_id, "wrapper": resolved_wrapper}), 200
 
             log.info("Queuing initial nodes for run %s: %s", run_id, nodes_to_start)
             for node_id in nodes_to_start:
@@ -691,7 +694,7 @@ def register_routes(app):
                 ctx.enqueue_status(ctx.workfile_path, "node", node_id, "run", run_id)
 
             return jsonify(
-                {"status": "started", "run_id": run_id, "client_id": run_id}
+                {"status": "started", "run_id": run_id, "client_id": run_id, "wrapper": resolved_wrapper}
             ), 202
         except Exception as e:
             log.exception("Error in /run endpoint")

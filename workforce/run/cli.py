@@ -2,7 +2,7 @@ from workforce import utils
 from .client import Runner
 
 
-def main(url_or_path, nodes=None, wrapper="{}", server_url: str | None = None):
+def main(url_or_path, nodes=None, wrapper: str | None = None, server_url: str | None = None):
 	"""
 	CLI entry point for the runner.
 	Accepts either a URL or a filesystem path and resolves it to a workspace URL.

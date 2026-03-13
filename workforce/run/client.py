@@ -8,7 +8,7 @@ from workforce import utils
 log = logging.getLogger(__name__)
 
 class Runner:
-	def __init__(self, base_url: str, workspace_id: str, workfile_path: str, wrapper: str = "{}"):
+	def __init__(self, base_url: str, workspace_id: str, workfile_path: str, wrapper: str | None = None):
 		self.base_url = base_url
 		self.workspace_id = workspace_id
 		self.workfile_path = workfile_path
@@ -110,10 +110,12 @@ class Runner:
 		try:
 			self.set_node_status(node_id, "running")
 
-			if "{}" in self.wrapper:
-				command = self.wrapper.replace("{}", utils.shell_quote_multiline(label))
+			wrapper = self.wrapper if self.wrapper is not None else "{}"
+
+			if "{}" in wrapper:
+				command = wrapper.replace("{}", utils.shell_quote_multiline(label))
 			else:
-				command = f"{self.wrapper} {utils.shell_quote_multiline(label)}"
+				command = f"{wrapper} {utils.shell_quote_multiline(label)}"
 
 			if not command.strip():
 				log.info(f"--> Empty command for {node_id}, marking done.")
@@ -175,6 +177,7 @@ class Runner:
 				"nodes": initial_nodes or [],
 				"socketio_sid": getattr(self.sio, "sid", None),
 				"workfile_path": self.workfile_path,
+				"wrapper": self.wrapper,
 			}
 			try:
 				endpoint = "/run"
@@ -186,6 +189,10 @@ class Runner:
 					self._registered_with_server = True
 				else:
 					log.warning(f"No run_id in response: {run_response}")
+
+				if self.wrapper is None:
+					server_wrapper = run_response.get("wrapper") if isinstance(run_response, dict) else None
+					self.wrapper = str(server_wrapper) if server_wrapper is not None else "{}"
 			except Exception as e:
 				log.error(f"Failed to POST /run after connecting: {e}")
 				self.sio.disconnect()

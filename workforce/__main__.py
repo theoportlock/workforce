@@ -247,8 +247,11 @@ def _main_impl():
     run_p.add_argument("--nodes", nargs="*", help="Specific node IDs to run.")
     run_p.add_argument(
         "--wrapper",
-        default="{}",
-        help="Command wrapper, use {} as placeholder for the command.",
+        default=None,
+        help=(
+            "Command wrapper override; defaults to workfile graph wrapper "
+            "when omitted."
+        ),
     )
     run_p.add_argument(
         "--server-url",
