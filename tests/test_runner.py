@@ -299,6 +299,59 @@ def test_runner_wrapper_substitution():
         assert "bash -c" in call_args[0][0]
 
 
+def test_runner_uses_graph_wrapper_when_cli_wrapper_not_provided():
+    """Runner uses server-provided graph wrapper when no CLI override is provided."""
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml", wrapper=None)
+    runner.set_node_status = MagicMock()
+    runner.send_node_log = MagicMock()
+
+    with patch("workforce.run.client.utils._post") as mock_post, patch("workforce.run.client.subprocess.Popen") as mock_popen:
+        mock_post.return_value = {"run_id": "run-1", "wrapper": "bash -c \"sleep 1; {}\""}
+        runner.sio = MagicMock()
+        runner.sio.sid = "sid-1"
+        runner.sio.connect = MagicMock()
+        runner.sio.wait = MagicMock()
+
+        runner.start(initial_nodes=[])
+        assert runner.wrapper == "bash -c \"sleep 1; {}\""
+
+        process_mock = MagicMock()
+        process_mock.communicate.return_value = ("", "")
+        process_mock.returncode = 0
+        mock_popen.return_value = process_mock
+
+        runner.execute_node("node1", "echo test")
+        executed_command = mock_popen.call_args[0][0]
+        assert "sleep 1" in executed_command
+
+
+def test_runner_prefers_cli_wrapper_over_graph_wrapper():
+    """Explicit CLI wrapper should be used over wrapper returned by server."""
+    runner = Runner("http://fake-server", workspace_id="ws_test", workfile_path="/tmp/test.graphml", wrapper="python -c {}")
+    runner.set_node_status = MagicMock()
+    runner.send_node_log = MagicMock()
+
+    with patch("workforce.run.client.utils._post") as mock_post, patch("workforce.run.client.subprocess.Popen") as mock_popen:
+        mock_post.return_value = {"run_id": "run-1", "wrapper": "bash -c {}"}
+        runner.sio = MagicMock()
+        runner.sio.sid = "sid-1"
+        runner.sio.connect = MagicMock()
+        runner.sio.wait = MagicMock()
+
+        runner.start(initial_nodes=[])
+        assert runner.wrapper == "python -c {}"
+
+        process_mock = MagicMock()
+        process_mock.communicate.return_value = ("", "")
+        process_mock.returncode = 0
+        mock_popen.return_value = process_mock
+
+        runner.execute_node("node1", "echo test")
+
+        executed_command = mock_popen.call_args[0][0]
+        assert executed_command.startswith("python -c")
+
+
 # =======================
 # Integration Tests: Scheduler Flow
 # =======================
