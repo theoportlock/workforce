@@ -41,7 +41,7 @@ dependencies = [
 "Homepage" = "https://github.com/theoportlock/workforce"
 
 [project.scripts]
-wf = "workforce.__main__:main"
+workforce = "workforce.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
