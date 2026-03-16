@@ -48,6 +48,20 @@ def print_version():
     print(f"Python {sys.version}")
 
 
+def _maybe_rewrite_bare_target_to_run(
+    argv: list[str], known_commands: set[str]
+) -> list[str]:
+    """Treat a bare first positional argument as a `run` target."""
+    if len(argv) <= 1:
+        return argv
+    first_arg = argv[1]
+    if first_arg.startswith("-"):
+        return argv
+    if first_arg in known_commands:
+        return argv
+    return [argv[0], "run", *argv[1:]]
+
+
 def main():
     # If running as frozen executable, wrap everything in error handling
     is_frozen = getattr(sys, "frozen", False)
@@ -92,6 +106,9 @@ def _main_impl():
         # to avoid subprocess issues.
         gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=(not is_frozen))
         return
+
+    known_commands = {"gui", "web", "run", "server", "edit"}
+    sys.argv = _maybe_rewrite_bare_target_to_run(sys.argv, known_commands)
 
     parser = argparse.ArgumentParser(
         prog="workforce",
