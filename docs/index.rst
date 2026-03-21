@@ -10,6 +10,7 @@ Welcome to workforce's documentation!
    tutorial
    usage
    architecture
+   codebase_diagram
    api
    glossary
    contributing
