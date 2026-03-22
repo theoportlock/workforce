@@ -56,7 +56,7 @@ def _setup_logging(log_dir: str | None = None):
     root.setLevel(logging.INFO)
 
     # Avoid duplicate handlers if re-imported
-    existing_paths = [getattr(h, 'baseFilename', None) for h in root.handlers]
+    existing_paths = [getattr(h, "baseFilename", None) for h in root.handlers]
     if log_path not in existing_paths:
         root.addHandler(handler)
 
@@ -90,11 +90,11 @@ def _pid_alive(pid: int) -> bool:
 
 def _acquire_lock() -> bool:
     """Acquire start lock to avoid racing starts. Returns True if lock acquired.
-    
+
     Cleans up stale lock files older than 30 seconds before attempting to acquire.
     """
     path = _lock_file()
-    
+
     # Clean up stale lock file (older than 30 seconds)
     if os.path.exists(path):
         try:
@@ -103,7 +103,7 @@ def _acquire_lock() -> bool:
                 os.remove(path)
         except (OSError, IOError):
             pass
-    
+
     try:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         os.close(fd)
@@ -124,18 +124,23 @@ def get_app():
     global _app, _socketio
     if _app is None:
         _app = Flask(__name__)
-        _socketio = SocketIO(_app, cors_allowed_origins="*", async_mode="threading", 
-                            ping_interval=30, ping_timeout=90)
-        
+        _socketio = SocketIO(
+            _app,
+            cors_allowed_origins="*",
+            async_mode="threading",
+            ping_interval=30,
+            ping_timeout=90,
+        )
+
         # Clean up old caches to prevent unbounded disk growth
         _cycle_workspace_caches()
-        
+
         # Register route handlers with the shared app
         server_routes.register_routes(_app)
-        
+
         # Register socket handlers
         server_sockets.register_socket_handlers(_socketio)
-    
+
     return _app, _socketio
 
 
@@ -147,18 +152,18 @@ def get_bind_info() -> tuple[str | None, int | None]:
 def get_or_create_context(workspace_id: str, workfile_path: str) -> ServerContext:
     """Get existing context or create a new one for the workspace."""
     global _contexts, _socketio
-    
+
     with _contexts_lock:
         if workspace_id in _contexts:
             return _contexts[workspace_id]
-        
+
         # Create new context
         cache_dir = platformdirs.user_cache_dir("workforce")
         workspace_cache_dir = os.path.join(cache_dir, workspace_id)
         os.makedirs(workspace_cache_dir, exist_ok=True)
-        
+
         _, _socketio = get_app()
-        
+
         ctx = ServerContext(
             workspace_id=workspace_id,
             workfile_path=workfile_path,
@@ -167,63 +172,65 @@ def get_or_create_context(workspace_id: str, workfile_path: str) -> ServerContex
             socketio=_socketio,
         )
         _contexts[workspace_id] = ctx
-        log.info(f"Created workspace context: {workspace_id} for {workfile_path} (clients: {ctx.client_count})")
-    
+        log.info(
+            f"Created workspace context: {workspace_id} for {workfile_path} (clients: {ctx.client_count})"
+        )
+
     # Register handlers and start worker AFTER releasing lock to avoid deadlock
     # Register event handlers for this workspace
     server_sockets.register_event_handlers(ctx)
-    
+
     # Start the worker thread for this context
     start_graph_worker(ctx)
-    
+
     return ctx
 
 
 def destroy_context(workspace_id: str):
     """Destroy and cleanup a workspace context.
-    
+
     Worker thread is not explicitly stopped - it will exit with the server process.
     """
     global _contexts
-    
+
     # Get context but DON'T remove from registry yet
     with _contexts_lock:
         if workspace_id not in _contexts:
             return
         ctx = _contexts[workspace_id]
-    
+
     # Clear EventBus subscriptions to prevent lingering references
-    if hasattr(ctx, 'events') and ctx.events:
+    if hasattr(ctx, "events") and ctx.events:
         # EventBus will be garbage collected, but explicitly clear subscriptions
         ctx.events._subscribers.clear()
         log.debug(f"Cleared EventBus subscriptions for {workspace_id}")
-    
+
     # Clear run tracking
     ctx.active_runs.clear()
     ctx.active_node_run.clear()
-    
+
     # Remove from registry
     with _contexts_lock:
         _contexts.pop(workspace_id, None)
-    
+
     # Clean up workspace cache to prevent unbounded disk growth
     _clean_workspace_cache(workspace_id)
-    
+
     log.info(f"Destroyed workspace context: {workspace_id}")
 
 
 def _stop_nodes_for_workspace(workspace_id: str) -> dict:
     """Kill running processes for a workspace. Used by manual stop_server().
-    
+
     Returns:
         dict with keys: killed (count), errors (list), stopped_nodes (list)
     """
     from workforce import edit
-    
+
     ctx = get_context(workspace_id)
     if not ctx:
         return {"killed": 0, "errors": [], "stopped_nodes": []}
-    
+
     try:
         G = edit.load_graph(ctx.workfile_path)
         running_nodes = []
@@ -272,7 +279,7 @@ def _clean_workspace_cache(workspace_id: str):
 
 def _cycle_workspace_caches(max_cache_size_mb: int = 500, max_age_days: int = 7):
     """Clean old or excess workspace caches to prevent unbounded disk growth.
-    
+
     Removes:
     - Individual workspace caches older than max_age_days
     - Workspace caches when total size exceeds max_cache_size_mb (removes oldest first)
@@ -280,18 +287,18 @@ def _cycle_workspace_caches(max_cache_size_mb: int = 500, max_age_days: int = 7)
     root = _cache_root()
     if not os.path.exists(root):
         return  # No cache to clean yet
-    
+
     try:
         entries = []
         total_size = 0
         current_time = time.time()
-        
+
         # Collect cache entries with size and mtime
         for entry in os.listdir(root):
             full_path = os.path.join(root, entry)
             if not os.path.isdir(full_path):
                 continue
-            
+
             try:
                 # Get directory size
                 size = sum(
@@ -301,28 +308,32 @@ def _cycle_workspace_caches(max_cache_size_mb: int = 500, max_age_days: int = 7)
                 )
                 mtime = os.path.getmtime(full_path)
                 age_days = (current_time - mtime) / (24 * 3600)
-                
-                entries.append({
-                    "name": entry,
-                    "path": full_path,
-                    "size": size,
-                    "mtime": mtime,
-                    "age_days": age_days
-                })
+
+                entries.append(
+                    {
+                        "name": entry,
+                        "path": full_path,
+                        "size": size,
+                        "mtime": mtime,
+                        "age_days": age_days,
+                    }
+                )
                 total_size += size
             except OSError:
                 pass
-        
+
         # Remove caches older than max_age_days
         for entry in entries:
             if entry["age_days"] > max_age_days:
                 try:
                     shutil.rmtree(entry["path"], ignore_errors=True)
-                    log.info(f"Removed old cache {entry['name']} (age: {entry['age_days']:.1f} days)")
+                    log.info(
+                        f"Removed old cache {entry['name']} (age: {entry['age_days']:.1f} days)"
+                    )
                     total_size -= entry["size"]
                 except Exception as e:
                     log.warning(f"Failed to remove old cache {entry['name']}: {e}")
-        
+
         # If still over size limit, remove oldest caches
         max_size_bytes = max_cache_size_mb * 1024 * 1024
         if total_size > max_size_bytes:
@@ -333,7 +344,9 @@ def _cycle_workspace_caches(max_cache_size_mb: int = 500, max_age_days: int = 7)
                     break
                 try:
                     shutil.rmtree(entry["path"], ignore_errors=True)
-                    log.info(f"Removed cache {entry['name']} to stay under size limit ({entry['size'] / 1024 / 1024:.1f} MB)")
+                    log.info(
+                        f"Removed cache {entry['name']} to stay under size limit ({entry['size'] / 1024 / 1024:.1f} MB)"
+                    )
                     total_size -= entry["size"]
                 except Exception as e:
                     log.warning(f"Failed to remove cache {entry['name']}: {e}")
@@ -362,6 +375,7 @@ def get_context(workspace_id: str) -> ServerContext | None:
 def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
     """Check if a port is already in use on any interface."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind((host, port))
             return False  # Port is free
@@ -378,15 +392,21 @@ def _is_compatible_server(host: str, port: int) -> bool:
                 return False
             # Basic schema check
             import json
+
             data = json.loads(resp.read().decode("utf-8"))
             return "workspaces" in data
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError):
         return False
 
 
-def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5049, log_dir: str | None = None):
+def start_server(
+    background: bool = True,
+    host: str = "127.0.0.1",
+    port: int = 5049,
+    log_dir: str | None = None,
+):
     """Start the single machine-wide server with explicit host/port.
-    
+
     Environment variable precedence:
     - Server binds to WORKFORCE_HOST (if set) or host parameter
     - Server binds to WORKFORCE_PORT (if set) or port parameter
@@ -397,7 +417,7 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     log_dir = log_dir or os.environ.get("WORKFORCE_LOG_DIR")
     skip_lock = os.environ.get("WORKFORCE_SKIP_LOCK", "0") in ("1", "true", "True")
     pid_info = _read_pid_file()
-    
+
     # If PID file exists and process is NOT alive, clean it up
     if pid_info and not _pid_alive(pid_info[2]):
         try:
@@ -410,7 +430,9 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
     if pid_info and _pid_alive(pid_info[2]):
         existing_host, existing_port, existing_pid = pid_info
         if _is_compatible_server(existing_host, existing_port):
-            print(f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})")
+            print(
+                f"Server already running on http://{existing_host}:{existing_port} (pid {existing_pid})"
+            )
             return
         try:
             os.remove(_pid_file())
@@ -420,7 +442,9 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
 
     lock_acquired = True if skip_lock else _acquire_lock()
     if not lock_acquired:
-        raise RuntimeError("Another server start is in progress or server already running")
+        raise RuntimeError(
+            "Another server start is in progress or server already running"
+        )
 
     # Only setup logging in foreground mode to avoid concurrent file access
     if not background:
@@ -431,7 +455,7 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         check_url = os.environ.get("WORKFORCE_URL")
         if not check_url:
             check_url = f"http://{host}:{port}"
-        
+
         try:
             with urllib.request.urlopen(f"{check_url}/workspaces", timeout=2) as resp:
                 if resp.status == 200:
@@ -457,22 +481,40 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
             env["WORKFORCE_LOG_DIR"] = log_dir
 
         import workforce
-        package_root = os.path.dirname(os.path.dirname(os.path.abspath(workforce.__file__)))
-        pythonpath = env.get('PYTHONPATH', '')
-        if package_root not in pythonpath.split(os.pathsep):
-            env['PYTHONPATH'] = f"{package_root}{os.pathsep}{pythonpath}" if pythonpath else package_root
 
-        cmd = [sys.executable, "-m", "workforce", "server", "start", "--foreground", "--host", host, "--port", str(port)]
+        package_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(workforce.__file__))
+        )
+        pythonpath = env.get("PYTHONPATH", "")
+        if package_root not in pythonpath.split(os.pathsep):
+            env["PYTHONPATH"] = (
+                f"{package_root}{os.pathsep}{pythonpath}"
+                if pythonpath
+                else package_root
+            )
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "workforce",
+            "server",
+            "start",
+            "--foreground",
+            "--host",
+            host,
+            "--port",
+            str(port),
+        ]
         if log_dir:
             cmd += ["--log-dir", log_dir]
 
         print(f"Starting background server: {' '.join(cmd)}")
-        
+
         # On Windows, detach subprocess from parent console to avoid signal propagation
         creation_flags = 0
         if sys.platform == "win32":
             creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
-        
+
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -487,10 +529,12 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
         server_url = f"http://{host}:{port}"
         start_time = time.time()
         timeout = 10
-        
+
         while time.time() - start_time < timeout:
             try:
-                with urllib.request.urlopen(f"{server_url}/workspaces", timeout=1) as resp:
+                with urllib.request.urlopen(
+                    f"{server_url}/workspaces", timeout=1
+                ) as resp:
                     if resp.status == 200:
                         print(f"Server is ready")
                         _release_lock()
@@ -499,10 +543,12 @@ def start_server(background: bool = True, host: str = "127.0.0.1", port: int = 5
                 # Server not ready yet, continue waiting
                 pass
             time.sleep(0.2)
-        
+
         # Timeout waiting for server to start
         _release_lock()
-        raise RuntimeError(f"Background server failed to start within {timeout} seconds")
+        raise RuntimeError(
+            f"Background server failed to start within {timeout} seconds"
+        )
 
     # Foreground server
     app, socketio = get_app()
@@ -548,7 +594,12 @@ def stop_server():
 
     try:
         if sys.platform == "win32":
-            subprocess.run(["taskkill", "/PID", str(pid)], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["taskkill", "/PID", str(pid)],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         else:
             os.kill(pid, signal.SIGTERM)
         log.info(f"Sent termination signal to server pid {pid}")
@@ -576,7 +627,7 @@ def stop_server():
 
 def list_servers(server_url: str | None = None):
     """List active workspace contexts with connection URLs.
-    
+
     When server_url is provided, query that endpoint directly (no PID checks).
     Otherwise, use PID file discovery; if no server is running, print guidance.
     """
@@ -585,7 +636,7 @@ def list_servers(server_url: str | None = None):
         pid = 0
     else:
         pid_info = _read_pid_file()
-        
+
         # Try PID file first
         if pid_info and _pid_alive(pid_info[2]):
             host, port, pid = pid_info
@@ -597,7 +648,7 @@ def list_servers(server_url: str | None = None):
                     os.remove(_pid_file())
                 except OSError:
                     pass
-            
+
             # No server running on default port - offer to start one
             print("Server is not running.")
             print("Start the server with: wf server start")
@@ -620,7 +671,11 @@ def list_servers(server_url: str | None = None):
             else:
                 bind_host = server_info.get("host") or host
                 bind_port = int(server_info.get("port") or port)
-                lan_enabled = bool(server_info.get("lan_enabled", bind_host not in ("127.0.0.1", "localhost")))
+                lan_enabled = bool(
+                    server_info.get(
+                        "lan_enabled", bind_host not in ("127.0.0.1", "localhost")
+                    )
+                )
 
                 local_ips = []
                 try:
@@ -628,12 +683,16 @@ def list_servers(server_url: str | None = None):
                     s.connect(("8.8.8.8", 80))
                     ip = s.getsockname()[0]
                     s.close()
-                    if ip != '127.0.0.1' and not ip.startswith('127.'):
+                    if ip != "127.0.0.1" and not ip.startswith("127."):
                         local_ips.append(ip)
                 except:
                     pass
 
-                bound_to_all = lan_enabled or bind_host in ("0.0.0.0", "::", "0:0:0:0:0:0:0:0")
+                bound_to_all = lan_enabled or bind_host in (
+                    "0.0.0.0",
+                    "::",
+                    "0:0:0:0:0:0:0:0",
+                )
 
             print("=" * 80)
             if pid > 0:
@@ -652,8 +711,12 @@ def list_servers(server_url: str | None = None):
             else:
                 print(f"\n📍 Access URL: http://{host}:{bind_port}")
                 if not bound_to_all:
-                    print("   ⚠️  Server bound to localhost only (not accessible from LAN)")
-                    print(f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0")
+                    print(
+                        "   ⚠️  Server bound to localhost only (not accessible from LAN)"
+                    )
+                    print(
+                        f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0"
+                    )
 
             if not workspaces:
                 print("\n📂 No active workspaces")
@@ -664,20 +727,24 @@ def list_servers(server_url: str | None = None):
             print("-" * 80)
 
             for ws in workspaces:
-                ws_id = ws['workspace_id']
-                ws_path = ws['workfile_path']
-                clients = ws.get('clients', {}) or {}
-                client_count = clients.get('gui', 0) + clients.get('runner', 0)
+                ws_id = ws["workspace_id"]
+                ws_path = ws["workfile_path"]
+                clients = ws.get("clients", {}) or {}
+                client_count = clients.get("gui", 0) + clients.get("runner", 0)
 
                 print(f"\n  Workspace: {ws_id}")
                 print(f"  File:      {ws_path}")
-                print(f"  Clients:   {client_count} (GUI: {clients.get('gui', 0)}, Runner: {clients.get('runner', 0)})")
+                print(
+                    f"  Clients:   {client_count} (GUI: {clients.get('gui', 0)}, Runner: {clients.get('runner', 0)})"
+                )
 
                 if server_url:
                     print(f"  URL:       {base_url}/workspace/{ws_id}")
                 elif bound_to_all and local_ips:
                     print("  URLs:")
-                    print(f"    Local:   http://127.0.0.1:{bind_port}/workspace/{ws_id}")
+                    print(
+                        f"    Local:   http://127.0.0.1:{bind_port}/workspace/{ws_id}"
+                    )
                     for ip in local_ips:
                         print(f"    LAN:     http://{ip}:{bind_port}/workspace/{ws_id}")
                 else:
@@ -685,10 +752,16 @@ def list_servers(server_url: str | None = None):
 
                 # Fetch detailed client IDs for this workspace
                 try:
-                    with urllib.request.urlopen(f"{base_url}/workspace/{ws_id}/clients", timeout=2) as client_resp:
+                    with urllib.request.urlopen(
+                        f"{base_url}/workspace/{ws_id}/clients", timeout=2
+                    ) as client_resp:
                         client_data = json.loads(client_resp.read().decode("utf-8"))
-                        gui_clients = [c.get("client_id") for c in client_data.get("gui", [])]
-                        runner_clients = [c.get("client_id") for c in client_data.get("runner", [])]
+                        gui_clients = [
+                            c.get("client_id") for c in client_data.get("gui", [])
+                        ]
+                        runner_clients = [
+                            c.get("client_id") for c in client_data.get("runner", [])
+                        ]
                         if gui_clients:
                             print(f"  GUI Clients:    {', '.join(gui_clients)}")
                         if runner_clients:
@@ -705,18 +778,20 @@ def list_servers(server_url: str | None = None):
 # CLI shims
 def cmd_start(args):
     # Default to background mode, unless --foreground is specified
-    foreground = getattr(args, 'foreground', False)
-    host = getattr(args, 'host', '127.0.0.1')
-    port = getattr(args, 'port', 5000)
-    log_dir = getattr(args, 'log_dir', None)
+    foreground = getattr(args, "foreground", False)
+    host = getattr(args, "host", "127.0.0.1")
+    port = getattr(args, "port", 5000)
+    log_dir = getattr(args, "log_dir", None)
     try:
         start_server(background=not foreground, host=host, port=port, log_dir=log_dir)
     except KeyboardInterrupt:
         # User interrupted or Windows file operation interrupted - server may have started
         pass
 
+
 def cmd_stop(args):
     stop_server()
 
+
 def cmd_list(args):
-    list_servers(server_url=getattr(args, 'server_url', None))
+    list_servers(server_url=getattr(args, "server_url", None))
