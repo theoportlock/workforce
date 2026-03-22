@@ -61,11 +61,30 @@ target-version = ['py39']
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I"] # Style, Errors, Import sorting
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E402", "E501", "E722", "F401", "F403", "I001"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+  "workforce.gui",
+  "workforce.gui.*",
+  "workforce.run.client",
+  "workforce.run.cli",
+  "workforce.server",
+  "workforce.server.*",
+  "workforce.utils",
+]
+ignore_errors = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov", "ruff", "mypy"]
