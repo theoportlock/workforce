@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -601,27 +601,28 @@ function AppContent() {
     ];
   }, [contextMenu, edges, nodes, selectedNodeId, setEdges, setNodes]);
 
-  const popupStyle = {
-    position: 'absolute' as const,
+  const panelStyle: CSSProperties = {
+    position: 'absolute',
     top: 16,
     right: 16,
-    width: 360,
-    maxWidth: 'calc(100% - 32px)',
-    maxHeight: 'calc(100% - 32px)',
+    width: 'min(420px, calc(100vw - 32px))',
+    maxHeight: 'calc(100vh - 84px)',
     display: 'grid',
     gridTemplateRows: 'auto auto 1fr',
-    gap: 12,
-    padding: 14,
+    gap: 16,
+    padding: 16,
     color: '#e2e8f0',
-    background: '#020617',
+    background: 'rgba(2, 6, 23, 0.96)',
     border: '1px solid #1e293b',
-    borderRadius: 10,
-    boxShadow: '0 16px 40px rgba(2, 6, 23, 0.45)',
+    borderRadius: 12,
+    boxShadow: '0 20px 45px rgba(15, 23, 42, 0.55)',
+    backdropFilter: 'blur(10px)',
+    overflow: 'hidden',
     zIndex: 10
   };
 
   return (
-    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
+    <div style={{ height: '100vh', margin: 0, background: '#020617', overflow: 'hidden' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
@@ -643,7 +644,7 @@ function AppContent() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ position: 'relative' }}>
+      <main style={{ position: 'relative', height: 'calc(100vh - 52px)' }}>
         <section style={{ height: '100%' }}>
           <ReactFlow
             nodes={nodes}
@@ -676,10 +677,25 @@ function AppContent() {
         </section>
 
         {selectedNode && (
-          <aside style={popupStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <strong>{selectedNode.data.label || selectedNode.id}</strong>
-              <button onClick={() => setSelectedNodeId(undefined)}>Close</button>
+          <aside style={panelStyle}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#38bdf8' }}>Selected node</div>
+                <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{selectedNode.data.label || selectedNode.id}</div>
+              </div>
+              <button
+                onClick={() => setSelectedNodeId(undefined)}
+                style={{
+                  border: '1px solid #334155',
+                  background: '#0f172a',
+                  color: '#e2e8f0',
+                  borderRadius: 8,
+                  padding: '6px 10px',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
             </div>
 
             <NodeInspector
