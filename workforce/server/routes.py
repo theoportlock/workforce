@@ -7,9 +7,11 @@ import re
 import subprocess
 import sys
 from flask import current_app, request, g, jsonify, send_from_directory
+from urllib.parse import quote
 from workforce import edit
 import networkx as nx
 from workforce.web import frontend_file
+from workforce.gui.recent import RecentFileManager
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +126,77 @@ def register_routes(app):
         else:
             g.workspace_id = None
             g.ctx = None
+
+    @app.route("/", methods=["GET"])
+    def server_home():
+        """Render a lightweight landing page with recently opened workspace links."""
+        recent_manager = RecentFileManager()
+        recent_files = recent_manager.get_list()
+        recent_remotes = recent_manager.get_remote_list()
+        host_root = request.host_url.rstrip("/")
+
+        local_items = []
+        for file_path in recent_files:
+            abs_path = os.path.abspath(file_path)
+            workspace_id = compute_workspace_id(abs_path)
+            workspace_url = f"{host_root}/workspace/{workspace_id}?workfile_path={quote(abs_path, safe='')}"
+            local_items.append(
+                {
+                    "path": abs_path,
+                    "workspace_id": workspace_id,
+                    "url": workspace_url,
+                }
+            )
+
+        remote_items = [entry for entry in recent_remotes if entry.get("url")]
+
+        def render_local_item(item):
+            return (
+                "<li>"
+                f'<div><a href="{item["url"]}">{item["url"]}</a></div>'
+                f"<div><code>{item['path']}</code></div>"
+                f"<div>Workspace ID: <code>{item['workspace_id']}</code></div>"
+                "</li>"
+            )
+
+        def render_remote_item(item):
+            label = item.get("label") or item.get("workspace_id") or item["url"]
+            workspace_id = item.get("workspace_id") or "unknown"
+            return (
+                "<li>"
+                f'<div><a href="{item["url"]}">{item["url"]}</a></div>'
+                f"<div>Label: <code>{label}</code></div>"
+                f"<div>Workspace ID: <code>{workspace_id}</code></div>"
+                "</li>"
+            )
+
+        local_list_html = "".join(render_local_item(item) for item in local_items) or "<li>No recent local workfiles found.</li>"
+        remote_list_html = "".join(render_remote_item(item) for item in remote_items) or "<li>No recent remote workspaces found.</li>"
+
+        html = f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Workforce Server</title>
+    <style>
+      body {{ font-family: sans-serif; margin: 2rem auto; max-width: 960px; line-height: 1.5; padding: 0 1rem; }}
+      code {{ background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 4px; }}
+      ul {{ padding-left: 1.25rem; }}
+      li {{ margin-bottom: 1rem; }}
+      .muted {{ color: #4b5563; }}
+    </style>
+  </head>
+  <body>
+    <h1>Workforce Server</h1>
+    <p class="muted">Recently opened workfiles are linked below. Visiting a local workfile URL will register its workspace if needed, then open the web UI.</p>
+    <p><a href="/workspaces">View active workspaces JSON</a></p>
+    <h2>Recent local workfiles</h2>
+    <ul>{local_list_html}</ul>
+    <h2>Recent remote workspaces</h2>
+    <ul>{remote_list_html}</ul>
+  </body>
+</html>"""
+        return current_app.response_class(html, mimetype="text/html")
 
     @app.route("/workspaces", methods=["GET"])
     def list_workspaces():
@@ -861,13 +934,31 @@ def register_routes(app):
 
         ctx = g.ctx or get_context(workspace_id)
         if not ctx:
-            return jsonify(
-                {
-                    "error": "Workspace not found",
-                    "workspace_id": workspace_id,
-                    "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
-                }
-            ), 404
+            workfile_path = request.args.get("workfile_path")
+            if workfile_path:
+                abs_path = os.path.abspath(workfile_path)
+                expected_workspace_id = compute_workspace_id(abs_path)
+                if expected_workspace_id != workspace_id:
+                    return jsonify(
+                        {
+                            "error": "Workspace ID does not match workfile_path",
+                            "workspace_id": workspace_id,
+                            "expected_workspace_id": expected_workspace_id,
+                        }
+                    ), 400
+                try:
+                    edit.load_graph(abs_path)
+                except Exception as e:
+                    return jsonify({"error": f"Failed to load graph: {e}"}), 500
+                ctx = get_or_create_context(workspace_id, abs_path)
+            else:
+                return jsonify(
+                    {
+                        "error": "Workspace not found",
+                        "workspace_id": workspace_id,
+                        "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+                    }
+                ), 404
 
         html_path = frontend_file("index.html")
         with open(html_path, "r", encoding="utf-8") as f:
@@ -937,13 +1028,31 @@ def register_routes(app):
 
         ctx = g.ctx or get_context(workspace_id)
         if not ctx:
-            return jsonify(
-                {
-                    "error": "Workspace not found",
-                    "workspace_id": workspace_id,
-                    "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
-                }
-            ), 404
+            workfile_path = request.args.get("workfile_path")
+            if workfile_path:
+                abs_path = os.path.abspath(workfile_path)
+                expected_workspace_id = compute_workspace_id(abs_path)
+                if expected_workspace_id != workspace_id:
+                    return jsonify(
+                        {
+                            "error": "Workspace ID does not match workfile_path",
+                            "workspace_id": workspace_id,
+                            "expected_workspace_id": expected_workspace_id,
+                        }
+                    ), 400
+                try:
+                    edit.load_graph(abs_path)
+                except Exception as e:
+                    return jsonify({"error": f"Failed to load graph: {e}"}), 500
+                ctx = get_or_create_context(workspace_id, abs_path)
+            else:
+                return jsonify(
+                    {
+                        "error": "Workspace not found",
+                        "workspace_id": workspace_id,
+                        "hint": "Register workspace with POST /workspace/register or check GET /workspaces.",
+                    }
+                ), 404
 
         static_root = frontend_file()
         return send_from_directory(static_root, asset_path)
