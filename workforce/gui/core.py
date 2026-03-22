@@ -794,7 +794,8 @@ class WorkflowApp:
                             presets[-1]['name'] = new_name
                             pm.save(presets)
                             refresh_treeview(select_index=len(presets) - 1)
-                            edit_entry.destroy(); edit_entry = None
+                            edit_entry.destroy()
+                            edit_entry = None
                         edit_entry.bind('<Return>', commit_new)
                         edit_entry.bind('<FocusOut>', commit_new)
 
@@ -992,7 +993,6 @@ class WorkflowApp:
         # Add recent remote workspaces
         for entry in recent_remotes[:20]:
             url = entry.get('url')
-            ws_id = entry.get('workspace_id')
             label = entry.get('label')
             if not label:
                 # Derive label "hostname + workspace_id"

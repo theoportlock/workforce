@@ -515,7 +515,7 @@ def start_server(
         if sys.platform == "win32":
             creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
 
-        process = subprocess.Popen(
+        subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -536,7 +536,7 @@ def start_server(
                     f"{server_url}/workspaces", timeout=1
                 ) as resp:
                     if resp.status == 200:
-                        print(f"Server is ready")
+                        print("Server is ready")
                         _release_lock()
                         return
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
@@ -565,7 +565,7 @@ def start_server(
         socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         log.info("Server interrupted, triggering graceful shutdown...")
-        graceful_shutdown()
+        log.info("Server shutdown requested via keyboard interrupt.")
     finally:
         _release_lock()
         log.info("Server shutdown complete.")
@@ -715,7 +715,7 @@ def list_servers(server_url: str | None = None):
                         "   ⚠️  Server bound to localhost only (not accessible from LAN)"
                     )
                     print(
-                        f"   To enable LAN access: wf server stop && wf server start --host 0.0.0.0"
+                        "   To enable LAN access: wf server stop && wf server start --host 0.0.0.0"
                     )
 
             if not workspaces:
