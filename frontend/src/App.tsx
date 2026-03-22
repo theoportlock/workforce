@@ -601,8 +601,27 @@ function AppContent() {
     ];
   }, [contextMenu, edges, nodes, selectedNodeId, setEdges, setNodes]);
 
+  const popupStyle = {
+    position: 'absolute' as const,
+    top: 16,
+    right: 16,
+    width: 360,
+    maxWidth: 'calc(100% - 32px)',
+    maxHeight: 'calc(100% - 32px)',
+    display: 'grid',
+    gridTemplateRows: 'auto auto 1fr',
+    gap: 12,
+    padding: 14,
+    color: '#e2e8f0',
+    background: '#020617',
+    border: '1px solid #1e293b',
+    borderRadius: 10,
+    boxShadow: '0 16px 40px rgba(2, 6, 23, 0.45)',
+    zIndex: 10
+  };
+
   return (
-    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr 220px', background: '#020617' }}>
+    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
@@ -624,8 +643,8 @@ function AppContent() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: '1fr 320px' }}>
-        <section style={{ borderRight: '1px solid #1e293b' }}>
+      <main style={{ position: 'relative' }}>
+        <section style={{ height: '100%' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -656,10 +675,16 @@ function AppContent() {
           </ReactFlow>
         </section>
 
-        <aside style={{ padding: 14, color: '#e2e8f0' }}>
-          <NodeInspector
-            node={selectedNode}
-            onUpdate={(updates) => {
+        {selectedNode && (
+          <aside style={popupStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <strong>{selectedNode.data.label || selectedNode.id}</strong>
+              <button onClick={() => setSelectedNodeId(undefined)}>Close</button>
+            </div>
+
+            <NodeInspector
+              node={selectedNode}
+              onUpdate={(updates) => {
               if (!selectedNodeId) return;
               const previousNode = nodes.find((node) => node.id === selectedNodeId);
               setNodes((existing) =>
@@ -698,13 +723,12 @@ function AppContent() {
                 });
               }
             }}
-          />
-        </aside>
-      </main>
+            />
 
-      <section style={{ borderTop: '1px solid #1e293b', padding: '10px 14px', color: '#e2e8f0' }}>
-        <LogPanel node={selectedNode} />
-      </section>
+            <LogPanel node={selectedNode} />
+          </aside>
+        )}
+      </main>
 
       {contextMenu && <CanvasContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
     </div>
