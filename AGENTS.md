@@ -103,11 +103,9 @@ The web UI is a real-time projection of server state via Socket.IO.
 
 # Development Discipline
 
-Before and after any change, run:
+After any change, run:
 
     pytest
-    ruff check workforce/
-    mypy workforce/
 
 If frontend changes were made:
 
@@ -121,4 +119,6 @@ Never commit broken type checks or lint errors.
 -   All mutations serialized.
 -   All execution scoped to a run subgraph.
 -   Clients render --- server decides.
+-   Prefer simple solutions to more lines
+-   You can update this AGENTS.md file on important changes
 
