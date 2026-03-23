@@ -623,7 +623,7 @@ function AppContent() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: '1fr 320px' }}>
+      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeId ? '1fr 320px' : '1fr' }}>
         <section style={{ borderRight: '1px solid #1e293b' }}>
           <ReactFlow
             nodes={nodes}
@@ -655,50 +655,52 @@ function AppContent() {
           </ReactFlow>
         </section>
 
-        <aside style={{ color: '#e2e8f0' }}>
-          <RightPanel
-            node={selectedNode}
-            onUpdate={(updates) => {
-              if (!selectedNodeId) return;
-              const previousNode = nodes.find((node) => node.id === selectedNodeId);
-              setNodes((existing) =>
-                existing.map((node) =>
-                  node.id === selectedNodeId ? { ...node, data: { ...node.data, ...updates } } : node
-                )
-              );
+        {selectedNodeId && (
+          <aside style={{ color: '#e2e8f0' }}>
+            <RightPanel
+              node={selectedNode}
+              onUpdate={(updates) => {
+                if (!selectedNodeId) return;
+                const previousNode = nodes.find((node) => node.id === selectedNodeId);
+                setNodes((existing) =>
+                  existing.map((node) =>
+                    node.id === selectedNodeId ? { ...node, data: { ...node.data, ...updates } } : node
+                  )
+                );
 
-              if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
-                void bridgeCall('updateNodeLabel', { node_id: selectedNodeId, label: updates.label }).catch((error) => {
-                  if (previousNode) {
-                    setNodes((existing) =>
-                      existing.map((node) =>
-                        node.id === selectedNodeId
-                          ? { ...node, data: { ...node.data, label: previousNode.data.label } }
-                          : node
-                      )
-                    );
-                  }
-                  setStatusMessage(`Label update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-                });
-              }
+                if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
+                  void bridgeCall('updateNodeLabel', { node_id: selectedNodeId, label: updates.label }).catch((error) => {
+                    if (previousNode) {
+                      setNodes((existing) =>
+                        existing.map((node) =>
+                          node.id === selectedNodeId
+                            ? { ...node, data: { ...node.data, label: previousNode.data.label } }
+                            : node
+                        )
+                      );
+                    }
+                    setStatusMessage(`Label update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+                  });
+                }
 
-              if (Object.prototype.hasOwnProperty.call(updates, 'command')) {
-                void bridgeCall('updateNodeCommand', { node_id: selectedNodeId, command: updates.command }).catch((error) => {
-                  if (previousNode) {
-                    setNodes((existing) =>
-                      existing.map((node) =>
-                        node.id === selectedNodeId
-                          ? { ...node, data: { ...node.data, command: previousNode.data.command } }
-                          : node
-                      )
-                    );
-                  }
-                  setStatusMessage(`Command update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-                });
-              }
-            }}
-          />
-        </aside>
+                if (Object.prototype.hasOwnProperty.call(updates, 'command')) {
+                  void bridgeCall('updateNodeCommand', { node_id: selectedNodeId, command: updates.command }).catch((error) => {
+                    if (previousNode) {
+                      setNodes((existing) =>
+                        existing.map((node) =>
+                          node.id === selectedNodeId
+                            ? { ...node, data: { ...node.data, command: previousNode.data.command } }
+                            : node
+                        )
+                      );
+                    }
+                    setStatusMessage(`Command update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+                  });
+                }
+              }}
+            />
+          </aside>
+        )}
       </main>
 
       {contextMenu && <CanvasContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
