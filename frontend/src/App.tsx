@@ -13,7 +13,8 @@ import ReactFlow, {
   ReactFlowProvider,
   SelectionMode,
   useEdgesState,
-  useNodesState
+  useNodesState,
+  useOnSelectionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { adaptBackendGraph, statusColorMap } from './graph/adapters';
@@ -244,6 +245,12 @@ function AppContent() {
     () => nodes.find((node) => node.id === selectedNodeId),
     [nodes, selectedNodeId]
   );
+
+  useOnSelectionChange({
+    onChange: ({ nodes: selectedNodes }) => {
+      setSelectedNodeId(selectedNodes[0]?.id);
+    }
+  });
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -620,7 +627,7 @@ function AppContent() {
             <button onClick={() => void handleStopRuns()}>Run ▸ Stop</button>
           </div>
         </div>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Drag • Connect • Right click • Multi-select'}</span>
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
       <main style={{ display: 'grid', gridTemplateColumns: selectedNodeId ? '1fr 320px' : '1fr' }}>
@@ -637,7 +644,6 @@ function AppContent() {
             onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
-            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
             onPaneClick={() => setSelectedNodeId(undefined)}
             nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
