@@ -18,8 +18,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { adaptBackendGraph, statusColorMap } from './graph/adapters';
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
-import { NodeInspector } from './components/NodeInspector';
-import { LogPanel } from './components/LogPanel';
+import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 import { FrontendOperationQueue } from './runtime/operationQueue';
@@ -602,7 +601,7 @@ function AppContent() {
   }, [contextMenu, edges, nodes, selectedNodeId, setEdges, setNodes]);
 
   return (
-    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr 220px', background: '#020617' }}>
+    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
@@ -656,8 +655,8 @@ function AppContent() {
           </ReactFlow>
         </section>
 
-        <aside style={{ padding: 14, color: '#e2e8f0' }}>
-          <NodeInspector
+        <aside style={{ color: '#e2e8f0' }}>
+          <RightPanel
             node={selectedNode}
             onUpdate={(updates) => {
               if (!selectedNodeId) return;
@@ -701,10 +700,6 @@ function AppContent() {
           />
         </aside>
       </main>
-
-      <section style={{ borderTop: '1px solid #1e293b', padding: '10px 14px', color: '#e2e8f0' }}>
-        <LogPanel node={selectedNode} />
-      </section>
 
       {contextMenu && <CanvasContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
     </div>
