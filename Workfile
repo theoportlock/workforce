@@ -16,7 +16,7 @@
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d1">echo asdfad</data>
-      <data key="d2">1118.9084483296704</data>
+      <data key="d2">1119.4084483296704</data>
       <data key="d3">58.32465419322318</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo asdfad"</data>
@@ -28,8 +28,8 @@
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
-      <data key="d2">1405.6227340439557</data>
-      <data key="d3">16.023738442307376</data>
+      <data key="d2">1407.1227340439557</data>
+      <data key="d3">0.5237384423073763</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -222,8 +222,8 @@ workforce.spec
     </node>
     <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
       <data key="d1">pwd</data>
-      <data key="d2">1745.3333333333333</data>
-      <data key="d3">50</data>
+      <data key="d2">1732.106908183099</data>
+      <data key="d3">-30.415023948359185</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; pwd"</data>
       <data key="d6">/home/tpor598/workforce
@@ -234,8 +234,8 @@ workforce.spec
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
-      <data key="d2">1045.9560673772892</data>
-      <data key="d3">-443.10959489102595</data>
+      <data key="d2">1130.0783368186162</data>
+      <data key="d3">-498.4332495686555</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
@@ -245,8 +245,8 @@ workforce.spec
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>
-      <data key="d2">644.9581206872818</data>
-      <data key="d3">88.72378295516864</data>
+      <data key="d2">533.1794574482072</data>
+      <data key="d3">89.49987550015581</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -a"</data>
       <data key="d6">.
@@ -296,8 +296,8 @@ workforce.spec
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
       <data key="d1">ls</data>
-      <data key="d2">193.0</data>
-      <data key="d3">-2.0</data>
+      <data key="d2">193</data>
+      <data key="d3">-2</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -377,7 +377,7 @@ workforce.spec
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
-      <data key="d1">ls -ltaaa</data>
+      <data key="d1">ls -lta</data>
       <data key="d2">72.0695507539109</data>
       <data key="d3">-512.3634500302867</data>
       <data key="d4">ran</data>

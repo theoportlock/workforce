@@ -639,6 +639,7 @@ function AppContent() {
             onSelectionDragStop={onSelectionDragStop}
             onNodeClick={(_, node) => setSelectedNodeId(node.id)}
             onPaneClick={() => setSelectedNodeId(undefined)}
+            nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
             fitView

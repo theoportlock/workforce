@@ -108,3 +108,15 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Node dependencies
+frontend/node_modules/
+
+# Vite cache
+frontend/node_modules/.vite/
+
+# TypeScript incremental builds
+frontend/*.tsbuildinfo
+
+# Optional: general
+node_modules/
