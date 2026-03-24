@@ -95,24 +95,15 @@ def _main_impl():
         print_version()
         return
 
-    # Default behaviour: GUI with default workfile or temporary workfile in background
-    if len(sys.argv) == 1:
-        wf = ensure_workfile()
-        server_url = utils.resolve_server()
-        registration = register_workspace(server_url, wf)
-        ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
-        base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-        # If running as frozen executable (PyInstaller), run in foreground
-        # to avoid subprocess issues.
-        gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=(not is_frozen))
-        return
-
     known_commands = {"gui", "web", "run", "server", "edit"}
     sys.argv = _maybe_rewrite_bare_target_to_run(sys.argv, known_commands)
 
     parser = argparse.ArgumentParser(
         prog="workforce",
-        description="Workforce - Visual workflow orchestration and execution",
+        description=(
+            "Workforce - Visual workflow orchestration and execution "
+            "(web UI is the default and recommended interface)"
+        ),
     )
     parser.add_argument(
         "--version", "-v", action="store_true", help="Show version information and exit"
@@ -121,7 +112,9 @@ def _main_impl():
     subparsers = parser.add_subparsers(dest="command", required=False)
 
     # ---------------- GUI ----------------
-    gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
+    gui_p = subparsers.add_parser(
+        "gui", help="Launch legacy Tk GUI (deprecated compatibility mode)"
+    )
     gui_p.add_argument(
         "url_or_path",
         nargs="?",
@@ -140,6 +133,12 @@ def _main_impl():
     )
 
     def _gui(args):
+        print(
+            "Deprecation warning: `workforce gui` is compatibility-only and "
+            "deprecated. Please use `workforce web` (or just `workforce`) "
+            "as the default UI. Sunset target: September 30, 2026.",
+            file=sys.stderr,
+        )
         # Check if input is a workspace URL
         parsed = (
             utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
@@ -190,7 +189,10 @@ def _main_impl():
     gui_p.set_defaults(func=_gui)
 
     # ---------------- WEB ----------------
-    web_p = subparsers.add_parser("web", help="Launch workspace in the default browser")
+    web_p = subparsers.add_parser(
+        "web",
+        help="Launch workspace in the default browser (default, recommended)",
+    )
     web_p.add_argument(
         "url_or_path",
         nargs="?",
@@ -252,6 +254,16 @@ def _main_impl():
             print(f"workfile: {wf_path}")
 
     web_p.set_defaults(func=_web)
+
+    # Default behaviour: launch browser workspace (same flow as `web` command).
+    if len(sys.argv) == 1:
+        default_args = argparse.Namespace(
+            url_or_path=default_workfile(),
+            foreground=is_frozen,
+            server_url=None,
+        )
+        _web(default_args)
+        return
 
     # ---------------- RUN ----------------
     run_p = subparsers.add_parser("run", help="Execute workflow")
