@@ -11,7 +11,7 @@ from urllib.parse import quote
 from workforce import edit
 import networkx as nx
 from workforce.web import frontend_file
-from workforce.gui.recent import RecentFileManager
+from workforce.recent import RecentFileManager
 
 log = logging.getLogger(__name__)
 
