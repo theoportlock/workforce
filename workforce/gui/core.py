@@ -14,7 +14,7 @@ from workforce import utils
 
 from .canvas import GraphCanvas
 from .client import ServerClient
-from .recent import RecentFileManager
+from workforce.recent import RecentFileManager
 from .state import THEME, GUIState
 
 log = logging.getLogger(__name__)

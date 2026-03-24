@@ -265,18 +265,8 @@ def test_open_workflow_updates_workspace_id(monkeypatch):
     assert bridge.workspace_id == "ws_new"
 
 
-def test_open_workflow_dialog_registers_workspace(monkeypatch):
+def test_open_workflow_dialog_is_unsupported_in_web_mode():
     bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_old")
-
-    monkeypatch.setattr("workforce.web.bridge._choose_open_graphml_path", lambda current_path=None: "/tmp/open.graphml")
-
-    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
-        assert base_url == "http://127.0.0.1:5049"
-        assert endpoint == "/workspace/register"
-        assert payload == {"path": os.path.abspath("/tmp/open.graphml")}
-        return {"workspace_id": "ws_opened", "path": "/tmp/open.graphml"}
-
-    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
 
     response = bridge.handle_request(
         {
@@ -287,28 +277,13 @@ def test_open_workflow_dialog_registers_workspace(monkeypatch):
         }
     )
 
-    assert response["ok"] is True
-    assert response["result"]["cancelled"] is False
-    assert bridge.workspace_id == "ws_opened"
+    assert response["ok"] is False
+    assert response["error"]["type"] == "BridgeProtocolError"
+    assert response["error"]["message"] == "openWorkflowDialog unsupported in web mode; client must provide path"
 
 
-def test_save_workflow_as_dialog_updates_workspace(monkeypatch):
+def test_save_workflow_as_dialog_is_unsupported_in_web_mode():
     bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_old")
-
-    monkeypatch.setattr("workforce.web.bridge._choose_save_graphml_path", lambda current_path=None: "/tmp/saved.graphml")
-
-    def fake_post(base_url, endpoint, payload, retry_on_connect_error=False):
-        assert base_url == "http://127.0.0.1:5049/workspace/ws_old"
-        assert endpoint == "/save-as"
-        assert payload == {"new_path": "/tmp/saved.graphml"}
-        return {
-            "status": "saved",
-            "new_path": "/tmp/saved.graphml",
-            "new_workspace_id": "ws_saved",
-            "new_base_url": "http://127.0.0.1:5049/workspace/ws_saved",
-        }
-
-    monkeypatch.setattr("workforce.web.bridge._post", fake_post)
 
     response = bridge.handle_request(
         {
@@ -319,9 +294,12 @@ def test_save_workflow_as_dialog_updates_workspace(monkeypatch):
         }
     )
 
-    assert response["ok"] is True
-    assert response["result"]["cancelled"] is False
-    assert bridge.workspace_id == "ws_saved"
+    assert response["ok"] is False
+    assert response["error"]["type"] == "BridgeProtocolError"
+    assert (
+        response["error"]["message"]
+        == "saveWorkflowAsDialog unsupported in web mode; client must provide new_path"
+    )
 
 
 def test_make_event_envelope_shape():

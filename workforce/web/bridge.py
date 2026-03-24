@@ -10,7 +10,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from workforce.gui.recent import RecentFileManager
+from workforce.recent import RecentFileManager
 from workforce.utils import _post
 
 PROTOCOL_VERSION = "1.0"
@@ -238,16 +238,12 @@ class WebBridge:
         return result
 
     def _save_workflow_as_dialog(self, params: dict[str, Any]) -> dict[str, Any]:
-        initial_path = params.get("current_path") or params.get("path")
-        new_path = _choose_save_graphml_path(initial_path)
-        if not new_path:
-            return {"cancelled": True}
-        result = self._save_workflow_as({"new_path": new_path})
-        return {"cancelled": False, **result}
+        del params
+        raise BridgeProtocolError("saveWorkflowAsDialog unsupported in web mode; client must provide new_path")
 
     def _open_workflow(self, params: dict[str, Any]) -> dict[str, Any]:
         """Register or switch to the workspace associated with a workfile path."""
-        path = params.get("path") or params.get("workfile_path")
+        path = params.get("path")
         if not path:
             raise BridgeProtocolError("openWorkflow requires path")
         abs_path = os.path.abspath(path)
@@ -261,12 +257,8 @@ class WebBridge:
         return result
 
     def _open_workflow_dialog(self, params: dict[str, Any]) -> dict[str, Any]:
-        initial_path = params.get("current_path") or params.get("path")
-        file_path = _choose_open_graphml_path(initial_path)
-        if not file_path:
-            return {"cancelled": True}
-        result = self._open_workflow({"path": file_path})
-        return {"cancelled": False, **result}
+        del params
+        raise BridgeProtocolError("openWorkflowDialog unsupported in web mode; client must provide path")
 
     def _update_workspace_from_result(self, result: dict[str, Any]) -> None:
         workspace_id = result.get("workspace_id")
@@ -340,50 +332,3 @@ def _get_json(base_url: str, endpoint: str) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Server returned non-JSON response from {url}") from exc
 
-
-def _choose_open_graphml_path(current_path: str | None = None) -> str | None:
-    initial_dir = os.path.dirname(os.path.abspath(current_path)) if current_path else os.path.expanduser("~")
-    return _run_dialog(
-        "askopenfilename",
-        initialdir=initial_dir,
-        title="Open Workflow",
-        filetypes=[("GraphML files", "*.graphml"), ("All files", "*.*")],
-    )
-
-
-def _choose_save_graphml_path(current_path: str | None = None) -> str | None:
-    if current_path:
-        initial_dir = os.path.dirname(os.path.abspath(current_path))
-        initial_file = os.path.basename(current_path)
-    else:
-        initial_dir = os.path.expanduser("~")
-        initial_file = "workflow.graphml"
-    return _run_dialog(
-        "asksaveasfilename",
-        initialdir=initial_dir,
-        initialfile=initial_file,
-        title="Save Workflow As",
-        filetypes=[("GraphML files", "*.graphml"), ("All files", "*.*")],
-        defaultextension=".graphml",
-    )
-
-
-def _run_dialog(method_name: str, **kwargs: Any) -> str | None:
-    """Run a Tk file dialog in a hidden root window."""
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-    except Exception as exc:
-        raise RuntimeError(f"File dialog is unavailable: {exc}") from exc
-
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    try:
-        chooser = getattr(filedialog, method_name)
-        selected = chooser(**kwargs)
-    finally:
-        root.destroy()
-    if not selected:
-        return None
-    return os.path.abspath(selected)
