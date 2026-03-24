@@ -36,7 +36,7 @@ Features
 * **Flexible edge types**: Use blocking edges for strict dependencies or non-blocking edges for flexible triggering and re-execution
 * **Subset execution**: Run specific subgraphs or the entire workflow
 * **Resume capability**: Restart failed nodes and continue pipeline execution
-* **Interactive GUI**: Edit workflows visually with a Tkinter-based interface
+* **Interactive Web UI**: Edit workflows visually with the React Flow frontend
 * **Flexible command wrapping**: Add prefixes/suffixes to commands (Docker, SSH, tmux, etc.)
 
 Architecture Overview
@@ -155,7 +155,7 @@ Installation can be done with:
 
 Building a workforce workflow
 -----------------------------
-To launch the pipeline editor, run:
+To launch the pipeline editor in your browser, run:
 
 .. code-block:: bash
 
@@ -181,7 +181,7 @@ If a `Workfile` is in the current directory:
 
 Running workforce plan
 ----------------------
-To run a plan from the GUI, click the 'Run' button or press 'r'. If nodes are selected, execution starts from those nodes. Otherwise, the full pipeline is executed. Run from cli with:
+To run a plan from the web editor, click the 'Run' button or press 'r'. If nodes are selected, execution starts from those nodes. Otherwise, the full pipeline is executed. Run from cli with:
 
 .. code-block:: bash
 

@@ -88,7 +88,7 @@ Client
 
 Clients connect to workspace-scoped URLs to interact with workflows. Multiple types of clients exist:
 
-* **GUI Client** - Tkinter-based visual editor
+* **GUI Client (legacy)** - Deprecated Tkinter visual editor
 * **Run Client** - CLI-based workflow executor
 * **Edit Client** - Programmatic workflow modifier
 

@@ -248,10 +248,10 @@ WebSocket Handlers
    :undoc-members:
    :show-inheritance:
 
-GUI Module
-----------
+GUI Module (Legacy)
+-------------------
 
-The GUI module provides the Tkinter-based visual workflow editor.
+The GUI module is legacy and is being deprecated in favor of the web frontend.
 
 Main Application
 ~~~~~~~~~~~~~~~~
