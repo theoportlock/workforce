@@ -22,7 +22,6 @@ from workforce.edit import (
     cmd_remove_edge,
     cmd_remove_node,
 )
-from workforce.gui import main as gui_main
 from workforce.server import (
     cmd_list as server_cmd_list,
 )
@@ -102,6 +101,8 @@ def _main_impl():
         registration = register_workspace(server_url, wf)
         ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
         base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
+        from workforce.gui import main as gui_main
+
         # If running as frozen executable (PyInstaller), run in foreground
         # to avoid subprocess issues.
         gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=(not is_frozen))
@@ -140,6 +141,8 @@ def _main_impl():
     )
 
     def _gui(args):
+        from workforce.gui import main as gui_main
+
         # Check if input is a workspace URL
         parsed = (
             utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
