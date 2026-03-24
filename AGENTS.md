@@ -1,124 +1,14 @@
-# AGENTS.md
+Purpose
+Workforce is a graph-based workflow system: a GraphML-backed DAG scheduler with a Flask + Socket.IO server (port 5049), React Flow web UI (Vite), local shell execution, and optional {} command wrapper. The Tkinter GUI is being deprecated in favor of the web frontend.
 
-## Purpose
+Core Invariants
+All graph mutations must go through ServerContext.enqueue() (see server/queue.py); never modify GraphML or in-memory state directly. This guarantees deterministic ordering and consistency across clients. Execution is always scoped to a run-specific induced subgraph (ctx.active_runs[run_id]["nodes"]): only those nodes may change state, only internal edges propagate readiness, and no global side effects are allowed. The node state machine is strict: "" → "run" → "running" → "ran" with "running" → "fail" and "fail" → "run"; all other transitions are invalid. Wrappers must apply deterministically via {} substitution (wrapper.replace("{}", cmd)) or fallback concatenation.
 
-Workforce is a **graph-based workflow execution system**:
+Architecture
+The server is authoritative (server/context.py, server/queue.py, server/routes.py, server/sockets.py); clients are projections. The execution layer (run/) handles dependency resolution and shell execution but must enqueue all state changes. The web frontend (frontend/) reflects server state via Socket.IO and is built with ./build-frontend.sh.
 
--   GraphML-backed DAG scheduler
--   Flask + Socket.IO server (port 5049)
--   Tkinter desktop GUI
--   React Flow web frontend (Vite build)
--   Local shell execution engine
--   Optional command wrapper (`{}` substitution)
+Development
+Run pytest after changes and rebuild the frontend if modified. Do not commit broken tests, types, or lint.
 
-# Core Invariants (Non-Negotiable)
-
-## 1. All Graph Mutations Go Through the Server Queues
-
-Never: - Modify GraphML files directly - Mutate in-memory graph state
-outside `ServerContext.enqueue()`
-
-All mutations **must** be serialized per workspace via:
-
-    server/queue.py
-
-This guarantees: - Deterministic ordering - Cross-client consistency
-(Tk + Web) - Safe concurrent edits
-
-## 2. Runs Operate on an Induced Subgraph
-
-Each run defines its allowed node set:
-
-    ctx.active_runs[run_id]["nodes"]
-
-Rules:
-
--   Only these nodes may transition state
--   Only edges within this induced set may propagate readiness
--   No execution may affect nodes outside the run
--   No global side effects
-
-Execution is always bounded to the run subgraph.
-
-## 3. Node State Machine (Strict)
-
-Valid states:
-
-    "" → "run" → "running" → "ran"
-                      ↘
-                       "fail"
-
-    "fail" → "run"
-
-No other transitions are allowed.
-
-Invalid transitions must raise errors.
-
-## 4. Wrapper Semantics
-
-If a wrapper is configured, it must contain `{}`:
-
-    wrapper.replace("{}", cmd)
-
-If `{}` is missing, fallback to:
-
-    wrapper + " " + cmd
-
-Wrapper logic must remain deterministic and side-effect free.
-
-# Architecture
-
-## Server (Authoritative)
-
--   `server/context.py` --- canonical graph state + enqueue
--   `server/queue.py` --- serialized mutation worker
--   `server/routes.py` --- REST API
--   `server/sockets.py` --- Socket.IO bridge
-
-The server owns truth.\
-All clients are projections.
-
-## Execution Engine
-
--   `run/` --- dependency resolution + shell execution
-
-Execution never mutates graph state directly.\
-It must enqueue mutations.
-
-## Tkinter GUI
-
--   `gui/state.py` --- canonical UI state
--   `gui/canvas.py` --- rendering
--   `gui/core.py` --- bootstrap
-
-## Web Frontend
-
--   `frontend/` --- React Flow app (Vite)
-
--   Built via:
-
-    ./build-frontend.sh
-
-The web UI is a real-time projection of server state via Socket.IO.
-
-# Development Discipline
-
-After any change, run:
-
-    pytest
-
-If frontend changes were made:
-
-    ./build-frontend.sh
-
-Never commit broken type checks or lint errors.
-
-# Guiding Principle
-
--   One authoritative graph per workspace.
--   All mutations serialized.
--   All execution scoped to a run subgraph.
--   Clients render --- server decides.
--   Prefer simple solutions to more lines
--   You can update this AGENTS.md file on important changes
-
+Principles
+Single authoritative graph per workspace, serialized mutations, run-scoped execution, server decides and clients render, prefer simplicity, and keep this file updated.
