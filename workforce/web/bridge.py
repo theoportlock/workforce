@@ -10,7 +10,7 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from workforce.gui.recent import RecentFileManager
+from workforce.recent import RecentFileManager
 from workforce.utils import _post
 
 PROTOCOL_VERSION = "1.0"
