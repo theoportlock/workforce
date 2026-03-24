@@ -92,7 +92,17 @@ The bridge maps methods to existing workspace HTTP endpoints.
 - `runWorkflow` → `POST /workspace/<id>/run`
 - `getNodeLog` → `GET /workspace/<id>/get-node-log/<node_id>`
 - `saveWorkflowAs` → `POST /workspace/<id>/save-as`
-- `saveWorkflowAsDialog` → native save-file picker (`*.graphml`) then `saveWorkflowAs`
+- `saveWorkflowAsDialog` → returns `BridgeProtocolError` in web mode (`"unsupported in web mode; client must provide new_path"`)
 - `openWorkflow` → `POST /workspace/register`
-- `openWorkflowDialog` → native open-file picker (`*.graphml`) then `openWorkflow`
+- `openWorkflowDialog` → returns `BridgeProtocolError` in web mode (`"unsupported in web mode; client must provide path"`)
 - `stopRuns` → `POST /workspace/<id>/stop`
+
+## Browser-driven file selection
+
+In web mode, file selection must happen in the browser UI (React frontend), not on the server:
+
+- Frontend chooses a path (for example via browser prompt/modal/native picker integrations).
+- Frontend calls `openWorkflow` with `{ "path": "<resolved_path>" }`.
+- Frontend calls `saveWorkflowAs` with `{ "new_path": "<resolved_path>" }`.
+
+Bridge dialog methods are intentionally unsupported in web mode to avoid server-side Tk dialogs.

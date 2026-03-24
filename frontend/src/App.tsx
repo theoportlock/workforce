@@ -174,6 +174,21 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
   return (response.result ?? {}) as T;
 }
 
+function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): string | null {
+  const verb = action === 'open' ? 'Open' : 'Save As';
+  const promptMessage =
+    action === 'open'
+      ? 'Enter the workflow file path to open:'
+      : 'Enter the workflow file path to save as:';
+  const entered = window.prompt(promptMessage, currentPath ?? '');
+  if (entered === null) return null;
+  const trimmed = entered.trim();
+  if (!trimmed) {
+    throw new Error(`${verb} cancelled: path is required.`);
+  }
+  return trimmed;
+}
+
 function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
   const color = statusColorMap[data.status];
   return (
@@ -336,10 +351,9 @@ function AppContent() {
   const handleOpenWorkflow = useCallback(async () => {
     try {
       await opQueueRef.current.flush();
-      const result = await bridgeCall<{ cancelled?: boolean; path?: string }>('openWorkflowDialog', {
-        current_path: currentPath
-      });
-      if (result.cancelled) return;
+      const selectedPath = promptWorkflowPath('open', currentPath);
+      if (!selectedPath) return;
+      const result = await bridgeCall<{ path?: string }>('openWorkflow', { path: selectedPath });
       if (result.path) setCurrentPath(result.path);
       await refreshGraph();
       setStatusMessage('Opened workflow successfully.');
@@ -516,10 +530,9 @@ function AppContent() {
   const handleSaveWorkflowAs = useCallback(async () => {
     try {
       await opQueueRef.current.flush();
-      const result = await bridgeCall<{ cancelled?: boolean; new_path?: string }>('saveWorkflowAsDialog', {
-        current_path: currentPath
-      });
-      if (result.cancelled) return;
+      const selectedPath = promptWorkflowPath('save', currentPath);
+      if (!selectedPath) return;
+      const result = await bridgeCall<{ new_path?: string }>('saveWorkflowAs', { new_path: selectedPath });
       if (result.new_path) setCurrentPath(result.new_path);
       await refreshGraph();
       setStatusMessage('Saved workflow copy successfully.');
