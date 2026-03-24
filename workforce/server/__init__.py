@@ -720,7 +720,7 @@ def list_servers(server_url: str | None = None):
 
             if not workspaces:
                 print("\n📂 No active workspaces")
-                print("   Open a workflow with: wf gui")
+                print("   Open a workflow with: wf web")
                 return
 
             print(f"\n📂 Active Workspaces ({len(workspaces)}):")
@@ -730,12 +730,12 @@ def list_servers(server_url: str | None = None):
                 ws_id = ws["workspace_id"]
                 ws_path = ws["workfile_path"]
                 clients = ws.get("clients", {}) or {}
-                client_count = clients.get("gui", 0) + clients.get("runner", 0)
+                client_count = clients.get("web", 0) + clients.get("runner", 0)
 
                 print(f"\n  Workspace: {ws_id}")
                 print(f"  File:      {ws_path}")
                 print(
-                    f"  Clients:   {client_count} (GUI: {clients.get('gui', 0)}, Runner: {clients.get('runner', 0)})"
+                    f"  Clients:   {client_count} (Web: {clients.get('web', 0)}, Runner: {clients.get('runner', 0)})"
                 )
 
                 if server_url:
@@ -756,14 +756,14 @@ def list_servers(server_url: str | None = None):
                         f"{base_url}/workspace/{ws_id}/clients", timeout=2
                     ) as client_resp:
                         client_data = json.loads(client_resp.read().decode("utf-8"))
-                        gui_clients = [
-                            c.get("client_id") for c in client_data.get("gui", [])
+                        web_clients = [
+                            c.get("client_id") for c in client_data.get("web", [])
                         ]
                         runner_clients = [
                             c.get("client_id") for c in client_data.get("runner", [])
                         ]
-                        if gui_clients:
-                            print(f"  GUI Clients:    {', '.join(gui_clients)}")
+                        if web_clients:
+                            print(f"  Web Clients:    {', '.join(web_clients)}")
                         if runner_clients:
                             print(f"  Runner Clients: {', '.join(runner_clients)}")
                 except Exception:

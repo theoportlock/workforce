@@ -73,8 +73,6 @@ disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = [
-  "workforce.gui",
-  "workforce.gui.*",
   "workforce.run.client",
   "workforce.run.cli",
   "workforce.server",

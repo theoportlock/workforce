@@ -124,8 +124,8 @@ class WebBridge:
             raise BridgeProtocolError("clientConnect requires socketio_sid")
         if not workfile_path:
             raise BridgeProtocolError("clientConnect requires workfile_path")
-        if client_type != "gui":
-            raise BridgeProtocolError("clientConnect requires client_type: gui")
+        if client_type != "web":
+            raise BridgeProtocolError("clientConnect requires client_type: web")
         return _post(
             self.workspace_url,
             "/client-connect",
@@ -137,11 +137,11 @@ class WebBridge:
         )
 
     def _client_disconnect(self, params: dict[str, Any]) -> dict[str, Any]:
-        client_type = params.get("client_type", "gui")
+        client_type = params.get("client_type", "web")
         client_id = params.get("client_id")
         socketio_sid = params.get("socketio_sid")
-        if client_type not in {"gui", "runner"}:
-            raise BridgeProtocolError("clientDisconnect requires client_type to be 'gui' or 'runner'")
+        if client_type not in {"web", "runner"}:
+            raise BridgeProtocolError("clientDisconnect requires client_type to be 'web' or 'runner'")
         payload = {"client_type": client_type, "client_id": client_id, "socketio_sid": socketio_sid}
         return _post(self.workspace_url, "/client-disconnect", payload)
 
