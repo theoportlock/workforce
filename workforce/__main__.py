@@ -10,7 +10,6 @@ with explicit host/port configuration and workspace routing by hashed file path.
 import argparse
 import json
 import sys
-import traceback
 import webbrowser
 
 from workforce import __version__, utils
@@ -69,46 +68,39 @@ def main():
         try:
             _main_impl()
         except Exception as e:
-            # Show error in message box for frozen executables
-            import tkinter as tk
-            from tkinter import messagebox
-
-            root = tk.Tk()
-            root.withdraw()
-            error_msg = (
-                f"Workforce failed to start\n\n{str(e)}\n\n"
-                f"Traceback:\n{traceback.format_exc()}"
-            )
-            messagebox.showerror("Workforce Error", error_msg)
-            root.destroy()
+            # Avoid hard tkinter dependency in the global CLI path.
+            print(f"Workforce failed to start: {e}", file=sys.stderr)
             sys.exit(1)
     else:
         _main_impl()
 
 
 def _main_impl():
-    is_frozen = getattr(sys, "frozen", False)
-
     # Handle --version flag at top level
     if "--version" in sys.argv or "-v" in sys.argv:
         print_version()
         return
 
-    # Default behaviour: GUI with default workfile or temporary workfile in background
+    # Default behaviour: open web UI with default workfile.
     if len(sys.argv) == 1:
         wf = ensure_workfile()
         server_url = utils.resolve_server()
         registration = register_workspace(server_url, wf)
         ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
         base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-        from workforce.gui import main as gui_main
-
-        # If running as frozen executable (PyInstaller), run in foreground
-        # to avoid subprocess issues.
-        gui_main(base_url, wf_path=wf, workspace_id=ws_id, background=(not is_frozen))
+        opened = webbrowser.open(base_url)
+        if opened:
+            print(f"Opened workspace {ws_id} in browser: {base_url}")
+        else:
+            print(
+                "Could not automatically open browser. "
+                f"Open this URL manually: {base_url}"
+            )
+        print(f"workspace_id: {ws_id}")
+        print(f"workfile: {wf}")
         return
 
-    known_commands = {"gui", "web", "run", "server", "edit"}
+    known_commands = {"web", "run", "server", "edit"}
     sys.argv = _maybe_rewrite_bare_target_to_run(sys.argv, known_commands)
 
     parser = argparse.ArgumentParser(
@@ -120,77 +112,6 @@ def _main_impl():
     )
 
     subparsers = parser.add_subparsers(dest="command", required=False)
-
-    # ---------------- GUI ----------------
-    gui_p = subparsers.add_parser("gui", help="Launch graphical interface")
-    gui_p.add_argument(
-        "url_or_path",
-        nargs="?",
-        default=default_workfile(),
-        help="Workfile path or workspace URL (e.g., http://host:port/workspace/ws_abc123)",
-    )
-    gui_p.add_argument(
-        "--foreground",
-        "-f",
-        action="store_true",
-        help="Run GUI in foreground (default: background)",
-    )
-    gui_p.add_argument(
-        "--server-url",
-        help="Server URL (overrides WORKFORCE_SERVER_URL, default http://127.0.0.1:5049)",
-    )
-
-    def _gui(args):
-        from workforce.gui import main as gui_main
-
-        # Check if input is a workspace URL
-        parsed = (
-            utils.parse_workspace_url(args.url_or_path) if args.url_or_path else None
-        )
-
-        if parsed:
-            # Direct workspace URL provided
-            server_url, ws_id = parsed
-            base_url = f"{server_url}/workspace/{ws_id}"
-            # Use a placeholder workfile path (not used for remote access)
-            wf_path = f"<remote:{ws_id}>"
-            gui_main(
-                base_url,
-                wf_path=wf_path,
-                workspace_id=ws_id,
-                background=not args.foreground,
-            )
-        elif args.url_or_path and utils.looks_like_url(args.url_or_path):
-            # Looks like a URL but parsing failed - give helpful error
-            print(f"Error: Invalid workspace URL format: {args.url_or_path}")
-            print()
-            print("Valid formats:")
-            print("  http://host:port/workspace/ws_XXXXXXXX")
-            print("  host:port/workspace/ws_XXXXXXXX")
-            print()
-            print(
-                "Note: Workspace IDs must start with 'ws_' followed by 8+ "
-                "hex characters"
-            )
-            print()
-            print("To find your workspace URL, run on the server:")
-            print("  wf server ls")
-            sys.exit(1)
-        else:
-            # Traditional file path
-            wf_path = ensure_workfile(args.url_or_path)
-            server_url = utils.resolve_server(server_url=args.server_url)
-            registration = register_workspace(server_url, wf_path)
-            ws_id = registration.get("workspace_id") or compute_workspace_id(wf_path)
-            base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-            gui_main(
-                base_url,
-                wf_path=wf_path,
-                workspace_id=ws_id,
-                background=not args.foreground,
-            )
-
-    gui_p.set_defaults(func=_gui)
 
     # ---------------- WEB ----------------
     web_p = subparsers.add_parser("web", help="Launch workspace in the default browser")
