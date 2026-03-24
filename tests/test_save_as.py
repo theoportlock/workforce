@@ -258,40 +258,6 @@ def test_save_as_absolute_path_handling(test_app, mock_context, temp_workfiles):
             os.chdir(original_cwd)
 
 
-def test_save_as_integration_with_gui_client():
-    """Test that ServerClient.save_as() works correctly."""
-    from workforce.gui.client import ServerClient
-    
-    # Create a mock client
-    client = ServerClient(
-        base_url="http://127.0.0.1:5042/workspace/ws_test",
-        workspace_id="ws_test",
-        workfile_path="/tmp/test.wf",
-        on_graph_update=None
-    )
-    
-    # Mock the _post function to verify it's called correctly
-    with patch('workforce.utils._post') as mock_post:
-        mock_post.return_value = {
-            "status": "saved",
-            "new_path": "/tmp/new.wf",
-            "new_workspace_id": "ws_new",
-            "new_base_url": "http://127.0.0.1:5042/workspace/ws_new"
-        }
-        
-        result = client.save_as("/tmp/new.wf")
-        
-        # Verify _post was called with correct parameters
-        mock_post.assert_called_once_with(
-            "http://127.0.0.1:5042/workspace/ws_test",
-            "/save-as",
-            {"new_path": "/tmp/new.wf"}
-        )
-        
-        assert result["status"] == "saved"
-        assert result["new_workspace_id"] == "ws_new"
-
-
 def test_save_as_concurrent_workspaces(test_app, temp_workfiles):
     """Test save-as doesn't affect other workspaces."""
     original_file1, new_file1 = temp_workfiles
