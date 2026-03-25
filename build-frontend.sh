@@ -18,6 +18,8 @@ NEW_CSS=$(ls -t "$SCRIPT_DIR/frontend/dist/assets/index-"*.css | head -1 | xargs
 
 echo "Copying $NEW_JS to assets/"
 cp "$SCRIPT_DIR/frontend/dist/assets/$NEW_JS" assets/
+echo "Copying $NEW_CSS to assets/"
+cp "$SCRIPT_DIR/frontend/dist/assets/$NEW_CSS" assets/
 
 echo "Updating manifest.json..."
 cat > assets/manifest.json << EOF
