@@ -84,7 +84,11 @@ def test_update_status_dispatches_to_edit_status(monkeypatch):
     assert response["ok"] is True
     assert called["base_url"] == "http://127.0.0.1:5049/workspace/ws_abc12345"
     assert called["endpoint"] == "/edit-status"
-    assert called["payload"] == {"element_type": "node", "element_id": "n1", "value": "run"}
+    assert called["payload"] == {
+        "element_type": "node",
+        "element_id": "n1",
+        "value": "run",
+    }
 
 
 def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
@@ -95,7 +99,7 @@ def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
         called["base_url"] = base_url
         called["endpoint"] = endpoint
         called["payload"] = payload
-        return {"status": "connected", "client_id": "gui-1"}
+        return {"status": "connected", "client_id": "web-1"}
 
     monkeypatch.setattr("workforce.web.bridge._post", fake_post)
 
@@ -106,7 +110,7 @@ def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
             "params": {
                 "socketio_sid": "sid-123",
                 "workfile_path": "/tmp/test.graphml",
-                "client_type": "gui",
+                "client_type": "web",
             },
             "protocolVersion": PROTOCOL_VERSION,
         }
@@ -117,7 +121,7 @@ def test_client_connect_requires_gui_socket_and_workfile(monkeypatch):
     assert called["payload"] == {
         "socketio_sid": "sid-123",
         "workfile_path": "/tmp/test.graphml",
-        "client_type": "gui",
+        "client_type": "web",
     }
 
 
@@ -168,10 +172,14 @@ def test_client_disconnect_without_identifiers_is_allowed(monkeypatch):
 
     assert response["ok"] is True
     assert called["endpoint"] == "/client-disconnect"
-    assert called["payload"] == {"client_type": "gui", "client_id": None, "socketio_sid": None}
+    assert called["payload"] == {
+        "client_type": "web",
+        "client_id": None,
+        "socketio_sid": None,
+    }
 
 
-def test_client_disconnect_defaults_to_gui(monkeypatch):
+def test_client_disconnect_with_client_id(monkeypatch):
     bridge = WebBridge(server_url="http://127.0.0.1:5049", workspace_id="ws_abc12345")
     called = {}
 
@@ -186,7 +194,7 @@ def test_client_disconnect_defaults_to_gui(monkeypatch):
         {
             "id": "disconnect-1",
             "method": "clientDisconnect",
-            "params": {"client_id": "gui-1"},
+            "params": {"client_id": "web-1"},
             "protocolVersion": PROTOCOL_VERSION,
         }
     )
@@ -194,8 +202,8 @@ def test_client_disconnect_defaults_to_gui(monkeypatch):
     assert response["ok"] is True
     assert called["endpoint"] == "/client-disconnect"
     assert called["payload"] == {
-        "client_type": "gui",
-        "client_id": "gui-1",
+        "client_type": "web",
+        "client_id": "web-1",
         "socketio_sid": None,
     }
 
@@ -248,7 +256,10 @@ def test_open_workflow_updates_workspace_id(monkeypatch):
         assert base_url == "http://127.0.0.1:5049"
         assert endpoint == "/workspace/register"
         assert payload == {"path": expected_path}
-        return {"workspace_id": "ws_new", "url": "http://127.0.0.1:5049/workspace/ws_new"}
+        return {
+            "workspace_id": "ws_new",
+            "url": "http://127.0.0.1:5049/workspace/ws_new",
+        }
 
     monkeypatch.setattr("workforce.web.bridge._post", fake_post)
 
@@ -279,7 +290,10 @@ def test_open_workflow_dialog_is_unsupported_in_web_mode():
 
     assert response["ok"] is False
     assert response["error"]["type"] == "BridgeProtocolError"
-    assert response["error"]["message"] == "openWorkflowDialog unsupported in web mode; client must provide path"
+    assert (
+        response["error"]["message"]
+        == "openWorkflowDialog unsupported in web mode; client must provide path"
+    )
 
 
 def test_save_workflow_as_dialog_is_unsupported_in_web_mode():

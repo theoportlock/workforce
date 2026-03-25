@@ -214,7 +214,7 @@ function AppContent() {
   const initial = useMemo(() => adaptBackendGraph(seededGraph), []);
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>();
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
@@ -257,13 +257,13 @@ function AppContent() {
   );
 
   const selectedNode = useMemo(
-    () => nodes.find((node) => node.id === selectedNodeId),
-    [nodes, selectedNodeId]
+    () => nodes.find((node) => node.id === selectedNodeIds[0]),
+    [nodes, selectedNodeIds]
   );
 
   useOnSelectionChange({
     onChange: ({ nodes: selectedNodes }) => {
-      setSelectedNodeId(selectedNodes[0]?.id);
+      setSelectedNodeIds(selectedNodes.map(n => n.id));
     }
   });
 
@@ -313,7 +313,7 @@ function AppContent() {
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node<WorkflowNodeData>) => {
     event.preventDefault();
-    setSelectedNodeId(node.id);
+    setSelectedNodeIds([node.id]);
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
   }, []);
 
@@ -551,6 +551,16 @@ function AppContent() {
     }
   }, []);
 
+  const handleRunWorkflow = useCallback(async () => {
+    try {
+      await opQueueRef.current.flush();
+      await bridgeCall('runWorkflow', { nodes: selectedNodeIds });
+      setStatusMessage(selectedNodeIds.length > 0 ? `Running selected nodes (${selectedNodeIds.length})...` : 'Running full pipeline...');
+    } catch (error) {
+      setStatusMessage(`Run failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, [selectedNodeIds]);
+
   const menuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return [];
 
@@ -581,7 +591,7 @@ function AppContent() {
             setEdges((existing) =>
               existing.filter((edge) => edge.source !== contextMenu.nodeId && edge.target !== contextMenu.nodeId)
             );
-            if (selectedNodeId === contextMenu.nodeId) setSelectedNodeId(undefined);
+            if (contextMenu.nodeId && selectedNodeIds.includes(contextMenu.nodeId)) setSelectedNodeIds([]);
             void bridgeCall('removeNode', { node_id: contextMenu.nodeId }).catch((error) => {
               setNodes(previousNodes);
               setEdges(previousEdges);
@@ -616,9 +626,9 @@ function AppContent() {
           });
         }
       },
-      { id: 'clear-selection', label: 'Clear selection', onSelect: () => setSelectedNodeId(undefined) }
+      { id: 'clear-selection', label: 'Clear selection', onSelect: () => setSelectedNodeIds([]) }
     ];
-  }, [contextMenu, edges, nodes, selectedNodeId, setEdges, setNodes]);
+  }, [contextMenu, edges, nodes, selectedNodeIds, setEdges, setNodes]);
 
   return (
     <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
@@ -637,13 +647,14 @@ function AppContent() {
           <div style={{ display: 'inline-flex', gap: 8 }}>
             <button onClick={() => void handleOpenWorkflow()}>File ▸ Open</button>
             <button onClick={() => void handleSaveWorkflowAs()}>File ▸ Save As</button>
-            <button onClick={() => void handleStopRuns()}>Run ▸ Stop</button>
+            <button onClick={() => void handleRunWorkflow()}>Run ▸</button>
+            <button onClick={() => void handleStopRuns()}>Stop</button>
           </div>
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeId ? '1fr 320px' : '1fr' }}>
+      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr' }}>
         <section style={{ borderRight: '1px solid #1e293b' }}>
           <ReactFlow
             nodes={nodes}
@@ -657,10 +668,17 @@ function AppContent() {
             onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
-            onPaneClick={() => setSelectedNodeId(undefined)}
+            onPaneClick={() => setSelectedNodeIds([])}
             nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
+            onKeyDown={(event) => {
+              if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+              if (event.key === 'r' || event.key === 'R') {
+                event.preventDefault();
+                void handleRunWorkflow();
+              }
+            }}
             fitView
             nodeTypes={{ workflowNode: WorkflowNode }}
             panOnDrag
@@ -675,11 +693,12 @@ function AppContent() {
           </ReactFlow>
         </section>
 
-        {selectedNodeId && (
+        {selectedNodeIds.length > 0 && (
           <aside style={{ color: '#e2e8f0' }}>
             <RightPanel
               node={selectedNode}
               onUpdate={(updates) => {
+                const selectedNodeId = selectedNodeIds[0];
                 if (!selectedNodeId) return;
                 const previousNode = nodes.find((node) => node.id === selectedNodeId);
                 setNodes((existing) =>

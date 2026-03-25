@@ -74,22 +74,20 @@ workforce.spec
       <data key="d3">-306.1897567164468</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 244
-drwxr-xr-x 15 tpor598 tpor598  4096 Mar 25 10:22 .
--rw-------  1 tpor598 tpor598     0 Mar 25 10:22 tmp5sapc54l
--rw-------  1 tpor598 tpor598 16204 Mar 25 10:22 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Mar 25 10:22 .git
+      <data key="d6">total 240
+drwxr-xr-x 15 tpor598 tpor598  4096 Mar 25 14:06 .
+-rw-------  1 tpor598 tpor598 14456 Mar 25 14:06 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Mar 25 14:05 .git
+drwxr-xr-x  2 tpor598 tpor598  4096 Mar 25 14:04 workforce.egg-info
+-rw-r--r--  1 tpor598 tpor598  2520 Mar 25 14:02 AGENTS.md
+drwxr-xr-x  5 tpor598 tpor598  4096 Mar 25 13:45 frontend
+drwxr-x--- 73 tpor598 tpor598  4096 Mar 25 11:37 ..
 drwxr-xr-x  4 tpor598 tpor598  4096 Mar 25 10:15 tests
-drwxr-x--- 73 tpor598 tpor598  4096 Mar 25 10:10 ..
 -rw-r--r--  1 tpor598 tpor598  1958 Mar 25 10:08 pyproject.toml
 drwxr-xr-x  7 tpor598 tpor598  4096 Mar 25 10:06 workforce
 drwxr-xr-x  8 tpor598 tpor598  4096 Mar 25 09:59 docs
 -rw-r--r--  1 tpor598 tpor598  9657 Mar 25 09:59 README.rst
--rw-r--r--  1 tpor598 tpor598  1884 Mar 25 09:45 AGENTS.md
-drwxr-xr-x  2 tpor598 tpor598  4096 Mar 24 08:12 workforce.egg-info
-drwxr-xr-x  5 tpor598 tpor598  4096 Mar 23 21:12 frontend
 -rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 20:44 .gitignore
--rw-r--r--  1 tpor598 tpor598   308 Mar 22 20:38 seb
 -rw-r--r--  1 tpor598 tpor598   273 Mar 22 20:32 todo.md
 -rw-r--r--  1 tpor598 tpor598  3140 Mar 22 20:21 spec
 drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 19:06 build
@@ -119,7 +117,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">13691</data>
+      <data key="d8">7626</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -150,8 +148,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
       <data key="d1">echo "teststet"
 ls
 ls</data>
-      <data key="d2">489.62712167059976</data>
-      <data key="d3">311.2901832467053</data>
+      <data key="d2">523.6271216705996</data>
+      <data key="d3">359.2901832467052</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo "teststet"
 ls
@@ -240,8 +238,8 @@ workforce.spec
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
-      <data key="d2">1147.0345528793773</data>
-      <data key="d3">-555.9012606749213</data>
+      <data key="d2">1140.3462392260087</data>
+      <data key="d3">-486.3221465797906</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
@@ -251,8 +249,8 @@ workforce.spec
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>
-      <data key="d2">533.1794574482072</data>
-      <data key="d3">89.49987550015581</data>
+      <data key="d2">469.9016364365341</data>
+      <data key="d3">-92.9888404531516</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -a"</data>
       <data key="d6">.
@@ -303,8 +301,8 @@ workforce.spec
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
       <data key="d1">ls</data>
-      <data key="d2">193</data>
-      <data key="d3">-2</data>
+      <data key="d2">176.05058365758754</data>
+      <data key="d3">25.11906614785994</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -344,9 +342,9 @@ workforce.spec
       <data key="d9">0</data>
     </node>
     <node id="670bcdd3-72c6-4bb2-a272-495a543e361f">
-      <data key="d1">ls</data>
-      <data key="d2">235.4168686497735</data>
-      <data key="d3">-144.5079365079365</data>
+      <data key="d1">lsd</data>
+      <data key="d2">-27.583131350226424</data>
+      <data key="d3">-144.50793650793656</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -388,25 +386,24 @@ workforce.spec
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">ls -lta</data>
-      <data key="d2">32.02422484228916</data>
-      <data key="d3">-492.34078707447577</data>
+      <data key="d2">-115.53713415759839</data>
+      <data key="d3">-395.26592769727716</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 244
-drwxr-xr-x 15 tpor598 tpor598  4096 Mar 25 10:22 .
--rw-------  1 tpor598 tpor598 14439 Mar 25 10:22 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Mar 25 10:22 .git
+      <data key="d6">total 240
+drwxr-xr-x 15 tpor598 tpor598  4096 Mar 25 14:06 .
+-rw-------  1 tpor598 tpor598 14571 Mar 25 14:06 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Mar 25 14:05 .git
+drwxr-xr-x  2 tpor598 tpor598  4096 Mar 25 14:04 workforce.egg-info
+-rw-r--r--  1 tpor598 tpor598  2520 Mar 25 14:02 AGENTS.md
+drwxr-xr-x  5 tpor598 tpor598  4096 Mar 25 13:45 frontend
+drwxr-x--- 73 tpor598 tpor598  4096 Mar 25 11:37 ..
 drwxr-xr-x  4 tpor598 tpor598  4096 Mar 25 10:15 tests
-drwxr-x--- 73 tpor598 tpor598  4096 Mar 25 10:10 ..
 -rw-r--r--  1 tpor598 tpor598  1958 Mar 25 10:08 pyproject.toml
 drwxr-xr-x  7 tpor598 tpor598  4096 Mar 25 10:06 workforce
 drwxr-xr-x  8 tpor598 tpor598  4096 Mar 25 09:59 docs
 -rw-r--r--  1 tpor598 tpor598  9657 Mar 25 09:59 README.rst
--rw-r--r--  1 tpor598 tpor598  1884 Mar 25 09:45 AGENTS.md
-drwxr-xr-x  2 tpor598 tpor598  4096 Mar 24 08:12 workforce.egg-info
-drwxr-xr-x  5 tpor598 tpor598  4096 Mar 23 21:12 frontend
 -rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 20:44 .gitignore
--rw-r--r--  1 tpor598 tpor598   308 Mar 22 20:38 seb
 -rw-r--r--  1 tpor598 tpor598   273 Mar 22 20:32 todo.md
 -rw-r--r--  1 tpor598 tpor598  3140 Mar 22 20:21 spec
 drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 19:06 build
@@ -436,7 +433,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">13616</data>
+      <data key="d8">7604</data>
       <data key="d9">0</data>
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">

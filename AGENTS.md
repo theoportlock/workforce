@@ -10,5 +10,14 @@ The server is authoritative (server/context.py, server/queue.py, server/routes.p
 Development
 After any change run pytest. If frontend code is modified, rebuild with ./build-frontend.sh. Never commit with failing tests, type errors, or lint issues.
 
+Frontend Build Issues
+If web UI changes don't appear after rebuild:
+1. Check that workforce/web/static/index.html references the same JS file as workforce/web/static/assets/manifest.json
+2. The build script's sed commands (lines 33-34) may fail to update index.html if the file format differs - manual sync may be needed
+3. Verify the server is running with the correct PYTHONPATH to pick up the latest workforce package
+
+Known Test Issues
+tests/test_web_bridge.py::test_client_connect_requires_gui_socket_and_workfile was broken - the test sent client_type="gui" but bridge.py requires client_type="web". This was fixed to use "web".
+
 Principles
 Single authoritative graph per workspace, serialized mutations, run-scoped execution, server decides and clients render, prefer simplicity, and keep this file updated.
