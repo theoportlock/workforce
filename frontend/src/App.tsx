@@ -14,7 +14,8 @@ import ReactFlow, {
   SelectionMode,
   useEdgesState,
   useNodesState,
-  useOnSelectionChange
+  useOnSelectionChange,
+  useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { adaptBackendGraph, statusColorMap } from './graph/adapters';
@@ -189,21 +190,33 @@ function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): stri
   return trimmed;
 }
 
-function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
+function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
   const color = statusColorMap[data.status];
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [data.label, id, updateNodeInternals]);
+
   return (
     <div
       style={{
+        alignItems: 'center',
         border: selected ? '2px solid #FFFFFF' : '1px solid #37474F',
-        borderRadius: 4,
+        borderRadius: 6,
         background: color,
+        boxSizing: 'border-box',
         color: '#FFFFFF',
-        minWidth: 190,
-        padding: 10
+        display: 'inline-flex',
+        justifyContent: 'center',
+        minHeight: 36,
+        minWidth: 0,
+        padding: '6px 8px',
+        whiteSpace: 'nowrap'
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label}</div>
+      <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label || ''}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
