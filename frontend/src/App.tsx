@@ -18,7 +18,7 @@ import ReactFlow, {
   useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { adaptBackendGraph, statusColorMap } from './graph/adapters';
+import { adaptBackendGraph, nodeWidthForLabel, statusColorMap } from './graph/adapters';
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
@@ -402,6 +402,10 @@ function AppContent() {
             if (!update) return node;
             return {
               ...node,
+              style: {
+                ...(node.style ?? {}),
+                width: nodeWidthForLabel(update.command ?? update.label ?? node.data.label)
+              },
               position: {
                 x: typeof update.x === 'undefined' ? node.position.x : Number(update.x),
                 y: typeof update.y === 'undefined' ? node.position.y : Number(update.y)
@@ -624,6 +628,7 @@ function AppContent() {
             id,
             type: 'workflowNode',
             position: { x: 200, y: 180 },
+            style: { width: nodeWidthForLabel(`node-${nodes.length + 1}`) },
             data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
           };
           setNodes((existing) => [...existing, node]);
@@ -715,7 +720,16 @@ function AppContent() {
                 const previousNode = nodes.find((node) => node.id === selectedNodeId);
                 setNodes((existing) =>
                   existing.map((node) =>
-                    node.id === selectedNodeId ? { ...node, data: { ...node.data, ...updates } } : node
+                    node.id === selectedNodeId
+                      ? {
+                          ...node,
+                          style:
+                            Object.prototype.hasOwnProperty.call(updates, 'label') && typeof updates.label === 'string'
+                              ? { ...(node.style ?? {}), width: nodeWidthForLabel(updates.label) }
+                              : node.style,
+                          data: { ...node.data, ...updates }
+                        }
+                      : node
                   )
                 );
 

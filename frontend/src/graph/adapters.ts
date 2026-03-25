@@ -17,6 +17,11 @@ export const statusColorMap: Record<WorkforceStatus, string> = {
   fail: '#B71C1C'
 };
 
+export function nodeWidthForLabel(label: string): number {
+  const textWidth = Math.ceil(label.length * 7.2);
+  return Math.max(42, textWidth + 16);
+}
+
 const toNum = (value: string | number | undefined) => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
@@ -31,19 +36,23 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
   edges: Edge[];
 } {
   return {
-    nodes: data.nodes.map((node) => ({
-      id: node.id,
-      type: 'workflowNode',
-      position: { x: toNum(node.x), y: toNum(node.y) },
-      data: {
-        label: node.command ?? node.label ?? node.id,
-        command: node.command ?? node.label ?? '',
-        status: node.status ?? '',
-        stdout: node.stdout,
-        stderr: node.stderr,
-        log: node.log
-      }
-    })),
+    nodes: data.nodes.map((node) => {
+      const label = node.command ?? node.label ?? node.id;
+      return {
+        id: node.id,
+        type: 'workflowNode',
+        position: { x: toNum(node.x), y: toNum(node.y) },
+        style: { width: nodeWidthForLabel(label) },
+        data: {
+          label,
+          command: node.command ?? node.label ?? '',
+          status: node.status ?? '',
+          stdout: node.stdout,
+          stderr: node.stderr,
+          log: node.log
+        }
+      };
+    }),
     edges: data.links.map((link, index) => ({
       id: link.id ?? `${link.source}-${link.target}-${index}`,
       source: String(link.source),
