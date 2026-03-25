@@ -212,6 +212,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
         minHeight: 36,
         minWidth: 0,
         padding: '6px 8px',
+        width: '100%',
         whiteSpace: 'nowrap'
       }}
     >
