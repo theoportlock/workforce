@@ -36,7 +36,7 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
       type: 'workflowNode',
       position: { x: toNum(node.x), y: toNum(node.y) },
       data: {
-        label: node.label || node.id,
+        label: node.command ?? node.label ?? node.id,
         command: node.command ?? node.label ?? '',
         status: node.status ?? '',
         stdout: node.stdout,

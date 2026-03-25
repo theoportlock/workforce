@@ -204,7 +204,6 @@ function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
     >
       <Handle type="target" position={Position.Left} />
       <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label}</div>
-      <div style={{ fontSize: 12, opacity: 0.9 }}>{data.command}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );

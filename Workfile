@@ -249,8 +249,8 @@ workforce.spec
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>
-      <data key="d2">469.9016364365341</data>
-      <data key="d3">-92.9888404531516</data>
+      <data key="d2">502.88933420585647</data>
+      <data key="d3">-111.46195120397212</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -a"</data>
       <data key="d6">.
@@ -386,8 +386,8 @@ workforce.spec
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">ls -lta</data>
-      <data key="d2">-115.53713415759839</data>
-      <data key="d3">-395.26592769727716</data>
+      <data key="d2">-90.00581262230361</data>
+      <data key="d3">-387.0300175246014</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
       <data key="d6">total 240
