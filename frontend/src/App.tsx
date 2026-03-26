@@ -282,6 +282,7 @@ function AppContent() {
 
   useOnSelectionChange({
     onChange: ({ nodes: selectedNodes }) => {
+      if (selectedNodes.length === 0) return;
       const nextSelectedNodeIds = selectedNodes.map((node) => node.id);
       setSelectedNodeIds((currentSelectedNodeIds) => {
         if (
@@ -731,6 +732,7 @@ function AppContent() {
             onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
+            onNodeClick={(_, node) => setSelectedNodeIds([node.id])}
             onPaneClick={() => setSelectedNodeIds([])}
             nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
