@@ -383,6 +383,7 @@ function AppContent() {
 
   const onNodeDragStart = useCallback((_: MouseEvent, node: Node<WorkflowNodeData>) => {
     dragStartPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
+    setSelectedNodeIds([node.id]);
   }, []);
 
   const onNodeDragStop = useCallback(
@@ -740,8 +741,8 @@ function AppContent() {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
             onNodeClick={(_, node) => setSelectedNodeIds([node.id])}
+            nodeDragThreshold={0}
             onPaneClick={() => setSelectedNodeIds([])}
-            nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
             onKeyDown={(event) => {

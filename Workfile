@@ -28,8 +28,8 @@
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
-      <data key="d2">1317.1199377302783</data>
-      <data key="d3">193.57321459338385</data>
+      <data key="d2">1331.0487467430162</data>
+      <data key="d3">168.32724825779624</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -69,8 +69,8 @@ workforce.spec
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d1">ls -lta</data>
-      <data key="d2">619.0555298874019</data>
-      <data key="d3">-306.1897567164468</data>
+      <data key="d2">614.9748241219513</data>
+      <data key="d3">-307.549991971597</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
       <data key="d6">total 240
@@ -133,22 +133,22 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">261.6093232279515</data>
-      <data key="d3">-69.93375507669309</data>
+      <data key="d2">254.80814695220056</data>
+      <data key="d3">-72.65422558699346</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; pwd"</data>
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">24523</data>
+      <data key="d8">4866</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
       <data key="d1">echo "teststet"
 ls
 ls</data>
-      <data key="d2">650.152791850697</data>
-      <data key="d3">237.98206647609635</data>
+      <data key="d2">647.4323213403966</data>
+      <data key="d3">240.7025369863967</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo "teststet"
 ls
@@ -245,8 +245,8 @@ workforce.spec
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>
-      <data key="d2">502.88933420585647</data>
-      <data key="d3">-111.46195120397212</data>
+      <data key="d2">578.0831391105592</data>
+      <data key="d3">-52.21010348962972</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -a"</data>
       <data key="d6">.
@@ -291,13 +291,13 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">24640</data>
+      <data key="d8">4906</data>
       <data key="d9">0</data>
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
       <data key="d1">ls</data>
-      <data key="d2">374.3176132181526</data>
-      <data key="d3">25.11906614785994</data>
+      <data key="d2">367.01551801766857</data>
+      <data key="d3">11.932119609661711</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
@@ -332,20 +332,59 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">24580</data>
+      <data key="d8">4886</data>
       <data key="d9">0</data>
     </node>
     <node id="670bcdd3-72c6-4bb2-a272-495a543e361f">
-      <data key="d1">lsd</data>
+      <data key="d1">ls -a</data>
       <data key="d2">393.7343064659742</data>
       <data key="d3">-250.16339305007978</data>
-      <data key="d4">fail</data>
-      <data key="d5">bash -c "sleep 1; lsd"</data>
-      <data key="d6" />
-      <data key="d7">bash: line 1: lsd: command not found
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; ls -a"</data>
+      <data key="d6">.
+..
+AGENTS.md
+AUTHORS.rst
+build
+build-frontend.sh
+BUILD_INSTALLER.md
+build_windows.ps1
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+.coverage
+dist
+docs
+env.sh
+frontend
+.git
+.github
+.gitignore
+HISTORY.rst
+installer.iss
+LICENSE
+__main__.spec
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+.pytest_cache
+README.rst
+.readthedocs.yaml
+.ruff_cache
+spec
+tests
+todo.md
+.venv
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+workforce.spec
 </data>
-      <data key="d8">24813</data>
-      <data key="d9">127</data>
+      <data key="d7" />
+      <data key="d8">6430</data>
+      <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">ls -lta</data>
@@ -401,8 +440,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
       <data key="d1">echo test-node</data>
-      <data key="d2">104.13442201502835</data>
-      <data key="d3">112.55275095194025</data>
+      <data key="d2">147.63442201502835</data>
+      <data key="d3">138.05275095194025</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo test-node"</data>
       <data key="d6">test-node
