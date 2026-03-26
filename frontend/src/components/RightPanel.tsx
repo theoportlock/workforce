@@ -12,7 +12,7 @@ interface RightPanelProps {
 
 export function RightPanel({ node, nodeLog, isNodeLogLoading, onUpdate }: RightPanelProps) {
   return (
-    <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', height: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div style={{ padding: 14, borderBottom: '1px solid #1e293b', minHeight: 0, overflow: 'auto' }}>
         <NodeInspector node={node} onUpdate={onUpdate} />
       </div>

@@ -718,8 +718,15 @@ function AppContent() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr' }}>
-        <section style={{ borderRight: '1px solid #1e293b' }}>
+      <main
+        style={{
+          display: 'grid',
+          gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr',
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        <section style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -759,7 +766,7 @@ function AppContent() {
         </section>
 
         {selectedNodeIds.length > 0 && (
-          <aside style={{ color: '#e2e8f0' }}>
+          <aside style={{ color: '#e2e8f0', minHeight: 0, overflow: 'hidden' }}>
             <RightPanel
               node={selectedNode}
               nodeLog={selectedNodeLog}
