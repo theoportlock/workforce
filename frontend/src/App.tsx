@@ -282,7 +282,16 @@ function AppContent() {
 
   useOnSelectionChange({
     onChange: ({ nodes: selectedNodes }) => {
-      setSelectedNodeIds(selectedNodes.map(n => n.id));
+      const nextSelectedNodeIds = selectedNodes.map((node) => node.id);
+      setSelectedNodeIds((currentSelectedNodeIds) => {
+        if (
+          currentSelectedNodeIds.length === nextSelectedNodeIds.length &&
+          currentSelectedNodeIds.every((nodeId, idx) => nodeId === nextSelectedNodeIds[idx])
+        ) {
+          return currentSelectedNodeIds;
+        }
+        return nextSelectedNodeIds;
+      });
     }
   });
 
@@ -296,7 +305,6 @@ function AppContent() {
 
     let ignore = false;
     setIsSelectedNodeLogLoading(true);
-    setSelectedNodeLog(undefined);
 
     void bridgeCall<GetNodeLogResult>('getNodeLog', { node_id: selectedNodeId })
       .then((result) => {
@@ -315,7 +323,7 @@ function AppContent() {
     return () => {
       ignore = true;
     };
-  }, [selectedNodeIds]);
+  }, [selectedNodeIds[0]]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
