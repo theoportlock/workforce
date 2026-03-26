@@ -18,7 +18,7 @@ import ReactFlow, {
   useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { adaptBackendGraph, nodeWidthForLabel, statusColorMap } from './graph/adapters';
+import { adaptBackendGraph, nodeDimensionsForLabel, statusColorMap } from './graph/adapters';
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
@@ -213,11 +213,11 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
         minWidth: 0,
         padding: '6px 8px',
         width: '100%',
-        whiteSpace: 'nowrap'
+        height: '100%'
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label || ''}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'pre' }}>{data.label || ''}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -405,7 +405,7 @@ function AppContent() {
               ...node,
               style: {
                 ...(node.style ?? {}),
-                width: nodeWidthForLabel(update.command ?? update.label ?? node.data.label)
+                ...nodeDimensionsForLabel(update.command ?? update.label ?? node.data.label)
               },
               position: {
                 x: typeof update.x === 'undefined' ? node.position.x : Number(update.x),
@@ -629,7 +629,7 @@ function AppContent() {
             id,
             type: 'workflowNode',
             position: { x: 200, y: 180 },
-            style: { width: nodeWidthForLabel(`node-${nodes.length + 1}`) },
+            style: nodeDimensionsForLabel(`node-${nodes.length + 1}`),
             data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
           };
           setNodes((existing) => [...existing, node]);
@@ -726,7 +726,7 @@ function AppContent() {
                           ...node,
                           style:
                             Object.prototype.hasOwnProperty.call(updates, 'label') && typeof updates.label === 'string'
-                              ? { ...(node.style ?? {}), width: nodeWidthForLabel(updates.label) }
+                              ? { ...(node.style ?? {}), ...nodeDimensionsForLabel(updates.label) }
                               : node.style,
                           data: { ...node.data, ...updates }
                         }
