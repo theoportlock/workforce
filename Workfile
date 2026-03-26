@@ -133,14 +133,14 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22 10:59 .pytest_cache
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
-      <data key="d2">254.80814695220056</data>
+      <data key="d2">214.60370452730436</data>
       <data key="d3">-72.65422558699346</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; pwd"</data>
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">4866</data>
+      <data key="d8">7558</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">

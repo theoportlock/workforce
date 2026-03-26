@@ -22,6 +22,7 @@ import { adaptBackendGraph, nodeDimensionsForLabel, statusColorMap } from './gra
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
+import { MenuBar } from './components/MenuBar';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 import { FrontendOperationQueue } from './runtime/operationQueue';
 
@@ -709,12 +710,25 @@ function AppContent() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <strong>Workforce Editor (Dev)</strong>
-          <div style={{ display: 'inline-flex', gap: 8 }}>
-            <button onClick={() => void handleOpenWorkflow()}>File ▸ Open</button>
-            <button onClick={() => void handleSaveWorkflowAs()}>File ▸ Save As</button>
-            <button onClick={() => void handleRunWorkflow()}>Run ▸</button>
-            <button onClick={() => void handleStopRuns()}>Stop</button>
-          </div>
+          <MenuBar
+            menus={[
+              {
+                label: 'File',
+                items: [
+                  { label: 'New', action: () => setStatusMessage('New not yet implemented') },
+                  { label: 'Open...', action: () => void handleOpenWorkflow() },
+                  { label: 'Save As...', action: () => void handleSaveWorkflowAs() }
+                ]
+              },
+              {
+                label: 'Run',
+                items: [
+                  { label: 'Run', action: () => void handleRunWorkflow() },
+                  { label: 'Stop', action: () => void handleStopRuns() }
+                ]
+              }
+            ]}
+          />
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
