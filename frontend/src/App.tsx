@@ -46,6 +46,10 @@ type ClientConnectResult = {
   client_id?: string;
 };
 
+type GetNodeLogResult = {
+  log?: string;
+};
+
 const seededGraph: BackendNodeLinkGraph = {
   nodes: [
     { id: 'n1', label: 'echo setup', x: 80, y: 80, status: 'ran', stdout: 'setup complete' },
@@ -231,6 +235,8 @@ function AppContent() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
+  const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
+  const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -276,9 +282,49 @@ function AppContent() {
 
   useOnSelectionChange({
     onChange: ({ nodes: selectedNodes }) => {
-      setSelectedNodeIds(selectedNodes.map(n => n.id));
+      if (selectedNodes.length === 0) return;
+      const nextSelectedNodeIds = selectedNodes.map((node) => node.id);
+      setSelectedNodeIds((currentSelectedNodeIds) => {
+        if (
+          currentSelectedNodeIds.length === nextSelectedNodeIds.length &&
+          currentSelectedNodeIds.every((nodeId, idx) => nodeId === nextSelectedNodeIds[idx])
+        ) {
+          return currentSelectedNodeIds;
+        }
+        return nextSelectedNodeIds;
+      });
     }
   });
+
+  useEffect(() => {
+    const selectedNodeId = selectedNodeIds[0];
+    if (!selectedNodeId) {
+      setSelectedNodeLog(undefined);
+      setIsSelectedNodeLogLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setIsSelectedNodeLogLoading(true);
+
+    void bridgeCall<GetNodeLogResult>('getNodeLog', { node_id: selectedNodeId })
+      .then((result) => {
+        if (ignore) return;
+        setSelectedNodeLog(result.log ?? '[No log available for this node]');
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSelectedNodeLog('[Failed to load node output]');
+      })
+      .finally(() => {
+        if (ignore) return;
+        setIsSelectedNodeLogLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedNodeIds[0]]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -672,8 +718,15 @@ function AppContent() {
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr' }}>
-        <section style={{ borderRight: '1px solid #1e293b' }}>
+      <main
+        style={{
+          display: 'grid',
+          gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr',
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        <section style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -686,6 +739,7 @@ function AppContent() {
             onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
+            onNodeClick={(_, node) => setSelectedNodeIds([node.id])}
             onPaneClick={() => setSelectedNodeIds([])}
             nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
@@ -712,9 +766,11 @@ function AppContent() {
         </section>
 
         {selectedNodeIds.length > 0 && (
-          <aside style={{ color: '#e2e8f0' }}>
+          <aside style={{ color: '#e2e8f0', minHeight: 0, overflow: 'hidden' }}>
             <RightPanel
               node={selectedNode}
+              nodeLog={selectedNodeLog}
+              isNodeLogLoading={isSelectedNodeLogLoading}
               onUpdate={(updates) => {
                 const selectedNodeId = selectedNodeIds[0];
                 if (!selectedNodeId) return;
