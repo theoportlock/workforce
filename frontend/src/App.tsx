@@ -46,6 +46,10 @@ type ClientConnectResult = {
   client_id?: string;
 };
 
+type GetNodeLogResult = {
+  log?: string;
+};
+
 const seededGraph: BackendNodeLinkGraph = {
   nodes: [
     { id: 'n1', label: 'echo setup', x: 80, y: 80, status: 'ran', stdout: 'setup complete' },
@@ -231,6 +235,8 @@ function AppContent() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
+  const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
+  const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -279,6 +285,37 @@ function AppContent() {
       setSelectedNodeIds(selectedNodes.map(n => n.id));
     }
   });
+
+  useEffect(() => {
+    const selectedNodeId = selectedNodeIds[0];
+    if (!selectedNodeId) {
+      setSelectedNodeLog(undefined);
+      setIsSelectedNodeLogLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setIsSelectedNodeLogLoading(true);
+    setSelectedNodeLog(undefined);
+
+    void bridgeCall<GetNodeLogResult>('getNodeLog', { node_id: selectedNodeId })
+      .then((result) => {
+        if (ignore) return;
+        setSelectedNodeLog(result.log ?? '[No log available for this node]');
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSelectedNodeLog('[Failed to load node output]');
+      })
+      .finally(() => {
+        if (ignore) return;
+        setIsSelectedNodeLogLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedNodeIds]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -715,6 +752,8 @@ function AppContent() {
           <aside style={{ color: '#e2e8f0' }}>
             <RightPanel
               node={selectedNode}
+              nodeLog={selectedNodeLog}
+              isNodeLogLoading={isSelectedNodeLogLoading}
               onUpdate={(updates) => {
                 const selectedNodeId = selectedNodeIds[0];
                 if (!selectedNodeId) return;
