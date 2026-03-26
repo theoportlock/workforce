@@ -755,6 +755,7 @@ function AppContent() {
             nodeTypes={{ workflowNode: WorkflowNode }}
             panOnDrag
             zoomOnScroll
+            minZoom={0.01}
             selectionOnDrag
             selectionMode={SelectionMode.Partial}
             multiSelectionKeyCode={['Meta', 'Control']}
