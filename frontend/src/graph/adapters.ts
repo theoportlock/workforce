@@ -17,6 +17,27 @@ export const statusColorMap: Record<WorkforceStatus, string> = {
   fail: '#B71C1C'
 };
 
+const NODE_CHAR_WIDTH = 7.2;
+const NODE_LINE_HEIGHT = 16;
+const NODE_HORIZONTAL_PADDING = 16;
+const NODE_VERTICAL_PADDING = 12;
+const NODE_MIN_WIDTH = 42;
+const NODE_MIN_HEIGHT = 36;
+
+function normalizeLabelLines(label: string): string[] {
+  const normalized = label.replace(/\r\n?/g, '\n');
+  const lines = normalized.split('\n');
+  return lines.length > 0 ? lines : [''];
+}
+
+export function nodeDimensionsForLabel(label: string): { width: number; height: number } {
+  const lines = normalizeLabelLines(label);
+  const longestLineLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  const width = Math.max(NODE_MIN_WIDTH, Math.ceil(longestLineLength * NODE_CHAR_WIDTH) + NODE_HORIZONTAL_PADDING);
+  const height = Math.max(NODE_MIN_HEIGHT, lines.length * NODE_LINE_HEIGHT + NODE_VERTICAL_PADDING);
+  return { width, height };
+}
+
 const toNum = (value: string | number | undefined) => {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') {
@@ -31,19 +52,23 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
   edges: Edge[];
 } {
   return {
-    nodes: data.nodes.map((node) => ({
-      id: node.id,
-      type: 'workflowNode',
-      position: { x: toNum(node.x), y: toNum(node.y) },
-      data: {
-        label: node.label || node.id,
-        command: node.command ?? node.label ?? '',
-        status: node.status ?? '',
-        stdout: node.stdout,
-        stderr: node.stderr,
-        log: node.log
-      }
-    })),
+    nodes: data.nodes.map((node) => {
+      const label = node.command ?? node.label ?? node.id;
+      return {
+        id: node.id,
+        type: 'workflowNode',
+        position: { x: toNum(node.x), y: toNum(node.y) },
+        style: nodeDimensionsForLabel(label),
+        data: {
+          label,
+          command: node.command ?? node.label ?? '',
+          status: node.status ?? '',
+          stdout: node.stdout,
+          stderr: node.stderr,
+          log: node.log
+        }
+      };
+    }),
     edges: data.links.map((link, index) => ({
       id: link.id ?? `${link.source}-${link.target}-${index}`,
       source: String(link.source),

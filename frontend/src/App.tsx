@@ -14,13 +14,15 @@ import ReactFlow, {
   SelectionMode,
   useEdgesState,
   useNodesState,
-  useOnSelectionChange
+  useOnSelectionChange,
+  useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { adaptBackendGraph, statusColorMap } from './graph/adapters';
+import { adaptBackendGraph, nodeDimensionsForLabel, statusColorMap } from './graph/adapters';
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
+import { MenuBar } from './components/MenuBar';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 import { FrontendOperationQueue } from './runtime/operationQueue';
 
@@ -43,6 +45,10 @@ type RunCompletePayload = {
 
 type ClientConnectResult = {
   client_id?: string;
+};
+
+type GetNodeLogResult = {
+  log?: string;
 };
 
 const seededGraph: BackendNodeLinkGraph = {
@@ -189,22 +195,34 @@ function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): stri
   return trimmed;
 }
 
-function WorkflowNode({ data, selected }: NodeProps<WorkflowNodeData>) {
+function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
   const color = statusColorMap[data.status];
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [data.label, id, updateNodeInternals]);
+
   return (
     <div
       style={{
+        alignItems: 'center',
         border: selected ? '2px solid #FFFFFF' : '1px solid #37474F',
-        borderRadius: 4,
+        borderRadius: 6,
         background: color,
+        boxSizing: 'border-box',
         color: '#FFFFFF',
-        minWidth: 190,
-        padding: 10
+        display: 'inline-flex',
+        justifyContent: 'center',
+        minHeight: 36,
+        minWidth: 0,
+        padding: '6px 8px',
+        width: '100%',
+        height: '100%'
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 600 }}>{data.label}</div>
-      <div style={{ fontSize: 12, opacity: 0.9 }}>{data.command}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'pre' }}>{data.label || ''}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -218,6 +236,8 @@ function AppContent() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
+  const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
+  const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -263,9 +283,49 @@ function AppContent() {
 
   useOnSelectionChange({
     onChange: ({ nodes: selectedNodes }) => {
-      setSelectedNodeIds(selectedNodes.map(n => n.id));
+      if (selectedNodes.length === 0) return;
+      const nextSelectedNodeIds = selectedNodes.map((node) => node.id);
+      setSelectedNodeIds((currentSelectedNodeIds) => {
+        if (
+          currentSelectedNodeIds.length === nextSelectedNodeIds.length &&
+          currentSelectedNodeIds.every((nodeId, idx) => nodeId === nextSelectedNodeIds[idx])
+        ) {
+          return currentSelectedNodeIds;
+        }
+        return nextSelectedNodeIds;
+      });
     }
   });
+
+  useEffect(() => {
+    const selectedNodeId = selectedNodeIds[0];
+    if (!selectedNodeId) {
+      setSelectedNodeLog(undefined);
+      setIsSelectedNodeLogLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setIsSelectedNodeLogLoading(true);
+
+    void bridgeCall<GetNodeLogResult>('getNodeLog', { node_id: selectedNodeId })
+      .then((result) => {
+        if (ignore) return;
+        setSelectedNodeLog(result.log ?? '[No log available for this node]');
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSelectedNodeLog('[Failed to load node output]');
+      })
+      .finally(() => {
+        if (ignore) return;
+        setIsSelectedNodeLogLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedNodeIds[0]]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -324,6 +384,7 @@ function AppContent() {
 
   const onNodeDragStart = useCallback((_: MouseEvent, node: Node<WorkflowNodeData>) => {
     dragStartPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
+    setSelectedNodeIds([node.id]);
   }, []);
 
   const onNodeDragStop = useCallback(
@@ -390,6 +451,10 @@ function AppContent() {
             if (!update) return node;
             return {
               ...node,
+              style: {
+                ...(node.style ?? {}),
+                ...nodeDimensionsForLabel(update.command ?? update.label ?? node.data.label)
+              },
               position: {
                 x: typeof update.x === 'undefined' ? node.position.x : Number(update.x),
                 y: typeof update.y === 'undefined' ? node.position.y : Number(update.y)
@@ -612,6 +677,7 @@ function AppContent() {
             id,
             type: 'workflowNode',
             position: { x: 200, y: 180 },
+            style: nodeDimensionsForLabel(`node-${nodes.length + 1}`),
             data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
           };
           setNodes((existing) => [...existing, node]);
@@ -644,18 +710,38 @@ function AppContent() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <strong>Workforce Editor (Dev)</strong>
-          <div style={{ display: 'inline-flex', gap: 8 }}>
-            <button onClick={() => void handleOpenWorkflow()}>File ▸ Open</button>
-            <button onClick={() => void handleSaveWorkflowAs()}>File ▸ Save As</button>
-            <button onClick={() => void handleRunWorkflow()}>Run ▸</button>
-            <button onClick={() => void handleStopRuns()}>Stop</button>
-          </div>
+          <MenuBar
+            menus={[
+              {
+                label: 'File',
+                items: [
+                  { label: 'New', action: () => setStatusMessage('New not yet implemented') },
+                  { label: 'Open...', action: () => void handleOpenWorkflow() },
+                  { label: 'Save As...', action: () => void handleSaveWorkflowAs() }
+                ]
+              },
+              {
+                label: 'Run',
+                items: [
+                  { label: 'Run', action: () => void handleRunWorkflow() },
+                  { label: 'Stop', action: () => void handleStopRuns() }
+                ]
+              }
+            ]}
+          />
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
-      <main style={{ display: 'grid', gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr' }}>
-        <section style={{ borderRight: '1px solid #1e293b' }}>
+      <main
+        style={{
+          display: 'grid',
+          gridTemplateColumns: selectedNodeIds.length ? '1fr 320px' : '1fr',
+          minHeight: 0,
+          overflow: 'hidden'
+        }}
+      >
+        <section style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -668,8 +754,9 @@ function AppContent() {
             onNodeDragStop={onNodeDragStop}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
+            onNodeClick={(_, node) => setSelectedNodeIds([node.id])}
+            nodeDragThreshold={0}
             onPaneClick={() => setSelectedNodeIds([])}
-            nodeDragThreshold={5}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
             onKeyDown={(event) => {
@@ -683,6 +770,7 @@ function AppContent() {
             nodeTypes={{ workflowNode: WorkflowNode }}
             panOnDrag
             zoomOnScroll
+            minZoom={0.01}
             selectionOnDrag
             selectionMode={SelectionMode.Partial}
             multiSelectionKeyCode={['Meta', 'Control']}
@@ -694,16 +782,27 @@ function AppContent() {
         </section>
 
         {selectedNodeIds.length > 0 && (
-          <aside style={{ color: '#e2e8f0' }}>
+          <aside style={{ color: '#e2e8f0', minHeight: 0, overflow: 'hidden' }}>
             <RightPanel
               node={selectedNode}
+              nodeLog={selectedNodeLog}
+              isNodeLogLoading={isSelectedNodeLogLoading}
               onUpdate={(updates) => {
                 const selectedNodeId = selectedNodeIds[0];
                 if (!selectedNodeId) return;
                 const previousNode = nodes.find((node) => node.id === selectedNodeId);
                 setNodes((existing) =>
                   existing.map((node) =>
-                    node.id === selectedNodeId ? { ...node, data: { ...node.data, ...updates } } : node
+                    node.id === selectedNodeId
+                      ? {
+                          ...node,
+                          style:
+                            Object.prototype.hasOwnProperty.call(updates, 'label') && typeof updates.label === 'string'
+                              ? { ...(node.style ?? {}), ...nodeDimensionsForLabel(updates.label) }
+                              : node.style,
+                          data: { ...node.data, ...updates }
+                        }
+                      : node
                   )
                 );
 

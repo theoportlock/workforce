@@ -32,7 +32,17 @@ cat > assets/manifest.json << EOF
 EOF
 
 echo "Updating index.html..."
-sed -i "s|index-[a-zA-Z0-9]*.js|$NEW_JS|" index.html
-sed -i "s|index-[a-zA-Z0-9]*.css|$NEW_CSS|" index.html
+python3 - <<PY
+from pathlib import Path
+import re
+
+path = Path("index.html")
+text = path.read_text()
+
+text = re.sub(r'assets/index-[^"\']+\\.js', f'assets/$NEW_JS', text)
+text = re.sub(r'assets/index-[^"\']+\\.css', f'assets/$NEW_CSS', text)
+
+path.write_text(text)
+PY
 
 echo "Done! Frontend deployed."
