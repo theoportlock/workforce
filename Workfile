@@ -442,8 +442,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
       <data key="d1">echo test-node</data>
-      <data key="d2">147.63442201502835</data>
-      <data key="d3">138.05275095194025</data>
+      <data key="d2">145.13442201502835</data>
+      <data key="d3">242.05275095194025</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo test-node"</data>
       <data key="d6">test-node
