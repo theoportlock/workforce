@@ -15,6 +15,7 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
   useOnSelectionChange,
+  useReactFlow,
   useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -238,6 +239,8 @@ function AppContent() {
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
   const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
+  const { screenToFlowPosition } = useReactFlow();
+  const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -673,10 +676,11 @@ function AppContent() {
         label: 'Add node',
         onSelect: () => {
           const id = crypto.randomUUID();
+          const position = { ...cursorFlowPosRef.current };
           const node = {
             id,
             type: 'workflowNode',
-            position: { x: 200, y: 180 },
+            position,
             style: nodeDimensionsForLabel(`node-${nodes.length + 1}`),
             data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
           };
@@ -759,6 +763,11 @@ function AppContent() {
             onPaneClick={() => setSelectedNodeIds([])}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
+            onMouseMove={(event) => {
+              if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+              const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+              cursorFlowPosRef.current = flowPos;
+            }}
             onKeyDown={(event) => {
               if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
               if (event.key === 'r' || event.key === 'R') {
