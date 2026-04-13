@@ -148,8 +148,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
       <data key="d1">echo "teststet"
 ls
 ls</data>
-      <data key="d2">647.4323213403966</data>
-      <data key="d3">240.7025369863967</data>
+      <data key="d2">618.4031473033929</data>
+      <data key="d3">131.18338039224653</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo "teststet"
 ls
@@ -220,18 +220,6 @@ workforce.spec
 </data>
       <data key="d7" />
       <data key="d8">4127</data>
-      <data key="d9">0</data>
-    </node>
-    <node id="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
-      <data key="d1">claude interpret theses results and forward into a manst</data>
-      <data key="d2">1494.7082280513698</data>
-      <data key="d3">152.19934538374017</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; pwd"</data>
-      <data key="d6">/home/tpor598/workforce
-</data>
-      <data key="d7" />
-      <data key="d8">4312</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -442,8 +430,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
       <data key="d1">echo test-node</data>
-      <data key="d2">145.13442201502835</data>
-      <data key="d3">242.05275095194025</data>
+      <data key="d2">116.10524797802469</data>
+      <data key="d3">132.5335943577901</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; echo test-node"</data>
       <data key="d6">test-node
@@ -466,10 +454,6 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
-      <data key="d11" />
-    </edge>
-    <edge source="4fde5e8e-52d5-495e-b90e-52b9d109f79b" target="76c0bc92-5421-4c94-9b92-1f08f1f14f3c">
-      <data key="d10">5b6a02ab-cfde-4bc4-b8d5-943f699695ee</data>
       <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
