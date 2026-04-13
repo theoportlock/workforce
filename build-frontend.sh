@@ -16,6 +16,9 @@ cd ../workforce/web/static
 NEW_JS=$(ls -t "$SCRIPT_DIR/frontend/dist/assets/index-"*.js | head -1 | xargs basename)
 NEW_CSS=$(ls -t "$SCRIPT_DIR/frontend/dist/assets/index-"*.css | head -1 | xargs basename)
 
+echo "Cleaning old assets..."
+rm -f assets/index-*.js assets/index-*.css
+
 echo "Copying $NEW_JS to assets/"
 cp "$SCRIPT_DIR/frontend/dist/assets/$NEW_JS" assets/
 echo "Copying $NEW_CSS to assets/"
@@ -44,5 +47,7 @@ text = re.sub(r'assets/index-[^"\']+\\.css', f'assets/$NEW_CSS', text)
 
 path.write_text(text)
 PY
+
+rm -f index.html.backup
 
 echo "Done! Frontend deployed."
