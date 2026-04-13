@@ -632,11 +632,12 @@ function AppContent() {
   const handleAddNodeAtPosition = useCallback(
     (position: { x: number; y: number }) => {
       const id = crypto.randomUUID();
+      const dims = nodeDimensionsForLabel(`node-${nodes.length + 1}`);
       const node = {
         id,
         type: 'workflowNode',
-        position,
-        style: nodeDimensionsForLabel(`node-${nodes.length + 1}`),
+        position: { x: position.x - dims.width / 2, y: position.y - dims.height / 2 },
+        style: dims,
         data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
       };
       setNodes((existing) => [...existing, node]);
