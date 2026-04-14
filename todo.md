@@ -4,7 +4,7 @@
 # double click canvas to add node into edit mode
 # on node double click should edit
 Make it so that if wf is called from within wsl then the windows default browser is opened
-bold on font to be removed (ideally color of bash)
+# bold on font to be removed (ideally color of bash)
 r for run on a single selected node
 Some way to tab autocomplete on node add menu
 Different color edge for non-blocking

@@ -286,8 +286,8 @@ workforce.spec
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
       <data key="d1">ls</data>
-      <data key="d2">367.01551801766857</data>
-      <data key="d3">11.932119609661711</data>
+      <data key="d2">394.51551801766857</data>
+      <data key="d3">1.4321196096617115</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls"</data>
       <data key="d6">AGENTS.md
