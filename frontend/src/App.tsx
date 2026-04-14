@@ -223,7 +223,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'pre' }}>{data.label || ''}</div>
+      <div style={{ fontSize: 13, fontWeight: 400, whiteSpace: 'pre' }}>{data.label || ''}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
