@@ -1,3 +1,6 @@
+# Server
+Replace PID file singleton with socket binding
+
 # Frontend
 Some way to tab autocomplete on node add menu
 Edges change color based on to run
