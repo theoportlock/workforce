@@ -15,6 +15,7 @@ import ReactFlow, {
   useEdgesState,
   useNodesState,
   useOnSelectionChange,
+  useReactFlow,
   useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -222,7 +223,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
       }}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'pre' }}>{data.label || ''}</div>
+      <div style={{ fontSize: 13, fontWeight: 400, whiteSpace: 'pre' }}>{data.label || ''}</div>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -238,6 +239,8 @@ function AppContent() {
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
   const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
+  const { screenToFlowPosition } = useReactFlow();
+  const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -626,6 +629,31 @@ function AppContent() {
     }
   }, [selectedNodeIds]);
 
+  const handleAddNodeAtPosition = useCallback(
+    (position: { x: number; y: number }) => {
+      const id = crypto.randomUUID();
+      const dims = nodeDimensionsForLabel(`node-${nodes.length + 1}`);
+      const node = {
+        id,
+        type: 'workflowNode',
+        position: { x: position.x - dims.width / 2, y: position.y - dims.height / 2 },
+        style: dims,
+        data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
+      };
+      setNodes((existing) => [...existing, node]);
+      void bridgeCall('addNode', {
+        node_id: id,
+        label: node.data.label,
+        x: node.position.x,
+        y: node.position.y
+      }).catch((error) => {
+        setNodes((existing) => existing.filter((entry) => entry.id !== id));
+        setStatusMessage(`Add node failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+      });
+    },
+    [nodes.length, setNodes]
+  );
+
   const menuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return [];
 
@@ -671,30 +699,11 @@ function AppContent() {
       {
         id: 'add-node',
         label: 'Add node',
-        onSelect: () => {
-          const id = crypto.randomUUID();
-          const node = {
-            id,
-            type: 'workflowNode',
-            position: { x: 200, y: 180 },
-            style: nodeDimensionsForLabel(`node-${nodes.length + 1}`),
-            data: { label: `node-${nodes.length + 1}`, command: '', status: '' as WorkforceStatus }
-          };
-          setNodes((existing) => [...existing, node]);
-          void bridgeCall('addNode', {
-            node_id: id,
-            label: node.data.label,
-            x: node.position.x,
-            y: node.position.y
-          }).catch((error) => {
-            setNodes((existing) => existing.filter((entry) => entry.id !== id));
-            setStatusMessage(`Add node failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-          });
-        }
+        onSelect: () => handleAddNodeAtPosition(cursorFlowPosRef.current)
       },
       { id: 'clear-selection', label: 'Clear selection', onSelect: () => setSelectedNodeIds([]) }
     ];
-  }, [contextMenu, edges, nodes, selectedNodeIds, setEdges, setNodes]);
+  }, [contextMenu, edges, handleAddNodeAtPosition, nodes, selectedNodeIds, setEdges, setNodes]);
 
   return (
     <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
@@ -730,7 +739,7 @@ function AppContent() {
             ]}
           />
         </div>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Click to inspect • Drag • Connect • Right click • Multi-select'}</span>
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Double click to add • Drag • Connect • Right click • Multi-select'}</span>
       </header>
 
       <main
@@ -741,7 +750,15 @@ function AppContent() {
           overflow: 'hidden'
         }}
       >
-        <section style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}>
+        <section
+          style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}
+          onDoubleClick={(event) => {
+            const target = event.target as HTMLElement;
+            if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return;
+            const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+            handleAddNodeAtPosition(flowPos);
+          }}
+        >
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -759,6 +776,11 @@ function AppContent() {
             onPaneClick={() => setSelectedNodeIds([])}
             onNodeContextMenu={onNodeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
+            onMouseMove={(event) => {
+              if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+              const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+              cursorFlowPosRef.current = flowPos;
+            }}
             onKeyDown={(event) => {
               if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
               if (event.key === 'r' || event.key === 'R') {
@@ -770,6 +792,7 @@ function AppContent() {
             nodeTypes={{ workflowNode: WorkflowNode }}
             panOnDrag
             zoomOnScroll
+            zoomOnDoubleClick={false}
             minZoom={0.01}
             selectionOnDrag
             selectionMode={SelectionMode.Partial}
