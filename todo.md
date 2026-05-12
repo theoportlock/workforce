@@ -1,11 +1,7 @@
-# Frontend
-# cleanup previous build 
-# When you add a new node, it should be at the cursor position
-# double click canvas to add node into edit mode
-# on node double click should edit
+Double click to edit node
 Make it so that if wf is called from within wsl then the windows default browser is opened
-# bold on font to be removed (ideally color of bash)
 r for run on a single selected node
+single operation buttons on top bar
 Some way to tab autocomplete on node add menu
 Different color edge for non-blocking
 Save PDF of layout button
