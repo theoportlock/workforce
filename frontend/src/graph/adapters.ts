@@ -19,10 +19,10 @@ export const statusColorMap: Record<WorkforceStatus, string> = {
 
 const NODE_CHAR_WIDTH = 7.2;
 const NODE_LINE_HEIGHT = 16;
-const NODE_HORIZONTAL_PADDING = 16;
-const NODE_VERTICAL_PADDING = 12;
-const NODE_MIN_WIDTH = 42;
-const NODE_MIN_HEIGHT = 36;
+const NODE_HORIZONTAL_PADDING = 48;
+const NODE_VERTICAL_PADDING = 32;
+const NODE_MIN_WIDTH = 150;
+const NODE_MIN_HEIGHT = 48;
 
 function normalizeLabelLines(label: string): string[] {
   const normalized = label.replace(/\r\n?/g, '\n');

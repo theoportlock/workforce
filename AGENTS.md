@@ -8,7 +8,7 @@ Architecture
 The server is authoritative (server/context.py, server/queue.py, server/routes.py, server/sockets.py) and owns all state; clients are projections. The execution layer (run/) handles dependency resolution and shell execution but must enqueue all mutations. The Tkinter GUI (gui/state.py, gui/canvas.py, gui/core.py) is legacy/deprecated. The web frontend (frontend/) is a React Flow app built with Vite and served as a real-time Socket.IO projection of server state; it must be built explicitly via ./build-frontend.sh.
 
 Development
-After any change run pytest. If frontend code is modified, rebuild with ./build-frontend.sh. Never commit with failing tests, type errors, or lint issues.
+Install Python development dependencies from pyproject.toml (for example, `python -m pip install -e ".[dev]"`) rather than maintaining ad-hoc requirement lists or relying on PYTHONPATH shims. After any change run pytest. If frontend code is modified, rebuild with ./build-frontend.sh. Never commit with failing tests, type errors, or lint issues.
 
 Frontend Build Issues
 If web UI changes don't appear after rebuild:

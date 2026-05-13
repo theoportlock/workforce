@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, CSSProperties, KeyboardEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -196,38 +196,243 @@ function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): stri
   return trimmed;
 }
 
+const nodeWrapperBaseStyle: CSSProperties = {
+  padding: '10px 15px',
+  border: '1px solid #555',
+  borderRadius: 5,
+  background: 'white',
+  width: 'fit-content',
+  minWidth: 150,
+  textAlign: 'left',
+  boxSizing: 'border-box',
+  color: '#111827',
+  position: 'relative'
+};
+
+const textDisplayStyle: CSSProperties = {
+  padding: 5,
+  cursor: 'text',
+  whiteSpace: 'pre-wrap'
+};
+
+const inputStyle: CSSProperties = {
+  width: 'auto',
+  minWidth: '100%',
+  display: 'inline-block',
+  boxSizing: 'border-box',
+  padding: 5,
+  border: 'none',
+  outline: 'none',
+  background: 'transparent',
+  font: 'inherit',
+  color: 'inherit',
+  resize: 'none',
+  overflow: 'hidden'
+};
+
+function parsePixelValue(value: string): number {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function adjustTextareaSize(element: HTMLTextAreaElement): { width: number; height: number } {
+  element.style.height = 'auto';
+  element.style.height = `${element.scrollHeight}px`;
+
+  const computed = window.getComputedStyle(element);
+  const tempSpan = document.createElement('span');
+  tempSpan.style.visibility = 'hidden';
+  tempSpan.style.position = 'absolute';
+  tempSpan.style.whiteSpace = 'pre';
+  tempSpan.style.font = computed.font;
+  tempSpan.textContent = element.value || ' ';
+  document.body.appendChild(tempSpan);
+
+  const horizontalPadding = parsePixelValue(computed.paddingLeft) + parsePixelValue(computed.paddingRight);
+  const horizontalBorder = parsePixelValue(computed.borderLeftWidth) + parsePixelValue(computed.borderRightWidth);
+  const width = Math.ceil(tempSpan.offsetWidth + horizontalPadding + horizontalBorder + 2);
+
+  document.body.removeChild(tempSpan);
+  element.style.width = 'auto';
+  element.style.width = `${width}px`;
+
+  return { width, height: element.scrollHeight };
+}
+
 function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
-  const color = statusColorMap[data.status];
+  const statusColor = statusColorMap[data.status];
   const updateNodeInternals = useUpdateNodeInternals();
+  const { setNodes } = useReactFlow<WorkflowNodeData>();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftLabel, setDraftLabel] = useState(data.label || '');
+  const previousLabelRef = useRef(data.label || '');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastEditRequestRef = useRef<number | undefined>(data.editRequestId);
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const { width, height } = adjustTextareaSize(textarea);
+    const wrapperHorizontalPadding = 30;
+    const wrapperVerticalPadding = 20;
+    const wrapperBorderWidth = 8;
+    const nextDimensions = {
+      width: Math.max(150, width + wrapperHorizontalPadding + wrapperBorderWidth),
+      height: height + wrapperVerticalPadding + 2
+    };
+    setNodes((existingNodes) =>
+      existingNodes.map((node) =>
+        node.id === id
+          ? {
+              ...node,
+              style: { ...(node.style ?? {}), ...nextDimensions }
+            }
+          : node
+      )
+    );
+  }, [draftLabel, id, setNodes]);
+
+  const updateNodeLabelLocally = useCallback(
+    (nextLabel: string) => {
+      setNodes((existingNodes) =>
+        existingNodes.map((node) =>
+          node.id === id
+            ? {
+                ...node,
+                style: { ...(node.style ?? {}), ...nodeDimensionsForLabel(nextLabel) },
+                data: { ...node.data, label: nextLabel, command: nextLabel }
+              }
+            : node
+        )
+      );
+    },
+    [id, setNodes]
+  );
+
+  const commitLabel = useCallback(() => {
+    const nextLabel = draftLabel;
+    const previousLabel = previousLabelRef.current;
+    setIsEditing(false);
+
+    if (nextLabel === previousLabel) return;
+
+    updateNodeLabelLocally(nextLabel);
+    previousLabelRef.current = nextLabel;
+
+    void bridgeCall('updateNodeLabel', { node_id: id, label: nextLabel }).catch((error) => {
+      updateNodeLabelLocally(previousLabel);
+      previousLabelRef.current = previousLabel;
+      setDraftLabel(previousLabel);
+      console.error(`Label update failed for ${id}:`, error);
+    });
+  }, [draftLabel, id, updateNodeLabelLocally]);
+
+  const cancelEdit = useCallback(() => {
+    setDraftLabel(previousLabelRef.current);
+    setIsEditing(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof data.editRequestId === 'undefined' || data.editRequestId === lastEditRequestRef.current) return;
+    lastEditRequestRef.current = data.editRequestId;
+    setIsEditing(true);
+  }, [data.editRequestId]);
+
+  useEffect(() => {
+    if (isEditing) return;
+    previousLabelRef.current = data.label || '';
+    setDraftLabel(data.label || '');
+  }, [data.label, isEditing]);
 
   useEffect(() => {
     updateNodeInternals(id);
-  }, [data.label, id, updateNodeInternals]);
+  }, [data.label, draftLabel, id, isEditing, updateNodeInternals]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    resizeTextarea();
+  }, [isEditing, resizeTextarea]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    textareaRef.current?.focus();
+    textareaRef.current?.select();
+  }, [isEditing]);
+
+  const handleDraftChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    adjustTextareaSize(event.target);
+    setDraftLabel(event.target.value);
+  };
+
+  const handleStartEditing = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setIsEditing(true);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelEdit();
+      return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      commitLabel();
+    }
+  };
 
   return (
     <div
       style={{
-        alignItems: 'center',
-        border: selected ? '2px solid #FFFFFF' : '1px solid #37474F',
-        borderRadius: 6,
-        background: color,
-        boxSizing: 'border-box',
-        color: '#FFFFFF',
-        display: 'inline-flex',
-        justifyContent: 'center',
-        minHeight: 36,
-        minWidth: 0,
-        padding: '6px 8px',
-        width: '100%',
-        height: '100%'
+        ...nodeWrapperBaseStyle,
+        border: selected ? '2px solid #111827' : nodeWrapperBaseStyle.border,
+        borderLeft: `6px solid ${statusColor}`
       }}
+      onDoubleClick={handleStartEditing}
     >
       <Handle type="target" position={Position.Left} />
-      <div style={{ fontSize: 13, fontWeight: 400, whiteSpace: 'pre' }}>{data.label || ''}</div>
+      {isEditing ? (
+        <>
+          <textarea
+            ref={textareaRef}
+            className="nodrag nowheel"
+            value={draftLabel}
+            aria-label="Node label"
+            rows={1}
+            spellCheck={false}
+            style={inputStyle}
+            onBlur={commitLabel}
+            onChange={handleDraftChange}
+            onKeyDown={handleKeyDown}
+            onMouseDown={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
+          />
+        </>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          title="Double click to edit node label"
+          style={textDisplayStyle}
+          onDoubleClick={handleStartEditing}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setIsEditing(true);
+            }
+          }}
+        >
+          {data.label || ''}
+        </div>
+      )}
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
+
+const nodeTypes = { workflowNode: WorkflowNode };
 
 function AppContent() {
   const initial = useMemo(() => adaptBackendGraph(seededGraph), []);
@@ -242,6 +447,7 @@ function AppContent() {
   const { screenToFlowPosition } = useReactFlow();
   const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const editRequestCounterRef = useRef(0);
   const opQueueRef = useRef(
     new FrontendOperationQueue(
       {
@@ -654,6 +860,20 @@ function AppContent() {
     [nodes.length, setNodes]
   );
 
+  const startInlineEditingNode = useCallback(
+    (nodeId: string) => {
+      editRequestCounterRef.current += 1;
+      const editRequestId = editRequestCounterRef.current;
+      setSelectedNodeIds([nodeId]);
+      setNodes((existing) =>
+        existing.map((node) =>
+          node.id === nodeId ? { ...node, data: { ...node.data, editRequestId } } : node
+        )
+      );
+    },
+    [setNodes]
+  );
+
   const menuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return [];
 
@@ -706,7 +926,7 @@ function AppContent() {
   }, [contextMenu, edges, handleAddNodeAtPosition, nodes, selectedNodeIds, setEdges, setNodes]);
 
   return (
-    <div style={{ height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
@@ -772,6 +992,10 @@ function AppContent() {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionDragStop={onSelectionDragStop}
             onNodeClick={(_, node) => setSelectedNodeIds([node.id])}
+            onNodeDoubleClick={(event, node) => {
+              event.stopPropagation();
+              startInlineEditingNode(node.id);
+            }}
             nodeDragThreshold={0}
             onPaneClick={() => setSelectedNodeIds([])}
             onNodeContextMenu={onNodeContextMenu}
@@ -789,7 +1013,7 @@ function AppContent() {
               }
             }}
             fitView
-            nodeTypes={{ workflowNode: WorkflowNode }}
+            nodeTypes={nodeTypes}
             panOnDrag
             zoomOnScroll
             zoomOnDoubleClick={false}
@@ -810,55 +1034,6 @@ function AppContent() {
               node={selectedNode}
               nodeLog={selectedNodeLog}
               isNodeLogLoading={isSelectedNodeLogLoading}
-              onUpdate={(updates) => {
-                const selectedNodeId = selectedNodeIds[0];
-                if (!selectedNodeId) return;
-                const previousNode = nodes.find((node) => node.id === selectedNodeId);
-                setNodes((existing) =>
-                  existing.map((node) =>
-                    node.id === selectedNodeId
-                      ? {
-                          ...node,
-                          style:
-                            Object.prototype.hasOwnProperty.call(updates, 'label') && typeof updates.label === 'string'
-                              ? { ...(node.style ?? {}), ...nodeDimensionsForLabel(updates.label) }
-                              : node.style,
-                          data: { ...node.data, ...updates }
-                        }
-                      : node
-                  )
-                );
-
-                if (Object.prototype.hasOwnProperty.call(updates, 'label')) {
-                  void bridgeCall('updateNodeLabel', { node_id: selectedNodeId, label: updates.label }).catch((error) => {
-                    if (previousNode) {
-                      setNodes((existing) =>
-                        existing.map((node) =>
-                          node.id === selectedNodeId
-                            ? { ...node, data: { ...node.data, label: previousNode.data.label } }
-                            : node
-                        )
-                      );
-                    }
-                    setStatusMessage(`Label update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-                  });
-                }
-
-                if (Object.prototype.hasOwnProperty.call(updates, 'command')) {
-                  void bridgeCall('updateNodeCommand', { node_id: selectedNodeId, command: updates.command }).catch((error) => {
-                    if (previousNode) {
-                      setNodes((existing) =>
-                        existing.map((node) =>
-                          node.id === selectedNodeId
-                            ? { ...node, data: { ...node.data, command: previousNode.data.command } }
-                            : node
-                        )
-                      );
-                    }
-                    setStatusMessage(`Command update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-                  });
-                }
-              }}
             />
           </aside>
         )}

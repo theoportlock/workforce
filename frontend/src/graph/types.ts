@@ -35,4 +35,5 @@ export interface WorkflowNodeData {
   stdout?: string;
   stderr?: string;
   log?: string;
+  editRequestId?: number;
 }
