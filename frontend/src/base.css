@@ -1,3 +1,22 @@
 body {
   margin: 0;
 }
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+.react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+.workflow-node__measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre;
+  left: -9999px;
+  top: -9999px;
+}
