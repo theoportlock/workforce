@@ -73,16 +73,16 @@ workforce.spec
       <data key="d3">-307.549991971597</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 260
-drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:14 .
--rw-------  1 tpor598 tpor598 16556 Jul  1 19:14 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:14 .git
-drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:05 ..
+      <data key="d6">total 256
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:21 .
+-rw-------  1 tpor598 tpor598 14770 Jul  1 19:21 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:19 .git
+drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:19 frontend
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:15 ..
 drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
 -rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
 -rw-r--r--  1 tpor598 tpor598 14808 May 13 14:20 DESIGN.md
-drwxr-xr-x  5 tpor598 tpor598  4096 May 13 14:20 frontend
 -rw-r--r--  1 tpor598 tpor598  2712 May 13 14:20 AGENTS.md
 -rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
 drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 14:54 workforce
@@ -117,7 +117,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">1802</data>
+      <data key="d8">3251</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -225,13 +225,13 @@ workforce.spec
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
-      <data key="d2">812.9447627806021</data>
-      <data key="d3">-385.884243447136</data>
-      <data key="d4">ran</data>
+      <data key="d2">845.9447627806021</data>
+      <data key="d3">-392.384243447136</data>
+      <data key="d4">run</data>
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">1877</data>
+      <data key="d8">3150</data>
       <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
@@ -443,7 +443,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
       <data key="d6">test-node
 </data>
       <data key="d7" />
-      <data key="d8">1735</data>
+      <data key="d8">3091</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">

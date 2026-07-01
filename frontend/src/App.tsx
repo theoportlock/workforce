@@ -948,16 +948,42 @@ function AppContent() {
                   { label: 'Open...', action: () => void handleOpenWorkflow() },
                   { label: 'Save As...', action: () => void handleSaveWorkflowAs() }
                 ]
-              },
-              {
-                label: 'Run',
-                items: [
-                  { label: 'Run', action: () => void handleRunWorkflow() },
-                  { label: 'Stop', action: () => void handleStopRuns() }
-                ]
               }
             ]}
           />
+          <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
+            <button
+              onClick={() => void handleRunWorkflow()}
+              style={{
+                background: '#334155',
+                border: 'none',
+                color: '#e2e8f0',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontFamily: 'inherit'
+              }}
+            >
+              Run
+            </button>
+            <button
+              onClick={() => void handleStopRuns()}
+              style={{
+                background: '#334155',
+                border: 'none',
+                color: '#e2e8f0',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontFamily: 'inherit'
+              }}
+            >
+              Stop
+            </button>
+          </div>
+
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Double click to add • Drag • Connect • Right click • Multi-select'}</span>
       </header>
