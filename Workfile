@@ -73,51 +73,51 @@ workforce.spec
       <data key="d3">-307.549991971597</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 240
-drwxr-xr-x 15 tpor598 tpor598  4096 Apr  2 14:41 .
--rw-------  1 tpor598 tpor598     0 Apr  2 14:41 tmpprkb_0tv
--rw-------  1 tpor598 tpor598 15772 Apr  2 14:41 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Apr  2 14:40 .git
-drwxr-xr-x  2 tpor598 tpor598  4096 Apr  1 22:01 workforce.egg-info
-drwxr-x--- 75 tpor598 tpor598  4096 Apr  1 12:27 ..
-drwxr-xr-x  5 tpor598 tpor598  4096 Mar 26 21:07 frontend
-drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 01:54 workforce
--rw-r--r--  1 tpor598 tpor598  1958 Mar 26 01:54 pyproject.toml
-drwxr-xr-x  4 tpor598 tpor598  4096 Mar 26 01:54 tests
-drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 01:54 docs
--rw-r--r--  1 tpor598 tpor598  2520 Mar 26 01:54 AGENTS.md
--rwxr-xr-x  1 tpor598 tpor598  1078 Mar 26 01:54 build-frontend.sh
--rw-r--r--  1 tpor598 tpor598  9657 Mar 26 01:54 README.rst
--rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 07:44 .gitignore
--rw-r--r--  1 tpor598 tpor598   273 Mar 22 07:32 todo.md
--rw-r--r--  1 tpor598 tpor598  3140 Mar 22 07:21 spec
-drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 06:06 build
--rwxr-xr-x  1 tpor598 tpor598   458 Feb 26 01:00 MANIFEST.in
-drwxr-xr-x  4 tpor598 tpor598  4096 Feb 25 22:59 .ruff_cache
--rw-r--r--  1 tpor598 tpor598  2807 Feb 25 22:53 CONTRIBUTING.rst
-drwxr-xr-x  6 tpor598 tpor598  4096 Jan 21 22:43 venv
--rw-r--r--  1 tpor598 tpor598  2535 Jan 21 20:40 BUILD_INSTALLER.md
--rw-r--r--  1 tpor598 tpor598  1228 Jan 21 20:40 build_windows.ps1
--rw-r--r--  1 tpor598 tpor598  2628 Jan 21 20:40 Makefile
--rw-r--r--  1 tpor598 tpor598   711 Jan 19 21:47 workforce.spec
--rw-r--r--  1 tpor598 tpor598   710 Jan 19 21:44 __main__.spec
-drwxr-xr-x  3 tpor598 tpor598  4096 Jan 19 21:14 dist
--rw-r--r--  1 tpor598 tpor598   797 Jan 19 20:21 installer.iss
--rw-r--r--  1 tpor598 tpor598     0 Jan 11 08:12 Workfile.lock
-drwxr-xr-x  5 tpor598 tpor598  4096 Jan  5 23:42 .venv
-drwxr-xr-x  3 tpor598 tpor598  4096 Jan  2 22:15 .github
--rwxr-xr-x  1 tpor598 tpor598  1177 Jan  2 21:03 HISTORY.rst
--rw-r--r--  1 tpor598 tpor598   598 Jan  2 02:48 .readthedocs.yaml
--rw-r--r--  1 tpor598 tpor598  1585 Dec 29 08:07 prompt.txt
--rw-r--r--  1 tpor598 tpor598 69632 Dec 15 23:42 .coverage
--rwxr-xr-x  1 tpor598 tpor598   426 Nov 12 22:55 env.sh
-drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
+      <data key="d6">total 260
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:14 .
+-rw-------  1 tpor598 tpor598 16556 Jul  1 19:14 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:14 .git
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:05 ..
+drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
+-rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
+-rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
+-rw-r--r--  1 tpor598 tpor598 14808 May 13 14:20 DESIGN.md
+drwxr-xr-x  5 tpor598 tpor598  4096 May 13 14:20 frontend
+-rw-r--r--  1 tpor598 tpor598  2712 May 13 14:20 AGENTS.md
+-rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
+drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 14:54 workforce
+-rw-r--r--  1 tpor598 tpor598  1958 Mar 26 14:54 pyproject.toml
+drwxr-xr-x  4 tpor598 tpor598  4096 Mar 26 14:54 tests
+drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 14:54 docs
+-rw-r--r--  1 tpor598 tpor598  9657 Mar 26 14:54 README.rst
+-rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 20:44 .gitignore
+-rw-r--r--  1 tpor598 tpor598  3140 Mar 22 20:21 spec
+drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 19:06 build
+-rwxr-xr-x  1 tpor598 tpor598   458 Feb 26 14:00 MANIFEST.in
+drwxr-xr-x  4 tpor598 tpor598  4096 Feb 26 11:59 .ruff_cache
+-rw-r--r--  1 tpor598 tpor598  2807 Feb 26 11:53 CONTRIBUTING.rst
+drwxr-xr-x  6 tpor598 tpor598  4096 Jan 22 11:43 venv
+-rw-r--r--  1 tpor598 tpor598  2535 Jan 22 09:40 BUILD_INSTALLER.md
+-rw-r--r--  1 tpor598 tpor598  1228 Jan 22 09:40 build_windows.ps1
+-rw-r--r--  1 tpor598 tpor598  2628 Jan 22 09:40 Makefile
+-rw-r--r--  1 tpor598 tpor598   711 Jan 20 10:47 workforce.spec
+-rw-r--r--  1 tpor598 tpor598   710 Jan 20 10:44 __main__.spec
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan 20 10:14 dist
+-rw-r--r--  1 tpor598 tpor598   797 Jan 20 09:21 installer.iss
+-rw-r--r--  1 tpor598 tpor598     0 Jan 11 21:12 Workfile.lock
+drwxr-xr-x  5 tpor598 tpor598  4096 Jan  6 12:42 .venv
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan  3 11:15 .github
+-rwxr-xr-x  1 tpor598 tpor598  1177 Jan  3 10:03 HISTORY.rst
+-rw-r--r--  1 tpor598 tpor598   598 Jan  2 15:48 .readthedocs.yaml
+-rw-r--r--  1 tpor598 tpor598 69632 Dec 16  2025 .coverage
+-rwxr-xr-x  1 tpor598 tpor598   426 Nov 13  2025 env.sh
+drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rwxr-xr-x  1 tpor598 tpor598  1072 Aug 13  2025 LICENSE
 -rwxr-xr-x  1 tpor598 tpor598   161 Aug 12  2025 AUTHORS.rst
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">4116</data>
+      <data key="d8">1802</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -141,7 +141,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
       <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">4018</data>
+      <data key="d8">1708</data>
       <data key="d9">0</data>
     </node>
     <node id="839b38c1-ff01-4d61-8472-eaf146dd5d34">
@@ -163,6 +163,7 @@ BUILD_INSTALLER.md
 build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+DESIGN.md
 dist
 docs
 env.sh
@@ -178,7 +179,6 @@ pyproject.toml
 README.rst
 spec
 tests
-tmp98b3dtiz
 todo.md
 venv
 Workfile
@@ -194,6 +194,7 @@ BUILD_INSTALLER.md
 build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+DESIGN.md
 dist
 docs
 env.sh
@@ -209,7 +210,7 @@ pyproject.toml
 README.rst
 spec
 tests
-tmp98b3dtiz
+tmpjl_jgvvl
 todo.md
 venv
 Workfile
@@ -219,7 +220,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">4127</data>
+      <data key="d8">1811</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -230,7 +231,7 @@ workforce.spec
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">4208</data>
+      <data key="d8">1877</data>
       <data key="d9">0</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
@@ -250,6 +251,7 @@ build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 .coverage
+DESIGN.md
 dist
 docs
 env.sh
@@ -281,7 +283,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">4150</data>
+      <data key="d8">1838</data>
       <data key="d9">0</data>
     </node>
     <node id="84aded15-4233-4d63-b327-155b735aa379">
@@ -298,6 +300,7 @@ BUILD_INSTALLER.md
 build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
+DESIGN.md
 dist
 docs
 env.sh
@@ -322,7 +325,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">4087</data>
+      <data key="d8">1779</data>
       <data key="d9">0</data>
     </node>
     <node id="670bcdd3-72c6-4bb2-a272-495a543e361f">
@@ -342,6 +345,7 @@ build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 .coverage
+DESIGN.md
 dist
 docs
 env.sh
@@ -363,6 +367,7 @@ README.rst
 .ruff_cache
 spec
 tests
+tmpf8sv0k8d
 todo.md
 .venv
 venv
@@ -373,7 +378,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">4027</data>
+      <data key="d8">1717</data>
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
@@ -382,50 +387,51 @@ workforce.spec
       <data key="d3">-350.78734275663135</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
-      <data key="d6">total 240
-drwxr-xr-x 15 tpor598 tpor598  4096 Apr  2 14:41 .
--rw-------  1 tpor598 tpor598 14515 Apr  2 14:41 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Apr  2 14:40 .git
-drwxr-xr-x  2 tpor598 tpor598  4096 Apr  1 22:01 workforce.egg-info
-drwxr-x--- 75 tpor598 tpor598  4096 Apr  1 12:27 ..
-drwxr-xr-x  5 tpor598 tpor598  4096 Mar 26 21:07 frontend
-drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 01:54 workforce
--rw-r--r--  1 tpor598 tpor598  1958 Mar 26 01:54 pyproject.toml
-drwxr-xr-x  4 tpor598 tpor598  4096 Mar 26 01:54 tests
-drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 01:54 docs
--rw-r--r--  1 tpor598 tpor598  2520 Mar 26 01:54 AGENTS.md
--rwxr-xr-x  1 tpor598 tpor598  1078 Mar 26 01:54 build-frontend.sh
--rw-r--r--  1 tpor598 tpor598  9657 Mar 26 01:54 README.rst
--rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 07:44 .gitignore
--rw-r--r--  1 tpor598 tpor598   273 Mar 22 07:32 todo.md
--rw-r--r--  1 tpor598 tpor598  3140 Mar 22 07:21 spec
-drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 06:06 build
--rwxr-xr-x  1 tpor598 tpor598   458 Feb 26 01:00 MANIFEST.in
-drwxr-xr-x  4 tpor598 tpor598  4096 Feb 25 22:59 .ruff_cache
--rw-r--r--  1 tpor598 tpor598  2807 Feb 25 22:53 CONTRIBUTING.rst
-drwxr-xr-x  6 tpor598 tpor598  4096 Jan 21 22:43 venv
--rw-r--r--  1 tpor598 tpor598  2535 Jan 21 20:40 BUILD_INSTALLER.md
--rw-r--r--  1 tpor598 tpor598  1228 Jan 21 20:40 build_windows.ps1
--rw-r--r--  1 tpor598 tpor598  2628 Jan 21 20:40 Makefile
--rw-r--r--  1 tpor598 tpor598   711 Jan 19 21:47 workforce.spec
--rw-r--r--  1 tpor598 tpor598   710 Jan 19 21:44 __main__.spec
-drwxr-xr-x  3 tpor598 tpor598  4096 Jan 19 21:14 dist
--rw-r--r--  1 tpor598 tpor598   797 Jan 19 20:21 installer.iss
--rw-r--r--  1 tpor598 tpor598     0 Jan 11 08:12 Workfile.lock
-drwxr-xr-x  5 tpor598 tpor598  4096 Jan  5 23:42 .venv
-drwxr-xr-x  3 tpor598 tpor598  4096 Jan  2 22:15 .github
--rwxr-xr-x  1 tpor598 tpor598  1177 Jan  2 21:03 HISTORY.rst
--rw-r--r--  1 tpor598 tpor598   598 Jan  2 02:48 .readthedocs.yaml
--rw-r--r--  1 tpor598 tpor598  1585 Dec 29 08:07 prompt.txt
--rw-r--r--  1 tpor598 tpor598 69632 Dec 15 23:42 .coverage
--rwxr-xr-x  1 tpor598 tpor598   426 Nov 12 22:55 env.sh
-drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
+      <data key="d6">total 256
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:14 .
+-rw-------  1 tpor598 tpor598 14266 Jul  1 19:14 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:14 .git
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:05 ..
+drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
+-rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
+-rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
+-rw-r--r--  1 tpor598 tpor598 14808 May 13 14:20 DESIGN.md
+drwxr-xr-x  5 tpor598 tpor598  4096 May 13 14:20 frontend
+-rw-r--r--  1 tpor598 tpor598  2712 May 13 14:20 AGENTS.md
+-rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
+drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 14:54 workforce
+-rw-r--r--  1 tpor598 tpor598  1958 Mar 26 14:54 pyproject.toml
+drwxr-xr-x  4 tpor598 tpor598  4096 Mar 26 14:54 tests
+drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 14:54 docs
+-rw-r--r--  1 tpor598 tpor598  9657 Mar 26 14:54 README.rst
+-rwxr-xr-x  1 tpor598 tpor598  1415 Mar 23 20:44 .gitignore
+-rw-r--r--  1 tpor598 tpor598  3140 Mar 22 20:21 spec
+drwxr-xr-x  4 tpor598 tpor598  4096 Mar 12 19:06 build
+-rwxr-xr-x  1 tpor598 tpor598   458 Feb 26 14:00 MANIFEST.in
+drwxr-xr-x  4 tpor598 tpor598  4096 Feb 26 11:59 .ruff_cache
+-rw-r--r--  1 tpor598 tpor598  2807 Feb 26 11:53 CONTRIBUTING.rst
+drwxr-xr-x  6 tpor598 tpor598  4096 Jan 22 11:43 venv
+-rw-r--r--  1 tpor598 tpor598  2535 Jan 22 09:40 BUILD_INSTALLER.md
+-rw-r--r--  1 tpor598 tpor598  1228 Jan 22 09:40 build_windows.ps1
+-rw-r--r--  1 tpor598 tpor598  2628 Jan 22 09:40 Makefile
+-rw-r--r--  1 tpor598 tpor598   711 Jan 20 10:47 workforce.spec
+-rw-r--r--  1 tpor598 tpor598   710 Jan 20 10:44 __main__.spec
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan 20 10:14 dist
+-rw-r--r--  1 tpor598 tpor598   797 Jan 20 09:21 installer.iss
+-rw-r--r--  1 tpor598 tpor598     0 Jan 11 21:12 Workfile.lock
+drwxr-xr-x  5 tpor598 tpor598  4096 Jan  6 12:42 .venv
+drwxr-xr-x  3 tpor598 tpor598  4096 Jan  3 11:15 .github
+-rwxr-xr-x  1 tpor598 tpor598  1177 Jan  3 10:03 HISTORY.rst
+-rw-r--r--  1 tpor598 tpor598   598 Jan  2 15:48 .readthedocs.yaml
+-rw-r--r--  1 tpor598 tpor598 69632 Dec 16  2025 .coverage
+-rwxr-xr-x  1 tpor598 tpor598   426 Nov 13  2025 env.sh
+drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rwxr-xr-x  1 tpor598 tpor598  1072 Aug 13  2025 LICENSE
 -rwxr-xr-x  1 tpor598 tpor598   161 Aug 12  2025 AUTHORS.rst
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">4036</data>
+      <data key="d8">1726</data>
       <data key="d9">0</data>
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
@@ -437,20 +443,44 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
       <data key="d6">test-node
 </data>
       <data key="d7" />
-      <data key="d8">4047</data>
+      <data key="d8">1735</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">
-      <data key="d1">echo $TEST</data>
-      <data key="d2">961.208561085286</data>
-      <data key="d3">-299.13856844340177</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; echo $TEST"</data>
+      <data key="d1">echo $TEST
+asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfa
+asdfasdf
+asdfasd
+fasdf
+asdf
+asdfasd
+fasdf
+asdf</data>
+      <data key="d2">1121.8187328916554</data>
+      <data key="d3">-488.0771673306963</data>
+      <data key="d4">fail</data>
+      <data key="d5">bash -c "sleep 1; echo $TEST
+asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfa
+asdfasdf
+asdfasd
+fasdf
+asdf
+asdfasd
+fasdf
+asdf"</data>
       <data key="d6">
 </data>
-      <data key="d7" />
-      <data key="d8">4217</data>
-      <data key="d9">0</data>
+      <data key="d7">bash: line 2: asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfa: command not found
+bash: line 3: asdfasdf: command not found
+bash: line 4: asdfasd: command not found
+bash: line 5: fasdf: command not found
+bash: line 6: asdf: command not found
+bash: line 7: asdfasd: command not found
+bash: line 8: fasdf: command not found
+bash: line 9: asdf: command not found
+</data>
+      <data key="d8">1662</data>
+      <data key="d9">127</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
@@ -506,6 +536,10 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 21 22:59 .pytest_cache
       <data key="d10">9fa98e1f-e76a-4ec1-8b6e-debe8964c0c0</data>
       <data key="d12">blocking</data>
       <data key="d11" />
+    </edge>
+    <edge source="d79547a8-d728-4b66-b74b-02469dd925a7" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
+      <data key="d10">d9e0a454-dc35-4731-8d8d-d6cd7e99bb97</data>
+      <data key="d12">blocking</data>
     </edge>
     <data key="d0">bash -c "sleep 1; {}"</data>
   </graph>

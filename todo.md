@@ -1,3 +1,8 @@
+It is attractive to make one server per workfile. The reason that there is only one server and multiple workfiles is because there can't be more than one active server on a single workfile.
+
+Make env part of the workfile?
+
+Consider using typer/click vs argparse
 Double click to edit node
 Make it so that if wf is called from within wsl then the windows default browser is opened
 r for run on a single selected node

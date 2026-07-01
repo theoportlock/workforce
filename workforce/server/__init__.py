@@ -562,7 +562,7 @@ def start_server(
     log.info("Server ready. Waiting for client connections...")
 
     try:
-        socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True)
+        socketio.run(app, host=host, port=port, allow_unsafe_werkzeug=True, debug=True, use_reloader=False)
     except KeyboardInterrupt:
         log.info("Server interrupted, triggering graceful shutdown...")
         log.info("Server shutdown requested via keyboard interrupt.")
