@@ -443,6 +443,9 @@ function AppContent() {
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
   const [isSelectedNodeLogLoading, setIsSelectedNodeLogLoading] = useState(false);
+  const [wrapper, setWrapper] = useState<string>('{}');
+  const [isEditingWrapper, setIsEditingWrapper] = useState(false);
+  const [draftWrapper, setDraftWrapper] = useState('{}');
   const { screenToFlowPosition } = useReactFlow();
   const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
@@ -464,10 +467,13 @@ function AppContent() {
 
   const refreshGraph = useCallback(async () => {
     try {
-      const graph = await bridgeCall<BackendNodeLinkGraph>('getGraph');
+      const graph = await bridgeCall<BackendNodeLinkGraph & { graph?: { wrapper?: string } }>('getGraph');
       const adapted = adaptBackendGraph(graph);
       setNodes(adapted.nodes);
       setEdges(adapted.edges);
+      if (graph.graph?.wrapper) {
+        setWrapper(graph.graph.wrapper);
+      }
     } catch {
       // Ignore bridge fetch in dev mode; seeded graph remains visible.
     }
@@ -834,6 +840,17 @@ function AppContent() {
     }
   }, [selectedNodeIds]);
 
+  const handleUpdateWrapper = useCallback(async () => {
+    try {
+      await bridgeCall('updateWrapper', { wrapper: draftWrapper });
+      setWrapper(draftWrapper);
+      setIsEditingWrapper(false);
+      setStatusMessage('Wrapper updated successfully.');
+    } catch (error) {
+      setStatusMessage(`Wrapper update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, [draftWrapper]);
+
   const handleAddNodeAtPosition = useCallback(
     (position: { x: number; y: number }) => {
       const id = crypto.randomUUID();
@@ -981,7 +998,26 @@ function AppContent() {
             >
               Stop
             </button>
+            <button
+              onClick={() => {
+                setDraftWrapper(wrapper);
+                setIsEditingWrapper(true);
+              }}
+              style={{
+                background: '#334155',
+                border: 'none',
+                color: '#e2e8f0',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontFamily: 'inherit'
+              }}
+            >
+              Wrapper
+            </button>
           </div>
+
 
         </div>
         <span style={{ fontSize: 12, color: '#94a3b8' }}>{statusMessage || 'Double click to add • Drag • Connect • Right click • Multi-select'}</span>
@@ -1064,10 +1100,90 @@ function AppContent() {
         )}
       </main>
 
-      {contextMenu && <CanvasContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
-    </div>
-  );
-}
+       {contextMenu && <CanvasContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
+       {isEditingWrapper && (
+         <div
+           style={{
+             position: 'fixed',
+             top: 0,
+             left: 0,
+             right: 0,
+             bottom: 0,
+             background: 'rgba(0,0,0,0.7)',
+             display: 'flex',
+             alignItems: 'center',
+             justifyContent: 'center',
+             zIndex: 2000
+           }}
+         >
+           <div
+             style={{
+               background: '#1e293b',
+               padding: '20px',
+               borderRadius: 8,
+               border: '1px solid #334155',
+               color: '#e2e8f0',
+               width: '600px',
+               maxWidth: '90vw',
+               display: 'flex',
+               flexDirection: 'column',
+               gap: 16
+             }}
+           >
+             <h3 style={{ margin: 0 }}>Edit Graph Wrapper</h3>
+             <textarea
+               value={draftWrapper}
+               onChange={(e) => setDraftWrapper(e.target.value)}
+               style={{
+                 width: '100%',
+                 height: '300px',
+                 background: '#0f172a',
+                 color: '#e2e8f0',
+                 border: '1px solid #334155',
+                 borderRadius: 4,
+                 padding: 10,
+                 fontFamily: 'monospace',
+                 fontSize: 13,
+                 resize: 'vertical'
+               }}
+             />
+             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+               <button
+                 onClick={() => setIsEditingWrapper(false)}
+                 style={{
+                   background: 'transparent',
+                   border: '1px solid #334155',
+                   color: '#94a3b8',
+                   cursor: 'pointer',
+                   padding: '6px 12px',
+                   borderRadius: 4,
+                   fontSize: 13
+                 }}
+               >
+                 Close
+               </button>
+               <button
+                 onClick={() => void handleUpdateWrapper()}
+                 style={{
+                   background: '#3b82f6',
+                   border: 'none',
+                   color: 'white',
+                   cursor: 'pointer',
+                   padding: '6px 12px',
+                   borderRadius: 4,
+                   fontSize: 13
+                 }}
+               >
+                 Update
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
+
 
 export default function App() {
   return (

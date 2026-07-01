@@ -15,15 +15,15 @@
   <key id="d0" for="graph" attr.name="wrapper" attr.type="string" />
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d1">echo asdfad</data>
+      <data key="d1">echo asdfad ls</data>
       <data key="d2">1119.4084483296704</data>
       <data key="d3">58.32465419322318</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; echo asdfad"</data>
-      <data key="d6">asdfad
+      <data key="d5">bash -c "sleep 3; echo asdfad ls"</data>
+      <data key="d6">asdfad ls
 </data>
       <data key="d7" />
-      <data key="d8">5837</data>
+      <data key="d8">8093</data>
       <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -73,14 +73,13 @@ workforce.spec
       <data key="d2">614.9748241219513</data>
       <data key="d3">-307.549991971597</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; ls -lta"</data>
+      <data key="d5">bash -c "sleep 3; ls -lta"</data>
       <data key="d6">total 256
-drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:40 .
--rw-------  1 tpor598 tpor598     0 Jul  1 19:40 tmp18w94212
--rw-------  1 tpor598 tpor598 16341 Jul  1 19:40 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:36 .git
-drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:35 frontend
-drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:22 ..
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:54 .
+-rw-------  1 tpor598 tpor598 14935 Jul  1 19:54 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:52 .git
+drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:51 frontend
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:43 ..
 drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
 -rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
@@ -119,7 +118,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">5703</data>
+      <data key="d8">8034</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -228,7 +227,7 @@ workforce.spec
       <data key="d1">sleep 5</data>
       <data key="d2">839.3607711551266</data>
       <data key="d3">-432.43685916877837</data>
-      <data key="d4">ran</data>
+      <data key="d4">run</data>
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
       <data key="d7" />
@@ -334,7 +333,7 @@ workforce.spec
       <data key="d2">393.7343064659742</data>
       <data key="d3">-250.16339305007978</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; ls -a"</data>
+      <data key="d5">bash -c "sleep 3; ls -a"</data>
       <data key="d6">.
 ..
 AGENTS.md
@@ -378,7 +377,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">5623</data>
+      <data key="d8">7876</data>
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
@@ -386,13 +385,13 @@ workforce.spec
       <data key="d2">347.28478039083734</data>
       <data key="d3">-350.78734275663135</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; ls -lta"</data>
+      <data key="d5">bash -c "sleep 3; ls -lta"</data>
       <data key="d6">total 256
-drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:40 .
--rw-------  1 tpor598 tpor598 14021 Jul  1 19:40 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:36 .git
-drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:35 frontend
-drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:22 ..
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:54 .
+-rw-------  1 tpor598 tpor598 14935 Jul  1 19:54 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:52 .git
+drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:51 frontend
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:43 ..
 drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
 -rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
@@ -431,7 +430,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">5632</data>
+      <data key="d8">7992</data>
       <data key="d9">0</data>
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
@@ -506,7 +505,7 @@ bash: line 8: l: command not found
 ls</data>
       <data key="d2">1110.845413515863</data>
       <data key="d3">-491.9178291122236</data>
-      <data key="d4">ran</data>
+      <data key="d4">run</data>
       <data key="d5">bash -c "sleep 1; echo $TEST
 ls"</data>
       <data key="d6">
@@ -546,31 +545,17 @@ workforce.spec
       <data key="d8">5971</data>
       <data key="d9">0</data>
     </node>
-    <node id="7139ee45-6157-46fb-a70f-0b7261f8d9b4">
-      <data key="d1">asd;flkjas;ldkfj</data>
-      <data key="d2">590.3817026915198</data>
-      <data key="d3">271.5695461279321</data>
-      <data key="d4">fail</data>
-      <data key="d5">bash -c "sleep 1; asd;flkjas;ldkfj"</data>
-      <data key="d6" />
-      <data key="d7">bash: line 1: asd: command not found
-bash: line 1: flkjas: command not found
-bash: line 1: ldkfj: command not found
-</data>
-      <data key="d8">6087</data>
-      <data key="d9">127</data>
-    </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
       <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d10">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
-      <data key="d11" />
+      <data key="d11">to_run</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d10">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
-      <data key="d11" />
+      <data key="d11">to_run</data>
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d10">48f98cee-2ce4-4b70-b1bd-bc9e5e21d752</data>
@@ -615,6 +600,6 @@ bash: line 1: ldkfj: command not found
       <data key="d12">blocking</data>
       <data key="d11" />
     </edge>
-    <data key="d0">bash -c "sleep 1; {}"</data>
+    <data key="d0">bash -c "sleep 3; {}"</data>
   </graph>
 </graphml>
