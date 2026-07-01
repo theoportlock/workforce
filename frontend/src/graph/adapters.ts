@@ -10,11 +10,11 @@ const statusLabelMap: Record<WorkforceStatus, string> = {
 };
 
 export const statusColorMap: Record<WorkforceStatus, string> = {
-  '': '#37474F',
-  run: '#0D47A1',
-  running: '#0D47A1',
-  ran: '#1B5E20',
-  fail: '#B71C1C'
+  '': '#B0BEC5',
+  run: '#BBDEFB',
+  running: '#BBDEFB',
+  ran: '#C8E6C9',
+  fail: '#FFCDD2'
 };
 
 const NODE_CHAR_WIDTH = 7.2;
