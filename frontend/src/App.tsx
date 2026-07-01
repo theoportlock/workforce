@@ -199,9 +199,7 @@ function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): stri
 const nodeWrapperBaseStyle: CSSProperties = {
   padding: '10px 15px',
   border: '1px solid #555',
-  borderRadius: 5,
   background: 'white',
-  width: 'fit-content',
   minWidth: 150,
   textAlign: 'left',
   boxSizing: 'border-box',
@@ -388,7 +386,8 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
       style={{
         ...nodeWrapperBaseStyle,
         border: selected ? '2px solid #111827' : nodeWrapperBaseStyle.border,
-        borderLeft: `6px solid ${statusColor}`
+        borderLeft: `6px solid ${statusColor}`,
+        background: statusColor
       }}
       onDoubleClick={handleStartEditing}
     >

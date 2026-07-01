@@ -74,11 +74,11 @@ workforce.spec
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
       <data key="d6">total 256
-drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:21 .
--rw-------  1 tpor598 tpor598 14770 Jul  1 19:21 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:19 .git
-drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:19 frontend
-drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:15 ..
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:32 .
+-rw-------  1 tpor598 tpor598 15120 Jul  1 19:32 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:30 .git
+drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:28 frontend
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:22 ..
 drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
 -rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
@@ -117,7 +117,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">3251</data>
+      <data key="d8">4748</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
@@ -225,8 +225,8 @@ workforce.spec
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sleep 5</data>
-      <data key="d2">845.9447627806021</data>
-      <data key="d3">-392.384243447136</data>
+      <data key="d2">839.3607711551266</data>
+      <data key="d3">-432.43685916877837</data>
       <data key="d4">run</data>
       <data key="d5">bash -c "sleep 1; sleep 5"</data>
       <data key="d6" />
@@ -367,7 +367,6 @@ README.rst
 .ruff_cache
 spec
 tests
-tmpf8sv0k8d
 todo.md
 .venv
 venv
@@ -378,7 +377,7 @@ workforce.egg-info
 workforce.spec
 </data>
       <data key="d7" />
-      <data key="d8">1717</data>
+      <data key="d8">4786</data>
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
@@ -388,15 +387,15 @@ workforce.spec
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; ls -lta"</data>
       <data key="d6">total 256
-drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:14 .
--rw-------  1 tpor598 tpor598 14266 Jul  1 19:14 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:14 .git
-drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:05 ..
+drwxr-xr-x 15 tpor598 tpor598  4096 Jul  1 19:32 .
+-rw-------  1 tpor598 tpor598 15120 Jul  1 19:32 Workfile
+drwxr-xr-x  9 tpor598 tpor598  4096 Jul  1 19:30 .git
+drwxr-xr-x  5 tpor598 tpor598  4096 Jul  1 19:28 frontend
+drwxr-x--- 81 tpor598 tpor598  4096 Jul  1 19:22 ..
 drwxr-xr-x  2 tpor598 tpor598  4096 Jun 17 10:36 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598  1249 Jun 11 10:38 todo.md
 -rw-r--r--  1 tpor598 tpor598  1575 May 13 14:20 prompt.txt
 -rw-r--r--  1 tpor598 tpor598 14808 May 13 14:20 DESIGN.md
-drwxr-xr-x  5 tpor598 tpor598  4096 May 13 14:20 frontend
 -rw-r--r--  1 tpor598 tpor598  2712 May 13 14:20 AGENTS.md
 -rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
 drwxr-xr-x  7 tpor598 tpor598  4096 Mar 26 14:54 workforce
@@ -431,19 +430,74 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rw-r--r--  1 tpor598 tpor598  1994 Aug 12  2025 CODE_OF_CONDUCT.rst
 </data>
       <data key="d7" />
-      <data key="d8">1726</data>
+      <data key="d8">4825</data>
       <data key="d9">0</data>
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
-      <data key="d1">echo test-node</data>
-      <data key="d2">116.10524797802469</data>
-      <data key="d3">132.5335943577901</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; echo test-node"</data>
-      <data key="d6">test-node
+      <data key="d1">echo test-node
+echo
+asd
+l
+l
+l
+
+l
+ls
 </data>
-      <data key="d7" />
-      <data key="d8">3091</data>
+      <data key="d2">121.10524797802469</data>
+      <data key="d3">130.0335943577901</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 1; echo test-node
+echo
+asd
+l
+l
+l
+
+l
+ls
+"</data>
+      <data key="d6">test-node
+
+AGENTS.md
+AUTHORS.rst
+build
+build-frontend.sh
+BUILD_INSTALLER.md
+build_windows.ps1
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+DESIGN.md
+dist
+docs
+env.sh
+frontend
+HISTORY.rst
+installer.iss
+LICENSE
+__main__.spec
+Makefile
+MANIFEST.in
+prompt.txt
+pyproject.toml
+README.rst
+spec
+tests
+todo.md
+venv
+Workfile
+Workfile.lock
+workforce
+workforce.egg-info
+workforce.spec
+</data>
+      <data key="d7">bash: line 3: asd: command not found
+bash: line 4: l: command not found
+bash: line 5: l: command not found
+bash: line 6: l: command not found
+bash: line 8: l: command not found
+</data>
+      <data key="d8">4545</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">
@@ -456,8 +510,8 @@ asdf
 asdfasd
 fasdf
 asdf</data>
-      <data key="d2">1121.8187328916554</data>
-      <data key="d3">-488.0771673306963</data>
+      <data key="d2">1110.845413515863</data>
+      <data key="d3">-491.9178291122236</data>
       <data key="d4">fail</data>
       <data key="d5">bash -c "sleep 1; echo $TEST
 asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdfa
@@ -536,10 +590,6 @@ bash: line 9: asdf: command not found
       <data key="d10">9fa98e1f-e76a-4ec1-8b6e-debe8964c0c0</data>
       <data key="d12">blocking</data>
       <data key="d11" />
-    </edge>
-    <edge source="d79547a8-d728-4b66-b74b-02469dd925a7" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d10">d9e0a454-dc35-4731-8d8d-d6cd7e99bb97</data>
-      <data key="d12">blocking</data>
     </edge>
     <data key="d0">bash -c "sleep 1; {}"</data>
   </graph>
