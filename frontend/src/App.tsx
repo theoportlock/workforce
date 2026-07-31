@@ -954,7 +954,10 @@ function AppContent() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <strong>Workforce Editor (Dev)</strong>
+          <a href="/" style={{ color: '#f8fafc', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>←</span>
+              <strong>Home</strong>
+            </a>
           <MenuBar
             menus={[
               {
