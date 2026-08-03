@@ -942,7 +942,7 @@ function AppContent() {
   }, [contextMenu, edges, handleAddNodeAtPosition, nodes, selectedNodeIds, setEdges, setNodes]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#020617' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#0f172a' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
