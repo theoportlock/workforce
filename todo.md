@@ -10,3 +10,4 @@ minimap on bottom left next to zooming controls
 tab icon being workforce
 wf status
 Runner = Flow approach - allow floodgates
+Some way of running on startup (systemd?)
