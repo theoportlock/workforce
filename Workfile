@@ -435,69 +435,20 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
     </node>
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
       <data key="d1">echo test-node
-echo
-asd
-l
-l
-l
-
-l
-ls
-</data>
+echo one
+pwd</data>
       <data key="d2">121.10524797802469</data>
       <data key="d3">130.0335943577901</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; echo test-node
-echo
-asd
-l
-l
-l
-
-l
-ls
-"</data>
+      <data key="d5">bash -c "sleep 3; echo test-node
+echo one
+pwd"</data>
       <data key="d6">test-node
-
-AGENTS.md
-AUTHORS.rst
-build
-build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-DESIGN.md
-dist
-docs
-env.sh
-frontend
-HISTORY.rst
-installer.iss
-LICENSE
-__main__.spec
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-spec
-tests
-todo.md
-venv
-Workfile
-Workfile.lock
-workforce
-workforce.egg-info
-workforce.spec
+one
+/home/tpor598/workforce
 </data>
-      <data key="d7">bash: line 3: asd: command not found
-bash: line 4: l: command not found
-bash: line 5: l: command not found
-bash: line 6: l: command not found
-bash: line 8: l: command not found
-</data>
-      <data key="d8">6016</data>
+      <data key="d7" />
+      <data key="d8">13162</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">

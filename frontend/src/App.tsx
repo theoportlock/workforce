@@ -24,8 +24,10 @@ import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
 import { MenuBar } from './components/MenuBar';
+import { WorkspacesIndex } from './components/WorkspacesIndex';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 import { FrontendOperationQueue } from './runtime/operationQueue';
+
 
 type GraphUpdatePayload = BackendNodeLinkGraph & {
   op?: string;
@@ -142,7 +144,8 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
       clientDisconnect: { path: '/client-disconnect' },
       getNodeLog: { path: `/get-node-log/${encodeURIComponent(String(params.node_id ?? ''))}`, httpMethod: 'GET' },
       getRuns: { path: '/runs', httpMethod: 'GET' },
-      getClients: { path: '/clients', httpMethod: 'GET' }
+      getClients: { path: '/clients', httpMethod: 'GET' },
+      listWorkspaces: { path: '/workspaces', httpMethod: 'GET' }
     };
 
     const fallback = fallbackEndpoints[method];
@@ -434,6 +437,9 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
 const nodeTypes = { workflowNode: WorkflowNode };
 
 function AppContent() {
+  const workspaceBaseUrl = resolveWorkspaceBaseUrl();
+  const isHomeView = !workspaceBaseUrl;
+
   const initial = useMemo(() => adaptBackendGraph(seededGraph), []);
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
@@ -636,6 +642,10 @@ function AppContent() {
       setStatusMessage(`Open failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
   }, [currentPath, refreshGraph]);
+
+  const handleSelectWorkspace = useCallback((id: string) => {
+    window.location.href = `/workspace/${id}`;
+  }, []);
 
   const applyGraphUpdate = useCallback(
     (payload: GraphUpdatePayload) => {
@@ -941,8 +951,17 @@ function AppContent() {
     ];
   }, [contextMenu, edges, handleAddNodeAtPosition, nodes, selectedNodeIds, setEdges, setNodes]);
 
-  return (
-    <div style={{ width: '100vw', height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#0f172a' }}>
+    if (isHomeView) {
+      return (
+        <WorkspacesIndex 
+          onSelectWorkspace={handleSelectWorkspace} 
+          fetchWorkspaces={() => bridgeCall('listWorkspaces')} 
+        />
+      );
+    }
+
+    return (
+      <div style={{ width: '100vw', height: '100vh', display: 'grid', gridTemplateRows: '52px 1fr', background: '#0f172a' }}>
       <header
         style={{
           borderBottom: '1px solid #1e293b',
