@@ -41,8 +41,7 @@ Enforcement
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the maintainer at:
 
 **Theo Portlock**  
-📧 theoportlock@gmail.com  
-🔗 https://github.com/theoportlock
+zn.tportlock@gmail.com  
 
 All complaints will be reviewed and investigated promptly and fairly.
 
