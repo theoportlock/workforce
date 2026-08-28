@@ -38,7 +38,9 @@ workforce add node <worksession> <cmd> --id 'filtering_of_data' --after 'quality
 workforce add edge <worksession> <src> <tgt> --blocking # adds edge (blocking is default)
 workforce add group <worksession> <nodeIDs> # adds nodes to group
 workforce edit node status <worksession> <id> "run" # Changes node status
+workforce edit node command <worksession> <id> "echo test" # Changes node command
 workforce edit node name <worksession> <id> "run" # Changes session name
+workforce edit edge type <worksession> <id> --blocking/--nonblocking # Changes edge to blocking or non-blocking
 workforce edit wrapper <worksession> 'docker run image bash -c "{}"' # Changes session name
 workforce cp <worksession> <group or nodeids> <worksession>
 workforce new <workfile> # Creates a new session; if it's a path then create blank then load
@@ -47,20 +49,27 @@ workforce ps # list currently running nodes in queue (accepts workfile or not)
 workforce top <worksession> -n 2 # Same as workforce ps but with watch
 
 # frontend
-index has ability to load/unload workfiles
-node and edge editor in react flow frontend
+index has ability to load/unload workfiles into worksessions
+Each worksession page is a node and edge editor in react flow frontend
 double click node to edit node (command) contents
 double click on empty portion of the canvas to add node
 right click and drag on one node to another to draw edges between nodes
-shift right click and drag to draw non-blocking edges
+shift right click and drag to draw non-blocking edges (can also double click edge or right click on the edge)
 r to trigger node run
 d to delete selected node(s)
 w for wrapper
 e to edit node
-o to open worksession from file
+c to clear
 
 # run
-if a subset is defined, a subgraph is built from those nodes, and if no subset is given but specific nodes are selected (as specified as a selected argument which is loaded from the frontend also), the full graph run starts (changes status to 'run') from those selected nodes instead of from nodes with in-degree 0. If neither applies, start nodes default to those with in-degree 0 in the relevant graph. This 'run' status change request is emitted which triggers the execution of that node with the status change to 'running'. When a node runs, its stdout and stderr are captured as node attributes, and on successful completion an event of changing status to 'ran' is emitted only to that specific run task using its client/run ID (as with the other emissions). The scheduler then marks all outgoing edges from the completed node as 'ready', and each such status change triggers and emit that triggers a check on the target node; when all its incoming edges are 'ready', those edge flags are cleared, the node’s status becomes 'run', and execution continues recursively following the same cycle. In the frontend, the run is triggered with the 'r' key. If nodes are selected, the run starts from those nodes. If no nodes are selected, the run starts from the in-degree 0 nodes (roots).
+If a subset is defined, a subgraph is built from those nodes, and if no subset is given but specific nodes are selected (as specified as a selected argument which is loaded from the frontend also), the full graph run starts (changes status to 'run') from those selected nodes instead of from nodes with in-degree 0.
+If neither applies, start nodes default to those with in-degree 0 in the relevant graph.
+This 'run' status change request is emitted which triggers the execution of that node with the status change to 'running'.
+When a node runs, its stdout and stderr are captured as node attributes, and on successful completion an event of changing status to 'ran' is emitted only to that specific run task using its client/run ID (as with the other emissions).
+The scheduler then marks all outgoing edges from the completed node as 'ready', and each such status change triggers and emit that triggers a check on the target node; when all its incoming edges are 'ready', those edge flags are cleared, the node’s status becomes 'run', and execution continues recursively following the same cycle.
+In the frontend, the run is triggered with the 'r' key.
+If nodes are selected, the run starts from those nodes.
+If no nodes are selected, the run starts from the in-degree 0 nodes (roots).
 Accepts a list of selected nodes that a subgraph should be made from.
 If no nodes are selected (this can be specified by cli or frontend), then failed nodes are selected.
 If there are no failed nodes then the nodes with 0 in degree are started.
@@ -68,12 +77,3 @@ NO1 When a node is ran, it's pid, error code. stdout and err are captured as a n
 That emission will trigger a scheduler which will request the map (network and the filtered to subnetwork if subset run).
 It will look at all outgoing edges and set them as 'ready' emitting this edge status change.
 This emit should trigger an event that looks at the target node to see if all of its incoming edges are set to ready and, if they are, the node's status is changed to 'run', status is removed from those edges and loops back around to NO1.
-
-# Server
-On server start (using __main__.py cli), it first checks to see if the Workfile (abs path) has been assigned a URL (stored in a shared Registry file, The Registry manages a list of workfiles and their URLs)
-If not, a flask API server for a URL (or given on cli - conditional if the given URL doesnt exist) unique to the Workfile is started and stored in the Registry if successfully started.
-In the Registry the client count is started at  1, and PID is stored
-On server stop, fail all the running processes, remove Workfile + URL from Registry (heartbeat?)
-Accepts requests to modify the Workfile using edit
-Accepts requests to run Workfile using run, that will start run clients.
-This request accepts the run arguments of subgraph, selected, and wrapper

@@ -11,3 +11,5 @@ tab icon being workforce
 wf status
 Runner = Flow approach - allow floodgates
 Some way of running on startup (systemd?)
+No changing names of IDs? Will make undo stack very difficult as how do you refer to the node, separate name from id from command? (complicated)
+
