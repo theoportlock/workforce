@@ -5,6 +5,8 @@ import ReactFlow, {
   Connection,
   Controls,
   Edge,
+  EdgeProps,
+  getBezierPath,
   Handle,
   MiniMap,
   Node,
@@ -133,8 +135,9 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
       updateNodePosition: { path: '/edit-node-position' },
       updateNodePositions: { path: '/edit-node-positions' },
       updateNodeLabel: { path: '/edit-node-label' },
-      updateNodeCommand: { path: '/edit-node-label' },
-      updateStatus: { path: '/edit-status' },
+       updateNodeCommand: { path: '/edit-node-label' },
+       editEdgeType: { path: '/edit-edge-type' },
+       updateStatus: { path: '/edit-status' },
       updateStatuses: { path: '/edit-statuses' },
       updateWrapper: { path: '/edit-wrapper' },
       runWorkflow: { path: '/run' },
@@ -209,6 +212,25 @@ const nodeWrapperBaseStyle: CSSProperties = {
   color: '#111827',
   position: 'relative'
 };
+
+function NonBlockingEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, markerEnd }: EdgeProps) {
+  const [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+
+  return (
+    <path
+      id={id}
+      fill="none"
+      style={{
+        ...style,
+        strokeWidth: 2,
+        strokeDasharray: '5,5',
+        stroke: '#94a3b8'
+      }}
+      d={edgePath}
+      markerEnd={markerEnd}
+    />
+  );
+}
 
 const textDisplayStyle: CSSProperties = {
   padding: 5,
@@ -435,6 +457,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
 }
 
 const nodeTypes = { workflowNode: WorkflowNode };
+const edgeTypes = { nonBlockingEdge: NonBlockingEdge };
 
 function AppContent() {
   const workspaceBaseUrl = resolveWorkspaceBaseUrl();
@@ -444,7 +467,7 @@ function AppContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId?: string; edgeId?: string } | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [currentPath, setCurrentPath] = useState<string | undefined>();
   const [selectedNodeLog, setSelectedNodeLog] = useState<string>();
@@ -595,6 +618,11 @@ function AppContent() {
     event.preventDefault();
     setSelectedNodeIds([node.id]);
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
   }, []);
 
   const onPaneContextMenu = useCallback((event: MouseEvent) => {
@@ -941,6 +969,40 @@ function AppContent() {
       ];
     }
 
+    if (contextMenu.edgeId) {
+      const edge = edges.find((e) => e.id === contextMenu.edgeId);
+      if (!edge) return [];
+      
+      const currentType = (edge.data?.edge_type as string) || 'blocking';
+      const nextType = currentType === 'blocking' ? 'non-blocking' : 'blocking';
+
+      return [
+        {
+          id: 'toggle-edge-type',
+          label: `Edge type: ${currentType === 'blocking' ? 'Blocking' : 'Non-blocking'}`,
+          onSelect: () => {
+            setEdges((existing) =>
+              existing.map((e) =>
+                e.id === edge.id ? { ...e, data: { ...e.data, edge_type: nextType } } : e
+              )
+            );
+            void bridgeCall('editEdgeType', { 
+              source: edge.source, 
+              target: edge.target, 
+              edge_type: nextType 
+            }).catch((error) => {
+              setEdges((existing) =>
+                existing.map((e) =>
+                  e.id === edge.id ? { ...e, data: { ...e.data, edge_type: currentType } } : e
+                )
+              );
+              setStatusMessage(`Edge type update failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+            });
+          }
+        }
+      ];
+    }
+
     return [
       {
         id: 'add-node',
@@ -1082,7 +1144,9 @@ function AppContent() {
             nodeDragThreshold={0}
             onPaneClick={() => setSelectedNodeIds([])}
             onNodeContextMenu={onNodeContextMenu}
+            onEdgeContextMenu={onEdgeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
+            edgeTypes={edgeTypes}
             onMouseMove={(event) => {
               if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
               const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });

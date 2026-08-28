@@ -73,7 +73,9 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
       id: link.id ?? `${link.source}-${link.target}-${index}`,
       source: String(link.source),
       target: String(link.target),
-      animated: link.status === 'to_run'
+      animated: link.status === 'to_run',
+      type: link.edge_type === 'non-blocking' ? 'nonBlockingEdge' : 'default',
+      data: { edge_type: link.edge_type ?? 'blocking' }
     }))
   };
 }

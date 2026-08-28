@@ -135,18 +135,16 @@ drwxr-xr-x  3 theo theo  4096 Mar 15 18:40 .github
       <data key="d1">echo "teststet"
 ls
 ls</data>
-      <data key="d2">618.4031473033929</data>
-      <data key="d3">131.18338039224653</data>
+      <data key="d2">691.4031473033929</data>
+      <data key="d3">247.1833803922466</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; echo "teststet"
+      <data key="d5">bash -c "sleep 2; echo "teststet"
 ls
 ls"</data>
       <data key="d6">teststet
 AGENTS.md
 AUTHORS.rst
 build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 DESIGN.md
@@ -154,26 +152,19 @@ docs
 env.sh
 frontend
 HISTORY.rst
-installer.iss
 LICENSE
 Makefile
-MANIFEST.in
-prompt.txt
 pyproject.toml
 README.rst
-spec
+spec.md
 tests
-tmppzf0hqtt
 todo.md
 venv
 Workfile
 workforce
-workforce.egg-info
 AGENTS.md
 AUTHORS.rst
 build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 DESIGN.md
@@ -181,23 +172,19 @@ docs
 env.sh
 frontend
 HISTORY.rst
-installer.iss
 LICENSE
 Makefile
-MANIFEST.in
-prompt.txt
 pyproject.toml
 README.rst
-spec
+spec.md
 tests
 todo.md
 venv
 Workfile
 workforce
-workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">3538</data>
+      <data key="d8">6879</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -382,57 +369,21 @@ drwxr-xr-x  3 theo theo  4096 Mar 15 18:40 .github
     <node id="3550708a-55a9-4ea6-8a45-dcee2e78bbdc">
       <data key="d1">echo test-node
 echo one
-pwd</data>
-      <data key="d2">121.10524797802469</data>
-      <data key="d3">130.0335943577901</data>
+pwd
+sleep 1</data>
+      <data key="d2">208.41267488288366</data>
+      <data key="d3">167.78762802220254</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; echo test-node
-echo
-asd
-l
-l
-l
-
-l
-ls
-"</data>
+      <data key="d5">bash -c "sleep 2; echo test-node
+echo one
+pwd
+sleep 1"</data>
       <data key="d6">test-node
-
-AGENTS.md
-AUTHORS.rst
-build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-DESIGN.md
-docs
-env.sh
-frontend
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-spec
-tests
-tmpb95p6kor
-todo.md
-venv
-Workfile
-workforce
-workforce.egg-info
+one
+/home/tpor598/workforce
 </data>
-      <data key="d7">bash: line 3: asd: command not found
-bash: line 4: l: command not found
-bash: line 5: l: command not found
-bash: line 6: l: command not found
-bash: line 8: l: command not found
-</data>
-      <data key="d8">3457</data>
+      <data key="d7" />
+      <data key="d8">6827</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">
@@ -475,6 +426,39 @@ workforce.egg-info
       <data key="d8">3602</data>
       <data key="d9">0</data>
     </node>
+    <node id="7c78d5cf-e127-4377-a83c-31c3610fa006">
+      <data key="d1">ls
+sleep 2</data>
+      <data key="d2">378.2145708137997</data>
+      <data key="d3">324.93947359859845</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 2; ls
+sleep 2"</data>
+      <data key="d6">AGENTS.md
+AUTHORS.rst
+build-frontend.sh
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+DESIGN.md
+docs
+env.sh
+frontend
+HISTORY.rst
+LICENSE
+Makefile
+pyproject.toml
+README.rst
+spec.md
+tests
+todo.md
+venv
+Workfile
+workforce
+</data>
+      <data key="d7" />
+      <data key="d8">6834</data>
+      <data key="d9">0</data>
+    </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d10">1b3b6605-438c-4e86-b808-09c2f33fbf21</data>
       <data key="d11" />
@@ -501,10 +485,6 @@ workforce.egg-info
       <data key="d12">blocking</data>
       <data key="d11" />
     </edge>
-    <edge source="839b38c1-ff01-4d61-8472-eaf146dd5d34" target="864cd165-6568-421b-a805-7db8fe430a2c">
-      <data key="d10">0239a6a2-b964-4b67-aa1d-87e05aa4c64e</data>
-      <data key="d11" />
-    </edge>
     <edge source="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d10">3ea98dfe-1da8-4c48-9792-c150e18d69b9</data>
       <data key="d12">blocking</data>
@@ -526,10 +506,14 @@ workforce.egg-info
       <data key="d11" />
     </edge>
     <edge source="3550708a-55a9-4ea6-8a45-dcee2e78bbdc" target="839b38c1-ff01-4d61-8472-eaf146dd5d34">
-      <data key="d10">9fa98e1f-e76a-4ec1-8b6e-debe8964c0c0</data>
+      <data key="d10">736bafbe-7f89-4220-af25-f6e4ccf2445a</data>
+      <data key="d12">non-blocking</data>
+    </edge>
+    <edge source="7c78d5cf-e127-4377-a83c-31c3610fa006" target="839b38c1-ff01-4d61-8472-eaf146dd5d34">
+      <data key="d10">1076d0f8-e22e-4566-8a94-29f597332689</data>
       <data key="d12">blocking</data>
       <data key="d11" />
     </edge>
-    <data key="d0">bash -c "sleep 1; {}"</data>
+    <data key="d0">bash -c "sleep 2; {}"</data>
   </graph>
 </graphml>
