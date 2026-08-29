@@ -53,7 +53,7 @@ index has ability to load/unload workfiles into worksessions
 Each worksession page is a node and edge editor in react flow frontend
 double click node to edit node (command) contents
 double click on empty portion of the canvas to add node
-right click and drag on one node to another to draw edges between nodes
+click and drag from the right handle (source) to the left handle (target) to draw edges between nodes (blocking by default)
 shift right click and drag to draw non-blocking edges (can also double click edge or right click on the edge)
 r to trigger node run
 d to delete selected node(s)
