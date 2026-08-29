@@ -112,7 +112,7 @@ def test_blocking_waits_for_all_predecessors(temp_graph_file, mock_server_contex
 
 
 def test_mixed_blocking_and_non_blocking(temp_graph_file, mock_server_context):
-    """Non-blocking may run target early; blocking later retriggers."""
+    """Non-blocking should NOT run target early if blocking edges are present."""
     G = nx.DiGraph()
     a = _add_node(G, "echo A")
     b = _add_node(G, "echo B")
@@ -126,20 +126,20 @@ def test_mixed_blocking_and_non_blocking(temp_graph_file, mock_server_context):
     time.sleep(0.05)
     run_id = str(uuid.uuid4())
 
+    # Source of non-blocking edge completes
     ctx.active_node_run[b] = run_id
     ctx.enqueue_status(temp_graph_file, "node", b, "ran", run_id)
     ctx.mod_queue.join()
     time.sleep(0.05)
-    assert edit.load_graph(temp_graph_file).nodes[e]["status"] == "run"
+    # Should NOT be run because 'a' (blocking) is not ready
+    assert edit.load_graph(temp_graph_file).nodes[e]["status"] == ""
 
-    ctx.active_node_run[e] = run_id
-    ctx.enqueue_status(temp_graph_file, "node", e, "ran", run_id)
-    ctx.mod_queue.join()
-
+    # Now source of blocking edge completes
     ctx.active_node_run[a] = run_id
     ctx.enqueue_status(temp_graph_file, "node", a, "ran", run_id)
     ctx.mod_queue.join()
     time.sleep(0.05)
+    # Now it should run
     assert edit.load_graph(temp_graph_file).nodes[e]["status"] == "run"
 
 

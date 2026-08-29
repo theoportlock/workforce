@@ -228,11 +228,13 @@ The execution loop follows this pattern:
 4. **Dependency Check**
    
    * Status change prompts target nodes to check dependencies
-   * Node transitions to ``run`` state only if:
-     
-     * **ALL** incoming edges (within the subnetwork context) are marked ``to_run``
-   
-   * Once satisfied:
+    * Node transitions to ``run`` state only if:
+      
+      * **ALL** incoming blocking edges (within the subnetwork context) are marked ``to_run``
+      * **AND** at least one incoming edge (blocking or non-blocking) is marked ``to_run``
+    
+    * Once satisfied:
+
      
      * Node clears the statuses from incoming edges
      * Begins execution
@@ -250,7 +252,7 @@ The dependency resolution system is the core of Workforce's scheduling logic. It
 Workforce supports two edge types that affect dependency checking:
 
 * **Blocking Edges** (:ref:`blocking-edge`) - The target node waits for ALL incoming blocking edges to be ``to_run``
-* **Non-Blocking Edges** (:ref:`non-blocking-edge`) - The target node runs immediately when ANY incoming non-blocking edge becomes ``to_run``
+* **Non-Blocking Edges** (:ref:`non-blocking-edge`) - The target node runs when ANY incoming non-blocking edge becomes ``to_run``, provided all blocking edges are already satisfied
 
 **Resolution Algorithm**:
 
@@ -265,11 +267,12 @@ When an upstream node completes (status becomes ``ran``), the scheduler:
    * Only if true: Set target node status to ``run``
    * Non-blocking edges do not affect blocking edge checks
    
-   **If the incoming edge is NON-BLOCKING**:
-   
-   * Immediately set target node status to ``run``
-   * Do not wait for other incoming edges
-   * Allows target to execute (or re-execute) from this single trigger
+    **If the incoming edge is NON-BLOCKING**:
+    
+    * Check if all incoming blocking edges are ``to_run``
+    * Only if true: Set target node status to ``run``
+    * If blocking edges are not ready, this trigger is ignored
+
 
 3. All propagation respects :ref:`subset-run` boundaries:
 

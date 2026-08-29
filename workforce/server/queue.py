@@ -96,34 +96,40 @@ def start_graph_worker(ctx):
         def _is_in_subset(node_id):
             return (not subset_only) or (node_id in run_nodes)
 
-        if edge_type == "non-blocking":
-            log.info(f"Non-blocking edge {edge_id} ready; triggering {target_node}")
-            ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", edge_id, "")
-            ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
-            return
-
-        # For blocking readiness, consider only blocking in-edges that are in subset (if subset run)
+        # Check blocking readiness first
         blocking_in_edges = [
             (u, v, ed) for u, v, ed in in_edges
             if ed.get("edge_type", "blocking") == "blocking" and _is_in_subset(u) and _is_in_subset(v)
         ]
-        all_ready = all(ed.get("status") == "to_run" for _, _, ed in blocking_in_edges)
-        
-        if all_ready:
-            log.info(f"All blocking dependencies met for node {target_node}, clearing edges and queuing node")
-            
-            # Clear blocking incoming edge statuses
-            for _, _, ed in blocking_in_edges:
-                eid = ed.get("id")
-                if eid:
-                    ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", eid, "")
-            
-            # Set target node to 'run' (always, for blocking edges)
-            # Blocking edges should retrigger execution even if node was previously ran
-            ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
-        else:
+        all_blocking_ready = all(ed.get("status") == "to_run" for _, _, ed in blocking_in_edges)
+
+        if not all_blocking_ready:
             ready_count = sum(1 for _, _, ed in blocking_in_edges if ed.get("status") == "to_run")
-            log.info(f"Node {target_node} not ready: {ready_count}/{len(blocking_in_edges)} blocking edges ready")
+            log.info(f"Node {target_node} blocked: {ready_count}/{len(blocking_in_edges)} blocking edges ready")
+            return
+
+        # At this point, all blocking dependencies are met.
+        # Now check if this specific edge (which triggered this check) is a valid trigger.
+        # It's a valid trigger if it's either blocking or non-blocking, as long as all blocking are met.
+        
+        # If it's a non-blocking edge, it triggers immediately now that blocking is clear.
+        if edge_type == "non-blocking":
+            log.info(f"Non-blocking edge {edge_id} ready and blocking edges clear; triggering {target_node}")
+            ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", edge_id, "")
+            ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
+            return
+
+        # If it's a blocking edge, we already checked all_blocking_ready.
+        log.info(f"All blocking dependencies met for node {target_node}, clearing edges and queuing node")
+        
+        # Clear blocking incoming edge statuses
+        for _, _, ed in blocking_in_edges:
+            eid = ed.get("id")
+            if eid:
+                ctx.enqueue(edit.edit_status_in_graph, workfile_path, "edge", eid, "")
+        
+        # Set target node to 'run'
+        ctx.enqueue_status(workfile_path, "node", target_node, "run", run_id)
 
     def worker():
         log.info(f"Graph worker thread started for workspace {ctx.workspace_id}.")

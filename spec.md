@@ -77,3 +77,5 @@ NO1 When a node is ran, it's pid, error code. stdout and err are captured as a n
 That emission will trigger a scheduler which will request the map (network and the filtered to subnetwork if subset run).
 It will look at all outgoing edges and set them as 'ready' emitting this edge status change.
 This emit should trigger an event that looks at the target node to see if all of its incoming edges are set to ready and, if they are, the node's status is changed to 'run', status is removed from those edges and loops back around to NO1.
+There are blocking and non-blocking edges
+all incoming blocking edges must be marked as ready before the target node can be executed

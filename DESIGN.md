@@ -136,10 +136,11 @@ Every run is treated as a subset run (unified model):
 
 4. **Dependency Check**:
    - Status change prompts target node to check dependencies
-   - Node transitions to `run` state only if:
-     - **ALL incoming blocking edges** within subset are `to_run`
-     - **OR ANY non-blocking edge** is `to_run`
-   - Once satisfied:
+    - Node transitions to `run` state only if:
+      - **ALL incoming blocking edges** within subset are `to_run`
+      - **AND** at least one incoming edge (blocking or non-blocking) is `to_run`
+    - Once satisfied:
+
      - Clear statuses from incoming edges
      - Begin execution
      - Loop back to step 1
@@ -155,7 +156,7 @@ Every run is treated as a subset run (unified model):
 
 **Non-Blocking Edges**:
 - Soft trigger relationship
-- Target immediately transitions to `run` when **ANY** non-blocking edge becomes `to_run`
+- Target transitions to `run` when **ANY** non-blocking edge becomes `to_run`, provided all incoming blocking edges are already satisfied
 - Enables re-triggering (node executes multiple times in single run)
 - Does not block other incoming edges
 
@@ -168,8 +169,11 @@ When upstream node completes (status → ran):
        Check if ALL incoming blocking edges are to_run
        → If yes: Set node to run
        → If no: Remain waiting
-     - If edge is NON-BLOCKING:
-       Immediately set node to run (re-trigger)
+      - If edge is NON-BLOCKING:
+        Check if all incoming blocking edges are to_run
+        → If yes: Set node to run
+        → If no: Remain waiting
+
   3. Respect subset boundaries:
      Only process edges with both endpoints in subset
      Ignore edges leading outside subset
