@@ -12,9 +12,11 @@ An execution can be performed on either the full graph or a subgraph.
 <cmd> = command as string
 
 ---- not requests ----
+workforce # Attempts to start the server at <url>, loads default workfile name (Workfile)
 workforce start # Starts the server in background
 workforce start --foreground # Attempts to start the server at <url>
 ---- requests ----
+workforce edit <workfile> # loads a workfile into the server
 workforce stop # Attempts to stops the server running at <url> env variable with shutdown request
 workforce # Launch webapp
 workforce run <worksession> # Runs the worksession. Uses load with autounload argument that will unload when finished/error?
@@ -32,17 +34,17 @@ workforce load <workfile> # Adds workfile to server
 workforce load <workfile> --autounload # Adds workfile to server and waits for unload signal (from runs) and unloads
 workforce load <workfile> -name 'test_work' # Adds workfile to server then does a set name request to set name of worksession (if that name is available)
 workforce unload <worksession> # Adds workfile to server
-workforce add node <worksession> <cmd> -x 100 -y 200 # Adds node to worksession and prints the node ID
-workforce add node <worksession> <cmd> --id 'filtering_of_data' -x 100 -y 200 # Adds node to worksession and prints the node ID. If the ID is given the has to be unique (check)
-workforce add node <worksession> <cmd> --id 'filtering_of_data' --after 'quality_check' -x +100 # Adds node then draws edge from another node
-workforce add edge <worksession> <src> <tgt> --blocking # adds edge (blocking is default)
-workforce add group <worksession> <nodeIDs> # adds nodes to group
-workforce edit node status <worksession> <id> "run" # Changes node status
-workforce edit node command <worksession> <id> "echo test" # Changes node command
-workforce edit node name <worksession> <id> "run" # Changes session name
-workforce edit edge type <worksession> <id> --blocking/--nonblocking # Changes edge to blocking or non-blocking
-workforce edit wrapper <worksession> 'docker run image bash -c "{}"' # Changes session name
-workforce cp <worksession> <group or nodeids> <worksession>
+workforce node add <worksession> <cmd> -x 100 -y 200 # Adds node to worksession and prints the node ID
+workforce node add <worksession> <cmd> --id 'filtering_of_data' -x 100 -y 200 # Adds node to worksession and prints the node ID. If the ID is given the has to be unique (check)
+workforce node add <worksession> <cmd> --id 'filtering_of_data' --after 'quality_check' -x +100 # Adds node then draws edge from another node (default is +100 in x)
+workforce edge add <worksession> <src> <tgt> --blocking # adds edge (blocking is default)
+workforce group add <worksession> <nodeIDs> # adds nodes to group
+workforce node edit status <worksession> <id> "run" # Changes node status
+workforce node edit command <worksession> <id> "echo test" # Changes node command
+workforce node edit name <worksession> <id> "run" # Changes session name
+workforce edge edit type <worksession> <id> --blocking/--nonblocking # Changes edge to blocking or non-blocking
+workforce wrapper edit <worksession> 'docker run image bash -c "{}"' # Changes session name
+workforce node cp <worksession> <group or nodeids> <worksession>
 workforce new <workfile> # Creates a new session; if it's a path then create blank then load
 workforce save <worksession> <workfile> # Saves the session to a workfile and relinks session to that workfile
 workforce ps # list currently running nodes in queue (accepts workfile or not)
@@ -60,6 +62,7 @@ d to delete selected node(s)
 w for wrapper
 e to edit node
 c to clear
+o on a selected node does a regex for .wf files in the nodes command and opens them with the same function that is called by workforce edit 
 
 # run
 If a subset is defined, a subgraph is built from those nodes, and if no subset is given but specific nodes are selected (as specified as a selected argument which is loaded from the frontend also), the full graph run starts (changes status to 'run') from those selected nodes instead of from nodes with in-degree 0.
