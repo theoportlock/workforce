@@ -108,7 +108,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
-      <data key="d1">pwd</data>
+      <data key="d1">asdf</data>
       <data key="d2">1045.1741416329319</data>
       <data key="d3">-113.68798886041924</data>
       <data key="d4">ran</data>
@@ -132,15 +132,16 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
-      <data key="d1">sleep 5</data>
+      <data key="d1">sasdfkjasghdlfkjleep 5</data>
       <data key="d2">853.0022202537202</data>
       <data key="d3">-456.68832423294475</data>
-      <data key="d4">run</data>
-      <data key="d5">bash -c "sleep 3; sleep 5"</data>
+      <data key="d4">fail</data>
+      <data key="d5">bash -c "sleep 2; sasdfkjasghdlfkjleep 5"</data>
       <data key="d6" />
-      <data key="d7" />
-      <data key="d8">3594</data>
-      <data key="d9">0</data>
+      <data key="d7">bash: line 1: sasdfkjasghdlfkjleep: command not found
+</data>
+      <data key="d8">17518</data>
+      <data key="d9">127</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>

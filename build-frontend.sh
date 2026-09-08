@@ -24,6 +24,9 @@ cp "$SCRIPT_DIR/frontend/dist/assets/$NEW_JS" assets/
 echo "Copying $NEW_CSS to assets/"
 cp "$SCRIPT_DIR/frontend/dist/assets/$NEW_CSS" assets/
 
+echo "Copying static assets..."
+cp "$SCRIPT_DIR/frontend/dist"/*.svg . 2>/dev/null || true
+
 echo "Updating manifest.json..."
 cat > assets/manifest.json << EOF
 {
@@ -44,6 +47,9 @@ text = path.read_text()
 
 text = re.sub(r'assets/index-[^"\']+\\.js', f'assets/$NEW_JS', text)
 text = re.sub(r'assets/index-[^"\']+\\.css', f'assets/$NEW_CSS', text)
+
+if '<link rel="icon"' not in text:
+    text = text.replace('<head>', '<head>\n    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />')
 
 path.write_text(text)
 PY

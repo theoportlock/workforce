@@ -4,7 +4,7 @@
 set -e
 
 # Define file paths and input SVG
-SVG_FILE="docs/images/icon.svg"
+SVG_FILE="docs/images/icon3.svg"
 OUTPUT_DIR="docs/images"
 ICON_WIN="${OUTPUT_DIR}/icon.ico"
 ICON_MAC="${OUTPUT_DIR}/icon.icns"
