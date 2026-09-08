@@ -16,8 +16,8 @@
   <graph edgedefault="directed">
     <node id="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d1">echo asdfad ls</data>
-      <data key="d2">1119.4084483296704</data>
-      <data key="d3">58.32465419322318</data>
+      <data key="d2">1036.279449950978</data>
+      <data key="d3">46.44908299626712</data>
       <data key="d4">run</data>
       <data key="d5">bash -c "sleep 3; echo asdfad ls"</data>
       <data key="d6">asdfad ls
@@ -28,8 +28,8 @@
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
       <data key="d1">ls</data>
-      <data key="d2">1331.0487467430162</data>
-      <data key="d3">168.32724825779624</data>
+      <data key="d2">1362.7169366015655</data>
+      <data key="d3">165.68823243625044</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 3; ls"</data>
       <data key="d6">AGENTS.md
