@@ -25,7 +25,8 @@ def test_wf_web_registers_workspace_and_opens_browser(monkeypatch, capsys):
         }
 
     monkeypatch.setattr(wf_main, "register_workspace", fake_register_workspace)
-    monkeypatch.setattr(wf_main.webbrowser, "open", lambda url: opened.append(url) or True)
+    # Mock _launch_browser_async instead of webbrowser.open (now async in subprocess)
+    monkeypatch.setattr(wf_main, "_launch_browser_async", lambda url: opened.append(url))
     monkeypatch.setattr(sys, "argv", ["wf", "web", "/tmp/demo.graphml", "--server-url", "http://x:1"])
 
     wf_main._main_impl()
@@ -35,7 +36,7 @@ def test_wf_web_registers_workspace_and_opens_browser(monkeypatch, capsys):
     assert opened == ["http://127.0.0.1:6500/workspace/ws_test1234"]
 
     out = capsys.readouterr().out
-    assert "Opened workspace ws_test1234 in browser" in out
+    assert "Opening workspace ws_test1234 in browser" in out
     assert "workfile: /tmp/demo.graphml" in out
 
 
@@ -43,7 +44,8 @@ def test_wf_web_accepts_workspace_url_without_register(monkeypatch):
     opened = []
 
     monkeypatch.setattr(wf_main, "register_workspace", lambda *_args, **_kwargs: pytest.fail("register_workspace should not be called"))
-    monkeypatch.setattr(wf_main.webbrowser, "open", lambda url: opened.append(url) or True)
+    # Mock _launch_browser_async instead of webbrowser.open (now async in subprocess)
+    monkeypatch.setattr(wf_main, "_launch_browser_async", lambda url: opened.append(url))
     monkeypatch.setattr(
         sys,
         "argv",

@@ -9,7 +9,9 @@ with explicit host/port configuration and workspace routing by hashed file path.
 
 import argparse
 import json
+import subprocess
 import sys
+import threading
 import webbrowser
 
 from workforce import __version__, utils
@@ -38,6 +40,36 @@ from workforce.utils import (
 )
 
 # -----------------------------------------------------------------------------
+
+
+def _launch_browser_async(url: str) -> None:
+    """
+    Launch browser asynchronously in a detached subprocess.
+    
+    Returns immediately without waiting for browser to open.
+    Gracefully handles errors without printing to terminal.
+    """
+    def _open_browser():
+        try:
+            # On Windows, detach subprocess from parent console
+            creation_flags = 0
+            if sys.platform == "win32":
+                creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+            
+            # Use subprocess instead of webbrowser.open() to avoid blocking
+            subprocess.Popen(
+                [sys.executable, "-c", f"import webbrowser; webbrowser.open('{url}')"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creation_flags,
+            )
+        except Exception:
+            # Silently ignore any errors; user has URL printed to terminal
+            pass
+    
+    # Launch in background thread to avoid any blocking
+    thread = threading.Thread(target=_open_browser, daemon=True)
+    thread.start()
 
 
 def print_version():
@@ -88,14 +120,8 @@ def _main_impl():
         registration = register_workspace(server_url, wf)
         ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
         base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-        opened = webbrowser.open(base_url)
-        if opened:
-            print(f"Opened workspace {ws_id} in browser: {base_url}")
-        else:
-            print(
-                "Could not automatically open browser. "
-                f"Open this URL manually: {base_url}"
-            )
+        _launch_browser_async(base_url)
+        print(f"Opening workspace {ws_id} in browser: {base_url}")
         print(f"workspace_id: {ws_id}")
         print(f"workfile: {wf}")
         return
@@ -161,19 +187,13 @@ def _main_impl():
             ws_id = registration.get("workspace_id") or compute_workspace_id(wf_path)
             base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
 
-        opened = webbrowser.open(base_url)
-        if opened:
-            print(f"Opened workspace {ws_id} in browser: {base_url}")
-        else:
-            print(
-                "Could not automatically open browser. "
-                f"Open this URL manually: {base_url}"
-            )
-        if wf_path.startswith("<remote:"):
-            print(f"workspace_id: {ws_id}")
-        else:
+        _launch_browser_async(base_url)
+        print(f"Opening workspace {ws_id} in browser: {base_url}")
+        if not wf_path.startswith("<remote:"):
             print(f"workspace_id: {ws_id}")
             print(f"workfile: {wf_path}")
+        else:
+            print(f"workspace_id: {ws_id}")
 
     web_p.set_defaults(func=_web)
 
