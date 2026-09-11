@@ -133,8 +133,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
       <data key="d1">sasdfkjasghdlfkjleep 5</data>
-      <data key="d2">853.0022202537202</data>
-      <data key="d3">-456.68832423294475</data>
+      <data key="d2">959.860238192703</data>
+      <data key="d3">-512.0119789105744</data>
       <data key="d4">fail</data>
       <data key="d5">bash -c "sleep 2; sasdfkjasghdlfkjleep 5"</data>
       <data key="d6" />
@@ -145,8 +145,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
       <data key="d1">ls -a</data>
-      <data key="d2">650.8375343030583</data>
-      <data key="d3">-40.842229240801736</data>
+      <data key="d2">677.2575964679902</data>
+      <data key="d3">-40.84222924080174</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 3; ls -a"</data>
       <data key="d6">.
@@ -315,8 +315,8 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">
       <data key="d1">echo $TEST
 ls</data>
-      <data key="d2">1110.845413515863</data>
-      <data key="d3">-491.9178291122236</data>
+      <data key="d2">1075.9839324861236</data>
+      <data key="d3">-360.8083461090742</data>
       <data key="d4">run</data>
       <data key="d5">bash -c "sleep 3; echo $TEST
 ls"</data>

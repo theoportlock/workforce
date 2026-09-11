@@ -31,6 +31,7 @@ workforce ls nodes --id 'filtering_of_data' <worksession> # Views node/edge info
 workforce ls groups <worksession> # Views defined groups of nodes
 workforce ls wrapper <worksession> # Views nodes/edges of worksession with their IDs
 workforce load <workfile> # Adds workfile to server
+workforce load -r <workfiles> # like pip install -r, recursively loads workfiles to server from list
 workforce load <workfile> --autounload # Adds workfile to server and waits for unload signal (from runs) and unloads
 workforce load <workfile> -name 'test_work' # Adds workfile to server then does a set name request to set name of worksession (if that name is available)
 workforce unload <worksession> # Adds workfile to server
@@ -44,7 +45,7 @@ workforce node edit command <worksession> <id> "echo test" # Changes node comman
 workforce node edit name <worksession> <id> "run" # Changes session name
 workforce edge edit type <worksession> <id> --blocking/--nonblocking # Changes edge to blocking or non-blocking
 workforce wrapper edit <worksession> 'docker run image bash -c "{}"' # Changes session name
-workforce node cp <worksession> <group or nodeids> <worksession>
+workforce node cp <worksession> <groupornodeids> <worksession>
 workforce new <workfile> # Creates a new session; if it's a path then create blank then load
 workforce save <worksession> <workfile> # Saves the session to a workfile and relinks session to that workfile
 workforce ps # list currently running nodes in queue (accepts workfile or not)
