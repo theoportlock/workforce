@@ -139,6 +139,7 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
        editEdgeType: { path: '/edit-edge-type' },
        updateStatus: { path: '/edit-status' },
       updateStatuses: { path: '/edit-statuses' },
+      removeNodeLogs: { path: '/remove-node-logs' },
       updateWrapper: { path: '/edit-wrapper' },
       runWorkflow: { path: '/run' },
       stopRuns: { path: '/stop' },
@@ -889,6 +890,59 @@ function AppContent() {
     }
   }, [draftWrapper]);
 
+  const handleClearStatuses = useCallback(async () => {
+    try {
+      const nodeIdsToClearing = selectedNodeIds.length > 0 ? selectedNodeIds : nodes.map(n => n.id);
+      
+      // Build status updates for nodes
+      const nodeStatusUpdates = nodeIdsToClearing.map(id => ({
+        element_type: 'node' as const,
+        element_id: id,
+        value: ''
+      }));
+      
+      // Build status updates for edges (only when clearing all)
+      const edgeStatusUpdates = selectedNodeIds.length === 0 ? edges.map(e => ({
+        element_type: 'edge' as const,
+        element_id: e.id,
+        value: ''
+      })) : [];
+      
+      const allStatusUpdates = [...nodeStatusUpdates, ...edgeStatusUpdates];
+      
+      // Clear UI state optimistically
+      setNodes((existing) =>
+        existing.map((node) =>
+          nodeIdsToClearing.includes(node.id)
+            ? { ...node, data: { ...node.data, status: '' as WorkforceStatus } }
+            : node
+        )
+      );
+      
+      if (selectedNodeIds.length === 0) {
+        setEdges((existing) =>
+          existing.map((edge) => ({
+            ...edge,
+            data: { ...edge.data, status: '' }
+          }))
+        );
+      }
+      
+      // Send batch status updates
+      await bridgeCall('updateStatuses', { updates: allStatusUpdates });
+      
+      // Remove logs for cleared nodes
+      await bridgeCall('removeNodeLogs', { node_ids: nodeIdsToClearing });
+      
+      const message = selectedNodeIds.length > 0
+        ? `Cleared ${nodeIdsToClearing.length} node status(es) and logs`
+        : 'Cleared all statuses and logs';
+      setStatusMessage(message);
+    } catch (error) {
+      setStatusMessage(`Clear failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+  }, [selectedNodeIds, nodes, edges, setNodes, setEdges]);
+
   const handleAddNodeAtPosition = useCallback(
     (position: { x: number; y: number }) => {
       const id = crypto.randomUUID();
@@ -948,6 +1002,7 @@ function AppContent() {
         { id: 'running', label: 'Set status: running', onSelect: () => setNodeStatus('running') },
         { id: 'complete', label: 'Set status: complete', onSelect: () => setNodeStatus('ran') },
         { id: 'failed', label: 'Set status: failed', onSelect: () => setNodeStatus('fail') },
+        { id: 'clear-status', label: 'Clear status', onSelect: () => void handleClearStatuses() },
         {
           id: 'delete-node',
           label: 'Delete node',
@@ -1083,6 +1138,21 @@ function AppContent() {
               Stop
             </button>
             <button
+              onClick={() => void handleClearStatuses()}
+              style={{
+                background: '#334155',
+                border: 'none',
+                color: '#e2e8f0',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 4,
+                fontSize: 13,
+                fontFamily: 'inherit'
+              }}
+            >
+              Clear
+            </button>
+            <button
               onClick={() => {
                 setDraftWrapper(wrapper);
                 setIsEditingWrapper(true);
@@ -1157,6 +1227,10 @@ function AppContent() {
               if (event.key === 'r' || event.key === 'R') {
                 event.preventDefault();
                 void handleRunWorkflow();
+              }
+              if (event.key === 'c' || event.key === 'C') {
+                event.preventDefault();
+                void handleClearStatuses();
               }
             }}
             fitView

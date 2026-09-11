@@ -18,12 +18,12 @@
       <data key="d1">echo asdfad ls</data>
       <data key="d2">1036.279449950978</data>
       <data key="d3">46.44908299626712</data>
-      <data key="d4">run</data>
-      <data key="d5">bash -c "sleep 3; echo asdfad ls"</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 2; echo asdfad ls"</data>
       <data key="d6">asdfad ls
 </data>
       <data key="d7" />
-      <data key="d8">3611</data>
+      <data key="d8">1773</data>
       <data key="d9">0</data>
     </node>
     <node id="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -31,12 +31,13 @@
       <data key="d2">1362.7169366015655</data>
       <data key="d3">165.68823243625044</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; ls"</data>
+      <data key="d5">bash -c "sleep 2; ls"</data>
       <data key="d6">AGENTS.md
 AUTHORS.rst
+build
 build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
+build.sh
+CLEAR_FEATURE_IMPLEMENTATION.md
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 DESIGN.md
@@ -44,14 +45,11 @@ docs
 env.sh
 frontend
 HISTORY.rst
-installer.iss
 LICENSE
 Makefile
-MANIFEST.in
-prompt.txt
 pyproject.toml
 README.rst
-spec
+spec.md
 tests
 todo.md
 venv
@@ -60,7 +58,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">3663</data>
+      <data key="d8">1843</data>
       <data key="d9">0</data>
     </node>
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
@@ -69,22 +67,24 @@ workforce.egg-info
       <data key="d3">-307.549991971597</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; ls -lta"</data>
-      <data key="d6">total 228
-drwxr-xr-x 14 tpor598 tpor598  4096 Aug 29 12:21 .
--rw-------  1 tpor598 tpor598 15748 Aug 29 12:21 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Aug 29 12:19 .git
+      <data key="d6">total 236
+drwxr-xr-x 14 tpor598 tpor598  4096 Sep 11 19:11 .
+-rw-------  1 tpor598 tpor598 11655 Sep 11 19:11 Workfile
+drwxr-xr-x 10 tpor598 tpor598  4096 Sep 11 19:11 .git
+-rw-r--r--  1 tpor598 tpor598  6690 Sep 11 18:59 CLEAR_FEATURE_IMPLEMENTATION.md
+drwxr-xr-x  6 tpor598 tpor598  4096 Sep 11 18:58 frontend
+drwxr-x--- 79 tpor598 tpor598  4096 Sep 11 18:57 ..
+-rw-r--r--  1 tpor598 tpor598  7079 Sep 11 18:06 spec.md
+-rw-r--r--  1 tpor598 tpor598   794 Sep 11 10:40 todo.md
+-rw-r--r--  1 tpor598 tpor598   957 Sep  9 11:15 build.sh
+-rwxr-xr-x  1 tpor598 tpor598  1415 Sep  9 11:11 build-frontend.sh
+drwxr-xr-x  2 tpor598 tpor598  4096 Sep  9 09:54 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598 14974 Aug 29 12:17 DESIGN.md
-drwxr-xr-x  2 tpor598 tpor598  4096 Aug 29 12:16 workforce.egg-info
 drwxr-xr-x  4 tpor598 tpor598  4096 Aug 29 12:16 build
 drwxr-xr-x  4 tpor598 tpor598  4096 Aug 29 12:16 tests
-drwxr-x--- 85 tpor598 tpor598  4096 Aug 29 12:09 ..
-drwxr-xr-x  5 tpor598 tpor598  4096 Aug 29 11:54 frontend
--rw-r--r--  1 tpor598 tpor598  6475 Aug 29 11:44 spec.md
--rw-r--r--  1 tpor598 tpor598   642 Aug 28 22:54 todo.md
 drwxr-xr-x  7 tpor598 tpor598  4096 Aug 28 21:14 workforce
 -rw-r--r--  1 tpor598 tpor598  1952 Aug 25 18:21 CODE_OF_CONDUCT.rst
 -rw-r--r--  1 tpor598 tpor598  2558 Aug 25 18:19 AGENTS.md
--rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
 -rw-r--r--  1 tpor598 tpor598  1958 Mar 26 14:54 pyproject.toml
 drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 14:54 docs
 -rw-r--r--  1 tpor598 tpor598  9657 Mar 26 14:54 README.rst
@@ -104,31 +104,31 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rwxr-xr-x  1 tpor598 tpor598   161 Aug 12  2025 AUTHORS.rst
 </data>
       <data key="d7" />
-      <data key="d8">15115</data>
+      <data key="d8">2573</data>
       <data key="d9">0</data>
     </node>
     <node id="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d1">asdf</data>
       <data key="d2">1045.1741416329319</data>
       <data key="d3">-113.68798886041924</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 2; pwd"</data>
-      <data key="d6">/home/tpor598/workforce
+      <data key="d4">fail</data>
+      <data key="d5">bash -c "sleep 2; asdf"</data>
+      <data key="d6" />
+      <data key="d7">bash: line 1: asdf: command not found
 </data>
-      <data key="d7" />
-      <data key="d8">15204</data>
-      <data key="d9">0</data>
+      <data key="d8">1818</data>
+      <data key="d9">127</data>
     </node>
     <node id="10980c67-0b82-4c2f-b8b7-cce4309faf0c">
       <data key="d1">pwd</data>
       <data key="d2">214.60370452730436</data>
       <data key="d3">-72.65422558699346</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; pwd"</data>
-      <data key="d6">/home/theo/workforce
+      <data key="d5">bash -c "sleep 2; pwd"</data>
+      <data key="d6">/home/tpor598/workforce
 </data>
       <data key="d7" />
-      <data key="d8">3433</data>
+      <data key="d8">1666</data>
       <data key="d9">0</data>
     </node>
     <node id="d6cfeaf3-7e80-453b-b8e3-a90d91d28f71">
@@ -140,7 +140,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
       <data key="d6" />
       <data key="d7">bash: line 1: sasdfkjasghdlfkjleep: command not found
 </data>
-      <data key="d8">17518</data>
+      <data key="d8">1782</data>
       <data key="d9">127</data>
     </node>
     <node id="0747db39-60a4-4c07-8ca9-fc3ae0d5a13d">
@@ -148,95 +148,15 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
       <data key="d2">677.2575964679902</data>
       <data key="d3">-40.84222924080174</data>
       <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; ls -a"</data>
-      <data key="d6">.
-..
-AGENTS.md
-AUTHORS.rst
-build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-DESIGN.md
-docs
-env.sh
-frontend
-.git
-.github
-.gitignore
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-.readthedocs.yaml
-spec
-tests
-todo.md
-venv
-Workfile
-workforce
-workforce.egg-info
-</data>
-      <data key="d7" />
-      <data key="d8">3563</data>
-      <data key="d9">0</data>
-    </node>
-    <node id="84aded15-4233-4d63-b327-155b735aa379">
-      <data key="d1">ls</data>
-      <data key="d2">404.3676756999862</data>
-      <data key="d3">23.410009824062485</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 3; ls"</data>
-      <data key="d6">AGENTS.md
-AUTHORS.rst
-build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
-CODE_OF_CONDUCT.rst
-CONTRIBUTING.rst
-DESIGN.md
-docs
-env.sh
-frontend
-HISTORY.rst
-installer.iss
-LICENSE
-Makefile
-MANIFEST.in
-prompt.txt
-pyproject.toml
-README.rst
-spec
-tests
-todo.md
-venv
-Workfile
-workforce
-workforce.egg-info
-</data>
-      <data key="d7" />
-      <data key="d8">3503</data>
-      <data key="d9">0</data>
-    </node>
-    <node id="670bcdd3-72c6-4bb2-a272-495a543e361f">
-      <data key="d1">sleep 1
-ls -a</data>
-      <data key="d2">368.2343064659742</data>
-      <data key="d3">-251.16339305007978</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 2; sleep 1
-ls -a"</data>
+      <data key="d5">bash -c "sleep 2; ls -a"</data>
       <data key="d6">.
 ..
 AGENTS.md
 AUTHORS.rst
 build
 build-frontend.sh
+build.sh
+CLEAR_FEATURE_IMPLEMENTATION.md
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 .coverage
@@ -265,31 +185,115 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">15070</data>
+      <data key="d8">1751</data>
+      <data key="d9">0</data>
+    </node>
+    <node id="84aded15-4233-4d63-b327-155b735aa379">
+      <data key="d1">ls</data>
+      <data key="d2">404.3676756999862</data>
+      <data key="d3">23.410009824062485</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 2; ls"</data>
+      <data key="d6">AGENTS.md
+AUTHORS.rst
+build
+build-frontend.sh
+build.sh
+CLEAR_FEATURE_IMPLEMENTATION.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+DESIGN.md
+docs
+env.sh
+frontend
+HISTORY.rst
+LICENSE
+Makefile
+pyproject.toml
+README.rst
+spec.md
+tests
+todo.md
+venv
+Workfile
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">1707</data>
+      <data key="d9">0</data>
+    </node>
+    <node id="670bcdd3-72c6-4bb2-a272-495a543e361f">
+      <data key="d1">sleep 1
+ls -a</data>
+      <data key="d2">368.2343064659742</data>
+      <data key="d3">-251.16339305007978</data>
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 2; sleep 1
+ls -a"</data>
+      <data key="d6">.
+..
+AGENTS.md
+AUTHORS.rst
+build
+build-frontend.sh
+build.sh
+CLEAR_FEATURE_IMPLEMENTATION.md
+CODE_OF_CONDUCT.rst
+CONTRIBUTING.rst
+.coverage
+DESIGN.md
+docs
+env.sh
+frontend
+.git
+.github
+.gitignore
+HISTORY.rst
+LICENSE
+Makefile
+pyproject.toml
+.pytest_cache
+README.rst
+.readthedocs.yaml
+.ruff_cache
+spec.md
+tests
+todo.md
+.venv
+venv
+Workfile
+workforce
+workforce.egg-info
+</data>
+      <data key="d7" />
+      <data key="d8">2545</data>
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">ls -lta</data>
-      <data key="d2">347.28478039083734</data>
-      <data key="d3">-350.78734275663135</data>
+      <data key="d2">362.78478039083734</data>
+      <data key="d3">-345.78734275663135</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; ls -lta"</data>
-      <data key="d6">total 228
-drwxr-xr-x 14 tpor598 tpor598  4096 Aug 29 12:21 .
--rw-------  1 tpor598 tpor598 13840 Aug 29 12:21 Workfile
-drwxr-xr-x  9 tpor598 tpor598  4096 Aug 29 12:19 .git
+      <data key="d6">total 236
+drwxr-xr-x 14 tpor598 tpor598  4096 Sep 11 19:11 .
+-rw-------  1 tpor598 tpor598 11284 Sep 11 19:11 Workfile
+drwxr-xr-x 10 tpor598 tpor598  4096 Sep 11 19:11 .git
+-rw-r--r--  1 tpor598 tpor598  6690 Sep 11 18:59 CLEAR_FEATURE_IMPLEMENTATION.md
+drwxr-xr-x  6 tpor598 tpor598  4096 Sep 11 18:58 frontend
+drwxr-x--- 79 tpor598 tpor598  4096 Sep 11 18:57 ..
+-rw-r--r--  1 tpor598 tpor598  7079 Sep 11 18:06 spec.md
+-rw-r--r--  1 tpor598 tpor598   794 Sep 11 10:40 todo.md
+-rw-r--r--  1 tpor598 tpor598   957 Sep  9 11:15 build.sh
+-rwxr-xr-x  1 tpor598 tpor598  1415 Sep  9 11:11 build-frontend.sh
+drwxr-xr-x  2 tpor598 tpor598  4096 Sep  9 09:54 workforce.egg-info
 -rw-r--r--  1 tpor598 tpor598 14974 Aug 29 12:17 DESIGN.md
-drwxr-xr-x  2 tpor598 tpor598  4096 Aug 29 12:16 workforce.egg-info
 drwxr-xr-x  4 tpor598 tpor598  4096 Aug 29 12:16 build
 drwxr-xr-x  4 tpor598 tpor598  4096 Aug 29 12:16 tests
-drwxr-x--- 85 tpor598 tpor598  4096 Aug 29 12:09 ..
-drwxr-xr-x  5 tpor598 tpor598  4096 Aug 29 11:54 frontend
--rw-r--r--  1 tpor598 tpor598  6475 Aug 29 11:44 spec.md
--rw-r--r--  1 tpor598 tpor598   642 Aug 28 22:54 todo.md
 drwxr-xr-x  7 tpor598 tpor598  4096 Aug 28 21:14 workforce
 -rw-r--r--  1 tpor598 tpor598  1952 Aug 25 18:21 CODE_OF_CONDUCT.rst
 -rw-r--r--  1 tpor598 tpor598  2558 Aug 25 18:19 AGENTS.md
--rwxr-xr-x  1 tpor598 tpor598  1177 Apr 14 09:52 build-frontend.sh
 -rw-r--r--  1 tpor598 tpor598  1958 Mar 26 14:54 pyproject.toml
 drwxr-xr-x  8 tpor598 tpor598  4096 Mar 26 14:54 docs
 -rw-r--r--  1 tpor598 tpor598  9657 Mar 26 14:54 README.rst
@@ -309,7 +313,7 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 -rwxr-xr-x  1 tpor598 tpor598   161 Aug 12  2025 AUTHORS.rst
 </data>
       <data key="d7" />
-      <data key="d8">15163</data>
+      <data key="d8">2549</data>
       <data key="d9">0</data>
     </node>
     <node id="d79547a8-d728-4b66-b74b-02469dd925a7">
@@ -317,15 +321,16 @@ drwxr-xr-x  3 tpor598 tpor598  4096 Oct 22  2025 .pytest_cache
 ls</data>
       <data key="d2">1075.9839324861236</data>
       <data key="d3">-360.8083461090742</data>
-      <data key="d4">run</data>
-      <data key="d5">bash -c "sleep 3; echo $TEST
+      <data key="d4">ran</data>
+      <data key="d5">bash -c "sleep 2; echo $TEST
 ls"</data>
       <data key="d6">
 AGENTS.md
 AUTHORS.rst
+build
 build-frontend.sh
-BUILD_INSTALLER.md
-build_windows.ps1
+build.sh
+CLEAR_FEATURE_IMPLEMENTATION.md
 CODE_OF_CONDUCT.rst
 CONTRIBUTING.rst
 DESIGN.md
@@ -333,14 +338,11 @@ docs
 env.sh
 frontend
 HISTORY.rst
-installer.iss
 LICENSE
 Makefile
-MANIFEST.in
-prompt.txt
 pyproject.toml
 README.rst
-spec
+spec.md
 tests
 todo.md
 venv
@@ -349,7 +351,7 @@ workforce
 workforce.egg-info
 </data>
       <data key="d7" />
-      <data key="d8">3602</data>
+      <data key="d8">1791</data>
       <data key="d9">0</data>
     </node>
     <edge source="864cd165-6568-421b-a805-7db8fe430a2c" target="4fde5e8e-52d5-495e-b90e-52b9d109f79b">
@@ -358,7 +360,7 @@ workforce.egg-info
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="5e6db5b0-645a-4ad6-bb54-dd56d5c4eb04">
       <data key="d10">0f8bd517-68f9-4568-9a90-9b36fc629df8</data>
-      <data key="d11">to_run</data>
+      <data key="d11" />
     </edge>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="864cd165-6568-421b-a805-7db8fe430a2c">
       <data key="d10">75862d8f-3342-4af9-8135-1de29f98ffb4</data>
@@ -390,12 +392,12 @@ workforce.egg-info
     </edge>
     <edge source="670bcdd3-72c6-4bb2-a272-495a543e361f" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d10">d983b397-0b81-45a4-841d-ac07d991ff62</data>
-      <data key="d12">blocking</data>
-      <data key="d11" />
+      <data key="d12">non-blocking</data>
+      <data key="d11">to_run</data>
     </edge>
     <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d10">47358621-cab2-4229-a2b5-3673cdc41a2d</data>
-      <data key="d12">non-blocking</data>
+      <data key="d12">blocking</data>
       <data key="d11" />
     </edge>
     <data key="d0">bash -c "sleep 2; {}"</data>
