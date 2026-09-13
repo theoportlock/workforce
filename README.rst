@@ -16,7 +16,7 @@ plugin workflows, AnADAMA2, Snakemake, Nextflow, and Make, it represents work
 as connected commands; unlike a DAG-only workflow engine, Workforce also
 supports loops.
 
-.. image:: images/small.png
+.. image:: docs/images/small.png
    :alt: Small pipeline example
    :align: center
    :width: 800px
@@ -83,7 +83,7 @@ The CLI exposes the same operations, including ``workforce node add``,
 ``workforce edge add``, ``workforce group add``, ``workforce wrapper edit``,
 ``workforce save``, ``workforce ls``, ``workforce ps``, and ``workforce top``.
 
-.. image:: images/complex.png
+.. image:: docs/images/complex.png
    :alt: Complex pipeline editor view
    :align: center
    :width: 800px
