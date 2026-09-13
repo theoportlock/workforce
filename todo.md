@@ -18,3 +18,4 @@ Wifi speed/temperature/webcam checker
 news aggregator
 Paper bot to find new papers that match my interests
 Notifications server
+one big handle and straight lines with right click and drag support

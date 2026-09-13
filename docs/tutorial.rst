@@ -22,7 +22,7 @@ Verify the installation:
 
 .. code-block:: bash
 
-    wf --help
+    workforce --help
 
 Your First Workflow
 -------------------
@@ -33,16 +33,16 @@ Let's create a simple data processing pipeline that:
 2. Processes the data
 3. Generates a report
 
-Step 1: Launch the GUI
-~~~~~~~~~~~~~~~~~~~~~~~
+Step 1: Launch the Web Frontend
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Start Workforce:
 
 .. code-block:: bash
 
-    wf
+    workforce web Workfile
 
-This opens the visual workflow editor.
+This opens the visual workflow editor in your browser.
 
 Step 2: Create Nodes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -113,7 +113,9 @@ This ensures download_data completes before process_data starts, and process_dat
 
 **Creating Non-Blocking Edges (Optional)**
 
-Non-blocking edges are soft triggers that allow nodes to execute without waiting for all dependencies. Use this for advanced patterns like node re-execution or fan-out workflows.
+Non-blocking edges are soft triggers. Once a target's blocking dependencies are
+ready, each non-blocking edge can trigger it immediately. Use this for advanced
+patterns like node re-execution, fan-out workflows, and loops.
 
 To create a non-blocking edge:
 
@@ -140,7 +142,7 @@ Save your workflow:
 
 1. Press **Ctrl+S** or use File → Exit (which saves automatically)
 2. If this is a new workflow, it will be saved as ``Workfile`` in the current directory
-3. Or specify a different path when starting: ``wf myworkflow.graphml``
+3. Or specify a different path when starting: ``workforce myworkflow.graphml``
 
 Step 5: Run the Workflow
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -192,22 +194,22 @@ Create a new workflow file:
 
 .. code-block:: bash
 
-    # Start with the GUI to create graphically
-    wf
+    # Start the web frontend to create graphically
+    workforce web Workfile
 
     # Or create nodes via CLI (requires existing Workfile or path)
-    wf edit add-node Workfile "echo 'Downloading...' && sleep 2 && echo 'Data downloaded' > data.txt" --x 100 --y 100
-    wf edit add-node Workfile "echo 'Processing...' && cat data.txt | wc -l > processed.txt" --x 200 --y 100
-    wf edit add-node Workfile "echo 'Report: \$(cat processed.txt) lines' > report.txt" --x 300 --y 100
+    workforce edit add-node Workfile "echo 'Downloading...' && sleep 2 && echo 'Data downloaded' > data.txt" --x 100 --y 100
+    workforce edit add-node Workfile "echo 'Processing...' && cat data.txt | wc -l > processed.txt" --x 200 --y 100
+    workforce edit add-node Workfile "echo 'Report: \$(cat processed.txt) lines' > report.txt" --x 300 --y 100
 
-Add dependencies (note: requires node UUIDs, easier via GUI):
+Add dependencies (note: requires node UUIDs, easier in the web frontend):
 
 .. code-block:: bash
 
     # You'll need the actual node UUIDs from the graph
     # wf edit add-edge Workfile <source-uuid> <target-uuid>
     
-    # It's much easier to create edges in the GUI by dragging
+    # You can also create edges by dragging in the web frontend
 
 Running via CLI
 ~~~~~~~~~~~~~~~
@@ -216,13 +218,13 @@ Execute the complete workflow:
 
 .. code-block:: bash
 
-    wf run Workfile
+    workforce run Workfile
 
 Run specific nodes only:
 
 .. code-block:: bash
 
-    wf run Workfile --nodes process_data,generate_report
+    workforce run Workfile --nodes process_data,generate_report
 
 Advanced Tutorial
 -----------------
@@ -230,7 +232,7 @@ Advanced Tutorial
 Running Subsets
 ~~~~~~~~~~~~~~~
 
-Select specific nodes in the GUI:
+Select specific nodes in the web frontend:
 
 1. **Left-click** to select a node
 2. **Shift + Left-click** to add more nodes to selection
@@ -256,7 +258,7 @@ Run all commands in a Docker container:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper "docker run -v \$(pwd):/work -w /work ubuntu bash -c '{}'"
+    workforce run Workfile --wrapper "docker run -v \$(pwd):/work -w /work ubuntu bash -c '{}'"
 
 **Example: Remote Execution**
 
@@ -264,7 +266,7 @@ Execute workflow on a remote server:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'ssh user@remote-server "{}"'
+    workforce run Workfile --wrapper 'ssh user@remote-server "{}"'
 
 **Example: Tmux Integration**
 
@@ -272,7 +274,7 @@ Send commands to tmux panes:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'tmux send-keys -t mysession "{}" C-m'
+    workforce run Workfile --wrapper 'tmux send-keys -t mysession "{}" C-m'
 
 Complex Workflow Example
 -------------------------
@@ -299,14 +301,14 @@ Creating the Workflow
 .. code-block:: bash
 
     # Note: These are simplified examples
-    # In practice, create nodes in GUI or use UUIDs for edges
+    # In practice, create nodes in the web frontend or use UUIDs for edges
     
     # Create nodes with commands
-    wf edit add-node Workfile "wget https://example.com/samples.tar.gz && tar -xzf samples.tar.gz"
-    wf edit add-node Workfile "fastqc samples/*.fastq -o qc_reports/"
-    wf edit add-node Workfile "for f in samples/*.fastq; do trim_galore \$f -o trimmed/; done"
+    workforce edit add-node Workfile "wget https://example.com/samples.tar.gz && tar -xzf samples.tar.gz"
+    workforce edit add-node Workfile "fastqc samples/*.fastq -o qc_reports/"
+    workforce edit add-node Workfile "for f in samples/*.fastq; do trim_galore \$f -o trimmed/; done"
     
-    # Connect nodes in GUI or use node UUIDs with add-edge
+    # Connect nodes in the web frontend or use node UUIDs with add-edge
     # Edges require source and target node IDs (UUIDs)
 
 Running with Conda
@@ -316,7 +318,7 @@ Activate a conda environment for all commands:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper "conda run -n biotools"
+    workforce run Workfile --wrapper "conda run -n biotools"
 
 Parallel Processing
 ~~~~~~~~~~~~~~~~~~~
@@ -325,70 +327,7 @@ Process multiple samples in parallel using GNU Parallel:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper "parallel -j 4" --suffix ":::" --suffix "sample1 sample2 sample3 sample4"
-
-Python API Tutorial
--------------------
-
-You can also work with workflows programmatically.
-
-Loading and Modifying Workflows
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from workforce.edit.graph import (
-        load_graph,
-        save_graph,
-        add_node_to_graph,
-        add_edge_to_graph,
-        edit_node_label_in_graph
-    )
-
-    # Load an existing workflow
-    G = load_graph('tutorial_workflow.graphml')
-
-    # Add a new node - returns {'node_id': '<uuid>'}
-    result = add_node_to_graph(
-        'tutorial_workflow.graphml',
-        label='test -f report.txt && echo "Validation passed"',
-        x=400,
-        y=100
-    )
-    new_node_id = result['node_id']
-    
-    # Add an edge (requires UUIDs of source and target)
-    # You'd need to get the node UUID from the graph first
-    # add_edge_to_graph('tutorial_workflow.graphml', source_uuid, new_node_id)
-
-    # Modify a node's command (requires node UUID)
-    # edit_node_label_in_graph(
-    #     'tutorial_workflow.graphml',
-    #     node_id,
-    #     'curl -O https://example.com/data.csv'
-    # )
-    
-    # Note: Each function automatically saves the graph
-
-Programmatic Execution
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from workforce import utils
-    
-    # Compute workspace ID from file path
-    workspace_id = utils.compute_workspace_id('tutorial_workflow.graphml')
-    
-    # Get workspace URL (auto-discovers or starts server)
-    workspace_url = utils.get_workspace_url(workspace_id)
-    print(f"Workspace URL: {workspace_url}")
-    
-    # To run the workflow, use the CLI:
-    # wf run tutorial_workflow.graphml
-    
-    # The run client connects via SocketIO and executes nodes
-    # when it receives NODE_READY events from the server
+    workforce run Workfile --wrapper 'parallel -j 4 {} ::: sample1 sample2 sample3 sample4'
 
 Best Practices
 --------------
@@ -421,10 +360,10 @@ Performance
 Debugging
 ~~~~~~~~~
 
-1. **Check logs frequently**: Press 'l' in GUI to view node output
+1. **Check logs frequently**: Select node in frontend to view node output
 2. **Test commands in isolation**: Verify each command works before adding to workflow
 3. **Use echo for debugging**: Add ``echo`` statements to track progress
-4. **Resume from failures**: Use Shift+R to retry failed nodes after fixes
+4. **Resume from failures**: Use r to retry failed nodes after fixes
 
 Next Steps
 ----------

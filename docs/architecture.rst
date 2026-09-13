@@ -11,8 +11,6 @@ Overview
 
 Workforce uses a client-server architecture to manage workflow execution. The system is built around a Flask API server that maintains workflow state and coordinates execution across multiple clients.
 
-**Backward Compatibility Note**: Workforce 2.0 introduces :ref:`non-blocking edges <non-blocking-edge>` for more flexible workflow execution. Existing workflows remain fully compatible—all edges default to :ref:`blocking edges <blocking-edge>`, preserving the strict dependency semantics of earlier versions. New workflows can optionally mix blocking and non-blocking edges for advanced execution patterns.
-
 Core Components
 ---------------
 
@@ -30,7 +28,7 @@ The server component is the heart of Workforce's execution engine. A single mach
 Server Startup Process
 ^^^^^^^^^^^^^^^^^^^^^^
 
-When starting a server (typically automatic when running ``wf`` commands):
+When starting a server (typically automatic when running ``workforce`` commands):
 
 1. **Singleton Check**: The system checks the PID file registry to detect any existing server
 
@@ -63,7 +61,8 @@ Once running, the server exposes workspace-scoped APIs at ``http://host:port/wor
 * **Run API**: Initiates workflow execution with parameters:
   
   * ``nodes``: Specific nodes to include in execution
-  * ``wrapper``: Command prefix/suffix wrapper
+  * ``wrapper``: Command wrapper template. ``{}`` is replaced with the node
+    command; when omitted, the wrapper is prepended to the command.
 
 * **Status API**: Provides real-time status of nodes and edges via Socket.IO
 * **Logs API**: Returns stdout/stderr from completed nodes
@@ -81,14 +80,14 @@ Servers automatically shut down when idle (no clients and no active runs):
 4. Resources are cleaned up (Socket.IO connections closed)
 5. Server process exits cleanly
 
-Manual shutdown via ``wf server stop`` is also supported.
+Manual shutdown via ``workforce server stop`` is also supported.
 
 Client
 ~~~~~~
 
 Clients connect to workspace-scoped URLs to interact with workflows. Multiple types of clients exist:
 
-* **GUI Client (legacy)** - Deprecated Tkinter visual editor
+* **Web Frontend** - Browser-based visual workflow editor
 * **Run Client** - CLI-based workflow executor
 * **Edit Client** - Programmatic workflow modifier
 
@@ -139,7 +138,7 @@ This architecture allows:
 * Multiple workflows to run simultaneously on one server
 * Automatic workspace context creation and cleanup
 * Complete isolation between different workflows
-* Connection sharing across multiple GUI/CLI instances for same workflow
+* Connection sharing across multiple web frontend and CLI instances for the same workflow
 
 Execution Model
 ---------------
@@ -156,7 +155,7 @@ Node Selection Logic
 
 When a workflow run is initiated:
 
-1. **Explicit Selection**: If specific nodes are selected (via CLI ``--nodes`` flag or GUI selection):
+1. **Explicit Selection**: If specific nodes are selected (via CLI ``--nodes`` flag or the web frontend):
    
    * Those nodes form an induced subgraph for execution
    * All edges and dependencies within this subgraph are preserved
@@ -211,7 +210,7 @@ The execution loop follows this pattern:
    * Node command is executed via subprocess
    * stdout and stderr are captured in real-time
    * Outputs are stored as node attributes in the graph
-   * Logs are viewable from GUI (press 's')
+   * Logs are viewable from the web frontend
 
 2. **Event Emission**
    
@@ -227,115 +226,52 @@ The execution loop follows this pattern:
 
 4. **Dependency Check**
    
-   * Status change prompts target nodes to check dependencies
-    * Node transitions to ``run`` state only if:
-      
-      * **ALL** incoming blocking edges (within the subnetwork context) are marked ``to_run``
-      * **AND** at least one incoming edge (blocking or non-blocking) is marked ``to_run``
-    
-    * Once satisfied:
+   * An edge becoming ``to_run`` prompts a dependency check for its target.
+   * The target can run only after **every incoming blocking edge** in the
+     active subset is ``to_run``.
+   * An incoming non-blocking edge is an immediate trigger once that rule is
+     satisfied. With no blocking inputs, it triggers the target immediately.
 
-     
-     * Node clears the statuses from incoming edges
-     * Begins execution
-     * Loop returns to step 1
-
-This mechanism ensures the engine only advances when subset-specific dependencies are fully met.
+This mechanism keeps strict prerequisites explicit while allowing event-like
+triggers where they are useful.
 
 Dependency Resolution
 ^^^^^^^^^^^^^^^^^^^^^
 
-The dependency resolution system is the core of Workforce's scheduling logic. It determines which nodes are ready to execute based on their incoming :ref:`edge-type` attributes and the current status of those edges.
+The scheduler uses one readiness rule: **all incoming blocking edges must be
+complete before their target can run**. Non-blocking edges never add another
+prerequisite; they are triggers.
 
-**Edge Types in Dependency Resolution**:
+When an upstream node finishes, its outgoing edges become ``to_run``. For each
+target in the active subset, the scheduler then applies this rule:
 
-Workforce supports two edge types that affect dependency checking:
+1. If any incoming blocking edge is not ``to_run``, leave the target waiting.
+2. Otherwise, queue the target when the arriving edge is ready.
+3. If the arriving edge is non-blocking, it is consumed as that immediate
+   trigger. If it is blocking, the completed blocking inputs are consumed
+   together before the target is queued.
 
-* **Blocking Edges** (:ref:`blocking-edge`) - The target node waits for ALL incoming blocking edges to be ``to_run``
-* **Non-Blocking Edges** (:ref:`non-blocking-edge`) - The target node runs when ANY incoming non-blocking edge becomes ``to_run``, provided all blocking edges are already satisfied
+For a blocking fan-in, C waits for both A and B::
 
-**Resolution Algorithm**:
+    A ──blocking──> C <──blocking── B
 
-When an upstream node completes (status becomes ``ran``), the scheduler:
+    A finishes: C waits for B.
+    B finishes: C runs.
 
-1. Marks all outgoing edges as ``to_run``
-2. For each downstream node, checks its incoming edges:
+For a target with only non-blocking inputs, every arriving edge triggers it
+immediately::
 
-   **If the incoming edge is BLOCKING**:
-   
-   * Check if ALL incoming blocking edges are ``to_run``
-   * Only if true: Set target node status to ``run``
-   * Non-blocking edges do not affect blocking edge checks
-   
-    **If the incoming edge is NON-BLOCKING**:
-    
-    * Check if all incoming blocking edges are ``to_run``
-    * Only if true: Set target node status to ``run``
-    * If blocking edges are not ready, this trigger is ignored
+    A ──non-blocking──> C <──non-blocking── B
 
+    A finishes: C runs.
+    B finishes: C runs again.
 
-3. All propagation respects :ref:`subset-run` boundaries:
+That second form permits non-blocking loops and repeated execution. It is the
+workflow author's responsibility to ensure such loops have an intended stopping
+condition.
 
-   * Only edges within the active subset are processed
-   * Edges leading to nodes outside the subset are ignored
-   * Ensures execution remains confined to selected scope
-
-**Visual Representation**:
-
-Here's how blocking and non-blocking edges interact during execution::
-
-    Initial State:
-    ┌─────┐         ┌─────┐
-    │ A   │ (ran)   │ B   │ (waiting)
-    └─────┘         └─────┘
-      │ blocked
-      │ to_run
-
-    With all blocking edges to_run and no non-blocking incoming:
-    ┌─────┐         ┌─────┐
-    │ A   │ (ran)   │ B   │ (run) ──> executes once
-    └─────┘         └─────┘
-      │ blocked
-      │ to_run
-
-    With non-blocking edge triggering:
-    ┌─────┐         ┌─────┐
-    │ A   │ (ran)   │ B   │ (run) ──> re-executes
-    └─────┘         └─────┘
-      │ non-blocked
-      │ to_run
-
-**Mixed Dependencies Example**:
-
-Consider a node C with one blocking edge from A and one non-blocking edge from B::
-
-    ┌─────┐      ┌─────┐
-    │ A   │      │ B   │
-    └─────┘      └─────┘
-      │ (blocking)  │ (non-blocking)
-      └────┬────────┘
-           │
-         ┌─────┐
-         │ C   │
-         └─────┘
-
-Execution sequence:
-
-1. A completes: A→C marked ``to_run``, C checks dependencies
-   
-   * A→C is blocking and ``to_run`` ✓
-   * Need to wait for B (no edges from B are ``to_run`` yet)
-   * C status remains waiting
-
-2. B completes: B→C marked ``to_run``
-   
-   * B→C is non-blocking, immediately set C to ``run``
-   * C executes (does not wait for A→C to be ``to_run``)
-
-3. If B runs again: B→C marked ``to_run`` again
-   
-   * C immediately runs again (re-triggers)
-   * A→C status does not affect re-triggering
+All propagation respects :ref:`subset-run` boundaries: only edges whose source
+and target are in the active subset participate in readiness checks.
 
 **Cycle Detection**:
 
@@ -344,7 +280,7 @@ Before execution begins, Workforce checks for cycles using only :ref:`blocking-e
 * Constructs a subgraph containing only blocking edges
 * Checks if the subgraph is a directed acyclic graph (DAG)
 * Non-blocking edges are ignored for cycle detection
-* This allows workflows with non-blocking cycles (safe, no infinite loops)
+* This permits non-blocking cycles and deliberate repeated execution
 * Blocking cycles cause an error before run initiation
 
 **Subset Run Propagation**:
@@ -360,7 +296,7 @@ During dependency resolution, the system:
 Resume Functionality
 ~~~~~~~~~~~~~~~~~~~~
 
-The resume feature (Shift+R in GUI, or re-running failed nodes) handles workflow recovery:
+The resume feature (re-running failed nodes from the web frontend or CLI) handles workflow recovery:
 
 **How Resume Works**:
 
@@ -421,7 +357,7 @@ Multi-User Support
 
 The event system enables true multi-user collaboration:
 
-* Multiple GUI clients can connect to the same workspace context simultaneously
+* Multiple web frontend clients can connect to the same workspace context simultaneously
 * Changes made in one client are broadcast to all others in real-time via Socket.IO rooms
 * Execution initiated by one client is visible to all connected clients
 * Each workspace maintains isolated event streams preventing cross-workspace interference
@@ -536,7 +472,7 @@ Server Failures
 * Idle servers automatically shut down (no clients + no active runs)
 * Deferred shutdown with 1-second delay prevents race conditions
 * Clients detect disconnection and notify user
-* Manual cleanup via ``wf server stop`` if needed
+* Manual cleanup via ``workforce server stop`` if needed
 
 Security Considerations
 -----------------------

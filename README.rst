@@ -9,13 +9,8 @@ workforce
     :target: https://workforce.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: docs/images/small.png
+.. image:: images/small.png
     :alt: Small pipeline example
-    :align: center
-    :width: 800px
-
-.. image:: docs/images/complex.png
-    :alt: Complex pipeline editor view
     :align: center
     :width: 800px
 
@@ -25,6 +20,11 @@ Similar to other workflow management systems like Galaxy workflow, QIIME plugin 
 
 * Free software: MIT license
 * Documentation: https://workforce-documentation.readthedocs.io.
+
+.. image:: images/complex.png
+    :alt: Complex pipeline editor view
+    :align: center
+    :width: 800px
 
 Features
 --------
@@ -159,7 +159,7 @@ To launch the pipeline editor in your browser, run:
 
 .. code-block:: bash
 
-   wf
+   workforce
 
 or:
 
@@ -171,13 +171,13 @@ To open a previously constructed pipeline, run:
 
 .. code-block:: bash
 
-   wf <PIPELINE.graphml>
+   workforce <PIPELINE.graphml>
     
 If a `Workfile` is in the current directory:
 
 .. code-block:: bash
 
-   wf
+   workforce
 
 Running workforce plan
 ----------------------
@@ -185,26 +185,37 @@ To run a plan from the web editor, click the 'Run' button or press 'r'. If nodes
 
 .. code-block:: bash
 
-   wf run Workfile
+   workforce run Workfile
 
-Prefix and Suffix
------------------
-Adding the following prefix and suffixes to the wf run command (or within gui) will add those prefix and suffixes to each command ran by the pipeline.
+Wrapper commands
+----------------
+Adding the following wrappers to the wf run command (or within gui) will add to each command ran by the pipeline.
 
-+-------------------------------------------------+---------------------------------------------------------------------------+
-| Wrapper Command                                 | Description                                                               |
-+=================================================+===========================================================================+
-| --wrapper 'bash -c "{}"'                        | Standard bash execution                                                   |
-| --wrapper 'bash -c '. env.sh ''                 | Bash execution with definition of config or other environmental settings  |
-| --wrapper 'tmux send-keys {} C-m'               | Sends each command to a tmux session and executes it.                     |
-| --wrapper 'ssh ADDRESS {}'                      | Executes each command remotely on the specified server.                   |
-| --wrapper 'parallel {} ::: FILENAMES'           | Runs the pipeline on each specified filename.                             |
-| --wrapper 'docker run -it IMAGE {}'             | Executes each command inside a Docker container with an interactive TTY.  |
-| --wrapper 'echo {} >> commands.sh'              | Exports pipeline commands to a bash script named commands.sh.             |
-| --wrapper 'bash -lc "conda activate ENV && {}"' | Activates a Conda environment before executing the command.               |
-| --wrapper 'nohup {} &'                          | Runs commands in the background.                                          |
-+-------------------------------------------------+---------------------------------------------------------------------------+
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
 
-To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run. Opening the terminal with shortcut 't' (or on the toolbar), you can see the output of the commands.
+   * - Wrapper Command
+     - Description
+   * - ``'bash -c "{}"'``
+     - Standard bash execution
+   * - ``'bash -c ". env.sh"'``
+     - Bash execution with definition of config or other environmental settings
+   * - ``'tmux send-keys {} C-m'``
+     - Sends each command to a tmux session and executes it.
+   * - ``'ssh ADDRESS {}'``
+     - Executes each command remotely on the specified server.
+   * - ``'parallel {} ::: FILENAMES'``
+     - Runs the pipeline on each specified filename.
+   * - ``'docker run -it IMAGE {}'``
+     - Executes each command inside a Docker container with an interactive TTY.
+   * - ``'echo {} >> commands.sh'``
+     - Exports pipeline commands to a bash script named commands.sh.
+   * - ``'bash -lc "conda activate ENV && {}"'``
+     - Activates a Conda environment before executing the command.
+   * - ``'nohup {} &'``
+     - Runs commands in the background.
+
+To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run.
 
 This is tested on mac, linux, and windows powershell and wsl2.

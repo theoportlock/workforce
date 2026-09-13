@@ -248,47 +248,13 @@ WebSocket Handlers
    :undoc-members:
    :show-inheritance:
 
-GUI Module (Legacy)
+Web Frontend Bridge
 -------------------
 
-The GUI module is legacy and is being deprecated in favor of the web frontend.
+The web frontend uses this bridge to dispatch workflow operations to the
+workspace API.
 
-Main Application
-~~~~~~~~~~~~~~~~
-
-.. automodule:: workforce.gui.app
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Canvas
-~~~~~~
-
-.. automodule:: workforce.gui.canvas
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-GUI Client
-~~~~~~~~~~
-
-.. automodule:: workforce.gui.client
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Core GUI
-~~~~~~~~
-
-.. automodule:: workforce.gui.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-State Management
-~~~~~~~~~~~~~~~~
-
-.. automodule:: workforce.gui.state
+.. automodule:: workforce.web.bridge
    :members:
    :undoc-members:
    :show-inheritance:

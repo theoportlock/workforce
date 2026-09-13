@@ -5,7 +5,7 @@ This plan defines a browser-based node–edge workflow editor for Workforce that
 ## Scope Update
 
 - **No pywebview for now**.
-- **No node-level prefix/suffix fields**.
+- **No legacy node-level command-wrapping fields**.
 - **Wrapper remains the only command wrapping mechanism** (graph-level setting, as used today).
 
 ## Goals
@@ -231,4 +231,3 @@ Frontend subscribes to workspace room (`ws:<workspace_id>`) and handles:
   - verifies JSON ↔ GraphML round-trip for wrapper/nodes/edges.
 - `test_web_event_protocol.py`
   - verifies event names and payload expectations from Socket.IO bridge layer.
-

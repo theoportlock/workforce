@@ -26,14 +26,14 @@ See also: :ref:`dependency-resolution`, :ref:`edge-type`, :ref:`non-blocking-edg
 Non-Blocking Edge
 ~~~~~~~~~~~~~~~~~
 
-A **non-blocking edge** is an optional edge type that represents a soft dependency or trigger relationship between two nodes. When a non-blocking edge becomes ``to_run``, the target node is immediately set to ``run`` state without waiting for other incoming edges. This allows nodes to execute (or re-execute) based on a single upstream trigger.
+A **non-blocking edge** is an optional edge type that represents a soft dependency or trigger relationship between two nodes. Once all incoming blocking edges are ``to_run``, a non-blocking edge becoming ``to_run`` immediately queues the target. This allows nodes to execute (or re-execute) from a single upstream trigger.
 
 Non-blocking edges enable:
 
 * Multiple executions of a node (re-triggering)
 * Fan-out patterns where multiple nodes trigger independent branches
 * Workflows that don't conform to strict DAG structure
-* Immediate propagation without waiting for all dependencies
+* Immediate propagation without waiting for other non-blocking inputs
 
 See also: :ref:`re-triggering`, :ref:`edge-type`, :ref:`blocking-edge`
 
@@ -42,7 +42,7 @@ See also: :ref:`re-triggering`, :ref:`edge-type`, :ref:`blocking-edge`
 Re-Triggering
 ~~~~~~~~~~~~~~
 
-**Re-triggering** is the behavior where a node executes multiple times during a single workflow run, each time triggered by a non-blocking edge from a predecessor. Unlike blocking edges which permit only one execution per run, non-blocking predecessors can cause a node to run again without clearing other dependencies.
+**Re-triggering** is the behavior where a node executes multiple times during a single workflow run, each time triggered by a non-blocking edge from a predecessor after its blocking prerequisites are satisfied.
 
 Key characteristics:
 
@@ -61,13 +61,13 @@ Edge Type
 An **edge type** is an attribute of edges in a Workforce workflow that determines how the edge affects dependency resolution and node execution. Workforce supports two edge types:
 
 * **blocking** (default) - Enforces strict dependency; target waits for all blocking inputs
-* **non-blocking** - Soft trigger; immediately runs target without waiting for other inputs
+* **non-blocking** - Soft trigger; queues the target as soon as its blocking inputs are ready
 
 Edge types are:
 
 * Stored as the ``edge_type`` attribute in GraphML workflow files
-* Visible in the GUI with visual distinction (solid vs dashed lines)
-* Controllable via REST API, CLI, and GUI keyboard modifiers
+* Visible in the web frontend with visual distinction (solid vs dashed lines)
+* Controllable via REST API, CLI, and web frontend interactions
 * Backward compatible (existing workflows default to all blocking edges)
 
 See also: :ref:`blocking-edge`, :ref:`non-blocking-edge`
@@ -81,7 +81,7 @@ A **subset run** is a workflow execution that operates on a selected subset of n
 
 Characteristics:
 
-* Can be explicitly selected (GUI/CLI: select specific nodes to run)
+* Can be explicitly selected in the web frontend or with the CLI
 * Can be implicit (default: run all root nodes or failed nodes)
 * Induces a subgraph of only those nodes and their connecting edges
 * Propagation is strictly confined within the subgraph boundaries
@@ -107,7 +107,7 @@ Key points:
 
 * Only **blocking edges** are considered for cycle detection
 * Non-blocking edges are ignored when checking for cycles
-* This allows workflows with non-blocking cycles (safe, no infinite loops)
+* This allows workflows with non-blocking cycles and repeated execution
 * Cycles in blocking edges are detected before execution begins
 * Prevents deadlocks and infinite loops in workflows
 
@@ -130,17 +130,12 @@ Resolution steps:
 
 1. A node completes execution (transitions to ``ran`` status)
 2. All outgoing edges from that node are marked as ``to_run``
-3. **For blocking edges**: Target node checks if **all** incoming blocking edges are ``to_run``
+3. Target checks whether **all** incoming blocking edges are ``to_run``.
+   If not, it remains waiting. Otherwise, the arriving edge queues the target;
+   a non-blocking edge is an immediate trigger and can allow multiple
+   executions during one run.
    
-   * If yes: Target transitions to ``run`` state
-   * If no: Target remains waiting
-   
-4. **For non-blocking edges**: Target immediately transitions to ``run`` state
-   
-   * No need to wait for other incoming edges
-   * Allows multiple executions during a single run
-   
-5. Targets within :ref:`subset-run` boundaries execute; targets outside the subset are ignored
+4. Targets within :ref:`subset-run` boundaries execute; targets outside the subset are ignored
 
 This mechanism ensures:
 

@@ -2,37 +2,37 @@
 Usage
 =====
 
-Workforce provides several ways to create and run workflows. You can use the GUI for visual editing, or the CLI for programmatic control.
+Workforce provides several ways to create and run workflows. You can use the web frontend for visual editing, or the CLI for programmatic control.
 
 Command Line Interface
 ----------------------
 
-Launching the GUI
-~~~~~~~~~~~~~~~~~
+Launching the Web Frontend
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To launch the Workforce GUI:
+To launch the Workforce web frontend:
 
 .. code-block:: bash
 
-    wf
+    workforce web Workfile
 
 or:
 
 .. code-block:: bash
 
-    python -m workforce
+    python -m workforce web Workfile
 
 To open a specific workflow file:
 
 .. code-block:: bash
 
-    wf path/to/workflow.graphml
+    workforce web path/to/workflow.graphml
 
 If a ``Workfile`` exists in the current directory, it will be opened automatically:
 
 .. code-block:: bash
 
-    wf
+    workforce web Workfile
 
 Running Workflows
 ~~~~~~~~~~~~~~~~~
@@ -41,19 +41,20 @@ Execute a complete workflow:
 
 .. code-block:: bash
 
-    wf run Workfile
+    workforce run Workfile
 
 Execute specific nodes only:
 
 .. code-block:: bash
 
-    wf run Workfile --nodes node1,node2,node3
+    workforce run Workfile --nodes node1,node2,node3
 
-Use command wrappers (prefix/suffix):
+Use the command wrapper template. The ``{}`` placeholder is replaced with each
+node command:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper "docker run -it ubuntu"
+    workforce run Workfile --wrapper 'docker run -it ubuntu bash -c "{}"'
 
 Server Management
 ~~~~~~~~~~~~~~~~~
@@ -62,19 +63,19 @@ Start a server for a workflow:
 
 .. code-block:: bash
 
-    wf server start Workfile
+    workforce server start Workfile
 
 Stop a server:
 
 .. code-block:: bash
 
-    wf server stop Workfile
+    workforce server stop Workfile
 
 List all running servers:
 
 .. code-block:: bash
 
-    wf server list
+    workforce server list
 
 Editing Workflows via CLI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,42 +84,42 @@ Add a node to a workflow:
 
 .. code-block:: bash
 
-    wf edit add-node Workfile "node_name" "command to run"
+    workforce edit add-node Workfile "node_name" "command to run"
 
 Remove a node:
 
 .. code-block:: bash
 
-    wf edit remove-node Workfile "node_name"
+    workforce edit remove-node Workfile "node_name"
 
 Add an edge (dependency):
 
 .. code-block:: bash
 
-    wf edit add-edge Workfile "source_node" "target_node"
+    workforce edit add-edge Workfile "source_node" "target_node"
 
 Remove an edge:
 
 .. code-block:: bash
 
-    wf edit remove-edge Workfile "source_node" "target_node"
+    workforce edit remove-edge Workfile "source_node" "target_node"
 
 Edit node command:
 
 .. code-block:: bash
 
-    wf edit edit-node Workfile "node_name" "new command"
+    workforce edit edit-node Workfile "node_name" "new command"
 
-Edit node position (for GUI layout):
+Edit node position (for web frontend layout):
 
 .. code-block:: bash
 
-    wf edit edit-node-position Workfile "node_name" x y
+    workforce edit edit-node-position Workfile "node_name" x y
 
-GUI Usage
----------
+Web Frontend Usage
+------------------
 
-The Workforce GUI provides an interactive visual editor for workflows.
+The Workforce web frontend provides an interactive visual editor for workflows.
 
 Keyboard Shortcuts
 ~~~~~~~~~~~~~~~~~~
@@ -162,7 +163,7 @@ Via CLI:
 
 .. code-block:: bash
 
-    wf edit add-edge Workfile "source_node" "target_node"
+    workforce edit add-edge Workfile "source_node" "target_node"
 
 This creates a blocking edge by default.
 
@@ -174,18 +175,25 @@ Via REST API (blocking edge):
       -H "Content-Type: application/json" \
       -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "blocking"}'
 
-Via Python client:
+Via the web bridge:
 
 .. code-block:: python
 
-    from workforce.gui.client import ServerClient
-    
-    client = ServerClient(server_url)
-    client.add_edge(source_id="node-uuid-1", target_id="node-uuid-2", edge_type="blocking")
+    from workforce.web.bridge import WebBridge
+
+    bridge = WebBridge(server_url, workspace_id)
+    bridge.handle_request({
+        "id": "add-blocking-edge",
+        "method": "addEdge",
+        "params": {"source": "node-uuid-1", "target": "node-uuid-2", "edge_type": "blocking"},
+        "protocolVersion": "1.0",
+    })
 
 **Non-Blocking Edges** (:ref:`non-blocking-edge`)
 
-Non-blocking edges are soft triggers that allow immediate execution without waiting for other dependencies. When a non-blocking edge becomes ready, the target node immediately transitions to ``run`` state, allowing for flexible triggering and re-execution patterns.
+Non-blocking edges are soft triggers. Once all incoming blocking edges are
+ready, each non-blocking edge that becomes ready immediately queues the target,
+allowing flexible triggering and re-execution patterns.
 
 To create a non-blocking edge:
 
@@ -198,7 +206,7 @@ Via CLI:
 
 .. code-block:: bash
 
-    wf edit add-edge Workfile "source_node" "target_node" --edge_type non-blocking
+    workforce edit add-edge Workfile "source_node" "target_node" --edge_type non-blocking
 
 Via REST API (non-blocking edge):
 
@@ -208,14 +216,19 @@ Via REST API (non-blocking edge):
       -H "Content-Type: application/json" \
       -d '{"source_id": "node-uuid-1", "target_id": "node-uuid-2", "edge_type": "non-blocking"}'
 
-Via Python client:
+Via the web bridge:
 
 .. code-block:: python
 
-    from workforce.gui.client import ServerClient
-    
-    client = ServerClient(server_url)
-    client.add_edge(source_id="node-uuid-1", target_id="node-uuid-2", edge_type="non-blocking")
+    from workforce.web.bridge import WebBridge
+
+    bridge = WebBridge(server_url, workspace_id)
+    bridge.handle_request({
+        "id": "add-non-blocking-edge",
+        "method": "addEdge",
+        "params": {"source": "node-uuid-1", "target": "node-uuid-2", "edge_type": "non-blocking"},
+        "protocolVersion": "1.0",
+    })
 
 **Updating Edge Types**
 
@@ -225,7 +238,7 @@ Via CLI:
 
 .. code-block:: bash
 
-    wf edit edit-edge-type Workfile "source_node" "target_node" "non-blocking"
+    workforce edit edit-edge-type Workfile "source_node" "target_node" "non-blocking"
 
 Via REST API:
 
@@ -263,7 +276,7 @@ Workflows can combine both edge types for sophisticated execution patterns. For 
 Creating Workflows
 ~~~~~~~~~~~~~~~~~~
 
-1. Launch the GUI with ``wf``
+1. Launch the web frontend with ``workforce web Workfile``
 2. Double-click on the canvas to add a new node
 3. Enter the bash command in the popup dialog
 4. To create dependencies:
@@ -276,7 +289,7 @@ Creating Workflows
 Running Workflows
 ~~~~~~~~~~~~~~~~~
 
-From the GUI:
+From the web frontend:
 
 1. Click the 'Run' button or press 'R'
 2. If nodes are selected, only those nodes (and their dependencies) will run
@@ -343,7 +356,7 @@ Node Attributes
 * **label** - The bash command to execute
 * **status** - Current execution status ("", run, running, ran, fail)
 * **log** - Combined stdout/stderr from command execution
-* **x, y** - Node position in GUI canvas (stored as strings)
+* **x, y** - Node position in the web frontend canvas (stored as strings)
 
 Edge Attributes
 ~~~~~~~~~~~~~~~
@@ -367,7 +380,7 @@ Send commands to tmux sessions:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'tmux send-keys -t mysession "{}" C-m'
+    workforce run Workfile --wrapper 'tmux send-keys -t mysession "{}" C-m'
 
 **Remote Execution via SSH**
 
@@ -375,7 +388,7 @@ Execute commands on a remote server:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'ssh user@remote-server "{}"'
+    workforce run Workfile --wrapper 'ssh user@remote-server "{}"'
 
 **Docker Containers**
 
@@ -383,7 +396,7 @@ Run commands inside Docker containers:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'docker run -it ubuntu bash -c "{}"'
+    workforce run Workfile --wrapper 'docker run -it ubuntu bash -c "{}"'
 
 **Conda Environments**
 
@@ -391,7 +404,7 @@ Activate a conda environment before running:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'conda run -n myenv bash -c "{}"'
+    workforce run Workfile --wrapper 'conda run -n myenv bash -c "{}"'
 
 **Slurm Job Submission**
 
@@ -399,7 +412,7 @@ Submit each command as a Slurm job:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'sbatch --wrap="{}"'
+    workforce run Workfile --wrapper 'sbatch --wrap="{}"'
 
 **Export to Bash Script**
 
@@ -407,7 +420,7 @@ Generate a bash script without executing:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'echo "{}" >> commands.sh'
+    workforce run Workfile --wrapper 'echo "{}" >> commands.sh'
 
 **Adding Sleep/Delay**
 
@@ -415,7 +428,7 @@ Add delay before each command:
 
 .. code-block:: bash
 
-    wf run Workfile --wrapper 'bash -c "sleep 1; {}"'
+    workforce run Workfile --wrapper 'bash -c "sleep 1; {}"'
 
 Python API
 ----------
@@ -452,23 +465,23 @@ For running workflows programmatically, connect to the server:
     # Runner client connects to workspace URL and waits for node_ready events
     # This is typically done by the run command, not manually
 
-Remote GUI over LAN
--------------------
+Remote Web Frontend over LAN
+----------------------------
 
-You can run the GUI from a different machine and connect to a remote server.
+You can open the web frontend from a different machine and connect to a remote server.
 
 - Start the server with LAN binding on the host machine:
 
 .. code-block:: bash
 
-    wf server stop
-    wf server start --host 0.0.0.0
+    workforce server stop
+    workforce server start --host 0.0.0.0
 
 - List access URLs and share the workspace URL:
 
 .. code-block:: bash
 
-    wf server ls
+    workforce server ls
 
 This shows both Local and LAN URLs. Use the LAN URL format:
 
@@ -476,11 +489,11 @@ This shows both Local and LAN URLs. Use the LAN URL format:
 
     http://<server_ip>:<port>/workspace/<workspace_id>
 
-- From the remote machine, launch the GUI directly to that URL:
+- From the remote machine, open the web frontend directly at that URL:
 
 .. code-block:: bash
 
-    wf gui http://<server_ip>:<port>/workspace/<workspace_id>
+    workforce web http://<server_ip>:<port>/workspace/<workspace_id>
 
 Notes:
 
@@ -500,7 +513,7 @@ Options to access the Workforce server from other machines:
 .. code-block:: bash
 
     # In Windows Python environment
-    wf server start --host 0.0.0.0
+    workforce server start --host 0.0.0.0
 
 Then use the Windows host LAN IP in the URL.
 
@@ -530,11 +543,11 @@ Then use the Windows host LAN IP in the URL.
 
     netsh interface portproxy show all
 
-- Use the Windows host LAN IP in the GUI URL:
+- Use the Windows host LAN IP in the web frontend URL:
 
 .. code-block:: bash
 
-    wf gui http://<windows_host_ip>:5049/workspace/<workspace_id>
+    workforce web http://<windows_host_ip>:5049/workspace/<workspace_id>
 
 Note: WSL IP can change after restart. Recreate the portproxy if needed.
 

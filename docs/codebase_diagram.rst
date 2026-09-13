@@ -2,7 +2,8 @@ Codebase Diagram
 ================
 
 This Mermaid diagram summarizes the main runtime surfaces in Workforce and
-how the desktop, CLI, and web clients interact with the authoritative server.
+how the web frontend, CLI, and programmatic clients interact with the
+authoritative server.
 
 .. code-block:: text
 
@@ -11,7 +12,6 @@ how the desktop, CLI, and web clients interact with the authoritative server.
 
        subgraph Clients[Clients and entry points]
            CLI[CLI entrypoints\nworkforce.__main__\nrun/cli.py\nedit/cli.py]
-           Tk[Tk desktop GUI\ngui/core.py\ngui/app.py\ngui/canvas.py\ngui/state.py]
            WebUI[React Flow frontend\nfrontend/src/*\nbuilt into workforce/web/static]
            EditClient[Programmatic edit client\nedit/client.py]
            RunClient[Programmatic run client\nrun/client.py]
@@ -43,14 +43,11 @@ how the desktop, CLI, and web clients interact with the authoritative server.
        end
 
        User --> CLI
-       User --> Tk
        User --> WebUI
 
        CLI --> Launcher
        CLI --> EditClient
        CLI --> RunClient
-       Tk --> EditClient
-       Tk --> RunClient
        WebUI --> Bridge
        Bridge --> Routes
        Bridge --> Sockets
@@ -58,7 +55,6 @@ how the desktop, CLI, and web clients interact with the authoritative server.
 
        EditClient --> Routes
        RunClient --> Routes
-       Tk -. realtime .-> Sockets
        WebUI -. realtime .-> Sockets
 
        Launcher --> Context
@@ -88,4 +84,4 @@ Key ideas
 * Execution is handled by the ``run`` package and feeds results back to the
   server through events instead of mutating graph state directly.
 * The web frontend is shipped as prebuilt assets under ``workforce/web/static``
-  and communicates with the same server APIs as the desktop and CLI clients.
+  and communicates with the same server APIs as the CLI and programmatic clients.

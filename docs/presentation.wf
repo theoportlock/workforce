@@ -7,8 +7,7 @@
   <key id="d4" for="node" attr.name="y" attr.type="double" />
   <key id="d3" for="node" attr.name="x" attr.type="double" />
   <key id="d2" for="node" attr.name="label" attr.type="string" />
-  <key id="d1" for="graph" attr.name="suffix" attr.type="string" />
-  <key id="d0" for="graph" attr.name="prefix" attr.type="string" />
+  <key id="d0" for="graph" attr.name="wrapper" attr.type="string" />
   <graph edgedefault="directed">
     <node id="5c1b6c40-de69-4b37-aa73-3960c1c8a24b">
       <data key="d2">Reproducibility
@@ -131,6 +130,5 @@ figure1.py, analysis.sh, all.R
     <edge source="3485dcdf-989d-4453-9a23-2a4f4b057374" target="f2e8f184-7ae0-40cc-a918-6d4d05a832ed" />
     <edge source="f2e8f184-7ae0-40cc-a918-6d4d05a832ed" target="97d6dfb1-92d9-4723-ac46-17f01bbd2665" />
     <data key="d0" />
-    <data key="d1" />
   </graph>
 </graphml>
