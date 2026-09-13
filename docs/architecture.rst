@@ -4,490 +4,75 @@
 Architecture
 ============
 
-This page describes the internal architecture and design of Workforce.
+Workforce is a graph-based workflow system. A Flask and Socket.IO server is
+authoritative for a loaded GraphML workfile; the React Flow web frontend and the
+CLI are clients of that server. Multiple users can edit and run the same
+worksession.
 
-Overview
+Authoritative state
+-------------------
+
+``ServerContext`` owns the in-memory graph, active runs, and client updates.
+Every graph mutation is queued through ``ServerContext.enqueue()`` and processed
+by ``server/queue.py``. This serializes mutations, keeps clients consistent,
+and prevents direct GraphML or in-memory edits from bypassing the server.
+
+The server runs on port 5049 by default. It hosts worksessions loaded from
+GraphML workfiles and broadcasts graph changes to connected clients.
+
+Execution model
+---------------
+
+Every execution has an active, run-induced subgraph stored with its run ID.
+Only nodes in that subgraph may change state, and only edges whose two endpoints
+are in it can propagate scheduling. This prevents a subset run from affecting
+the rest of the workfile.
+
+Starting nodes are chosen as follows:
+
+1. A supplied subset is run as its induced subgraph.
+2. Without a subset, selected nodes are used as the starting nodes.
+3. With no selection, failed nodes are selected.
+4. If no nodes have failed, nodes with in-degree zero in the relevant graph are
+   started.
+
+The state machine is ``""`` → ``run`` → ``running`` → ``ran``. A running node
+may move to ``fail``; a failed node may move back to ``run``. Other transitions
+are invalid.
+
+Scheduling
+----------
+
+Changing a node to ``run`` starts it. Workforce records its PID, exit code,
+stdout, and stderr as node attributes. On success the server emits a ``ran``
+change for that run and marks outgoing active-subgraph edges ``ready``.
+
+Each ready edge prompts a check of its target. The target becomes ``run`` when
+all incoming blocking edges are ready. The ready flags on the consumed incoming
+edges are then cleared and the same cycle continues. Non-blocking edges are not
+prerequisites: all incoming *blocking* edges must be ready, but an arriving
+non-blocking edge need not wait for other non-blocking edges.
+
+Loops
+-----
+
+The graph need not be acyclic. Workforce supports loops, including loops that
+re-trigger work through non-blocking edges. Because repeated triggers can
+continue indefinitely, termination belongs to the workflow's commands or graph
+design. Loop support does not relax run boundaries: an edge outside the active
+subgraph never causes state changes or execution.
+
+Command wrappers
+----------------
+
+Before local shell execution, a wrapper is applied deterministically. A wrapper
+containing ``{}`` uses ``wrapper.replace("{}", cmd)``; otherwise the wrapper is
+concatenated with the command.
+
+Frontend
 --------
 
-Workforce uses a client-server architecture to manage workflow execution. The system is built around a Flask API server that maintains workflow state and coordinates execution across multiple clients.
-
-Core Components
----------------
-
-Server
-~~~~~~
-
-The server component is the heart of Workforce's execution engine. A single machine-wide server manages multiple workflows through isolated workspace contexts. It manages:
-
-* **Workflow State** - Tracks node and edge status during execution
-* **Event System** - Pub/sub event broadcasting for real-time updates
-* **Execution Queue** - Schedules nodes based on dependency resolution
-* **Client Coordination** - Handles multiple simultaneous clients
-* **Workspace Contexts** - Isolated execution environments per workfile
-
-Server Startup Process
-^^^^^^^^^^^^^^^^^^^^^^
-
-When starting a server (typically automatic when running ``workforce`` commands):
-
-1. **Singleton Check**: The system checks the PID file registry to detect any existing server
-
-2. **Server Discovery**: If a server is already running:
-   
-   * The system logs the existing server location
-   * Exits without starting a duplicate server
-   * Enforces single machine-wide server policy
-
-3. **Port Configuration**: If no server exists:
-   
-   * Uses explicitly configured port (default: 5049)
-   * Port can be overridden via command-line argument or environment variable
-   * Server fails if port is already in use
-
-4. **Server Initialization**: Flask + Socket.IO server starts:
-   
-   * Listens on discovered port
-   * Ready to accept workspace connections
-   * Creates workspace contexts on-demand as clients connect
-
-5. **Server Ready**: The server begins accepting API requests and client connections
-
-Server Operations
-^^^^^^^^^^^^^^^^^
-
-Once running, the server exposes workspace-scoped APIs at ``http://host:port/workspace/{workspace_id}/...``:
-
-* **Edit API**: Modifies the Workfile structure (add/remove nodes and edges)
-* **Run API**: Initiates workflow execution with parameters:
-  
-  * ``nodes``: Specific nodes to include in execution
-  * ``wrapper``: Command wrapper template. ``{}`` is replaced with the node
-    command; when omitted, the wrapper is prepended to the command.
-
-* **Status API**: Provides real-time status of nodes and edges via Socket.IO
-* **Logs API**: Returns stdout/stderr from completed nodes
-
-Each workspace operates independently with isolated state and event streams.
-
-Server Shutdown
-^^^^^^^^^^^^^^^
-
-Servers automatically shut down when idle (no clients and no active runs):
-
-1. All running processes are gracefully terminated
-2. Node statuses are updated to reflect termination
-3. Workspace contexts are destroyed
-4. Resources are cleaned up (Socket.IO connections closed)
-5. Server process exits cleanly
-
-Manual shutdown via ``workforce server stop`` is also supported.
-
-Client
-~~~~~~
-
-Clients connect to workspace-scoped URLs to interact with workflows. Multiple types of clients exist:
-
-* **Web Frontend** - Browser-based visual workflow editor
-* **Run Client** - CLI-based workflow executor
-* **Edit Client** - Programmatic workflow modifier
-
-All clients communicate with the server via:
-
-* HTTP API calls for workflow modifications (workspace-scoped endpoints)
-* Socket.IO connections for real-time status updates (workspace-specific rooms)
-
-Multiple clients can connect to the same workspace context simultaneously, sharing state and receiving synchronized updates.
-
-Workspace Management
-~~~~~~~~~~~~~~~~~~~~
-
-Workforce uses a single machine-wide server that manages multiple workflows through isolated workspace contexts.
-
-**Server Discovery**:
-
-* PID file registry tracks running server location and process ID
-* Detects existing server before attempting to start new one
-* Returns server URL for client connections (default: http://127.0.0.1:5049)
-
-**Workspace Identification**:
-
-* Each workfile gets a deterministic workspace ID via ``compute_workspace_id()``
-* Workspace ID is SHA256 hash of absolute file path
-* Ensures consistent identification across multiple sessions
-
-**Workspace Contexts**:
-
-* Server maintains dict of ``ServerContext`` objects keyed by workspace_id
-* Each context created on-demand when first client connects
-* Context includes:
-  
-  * ``mod_queue`` - Serialized graph modification queue
-  * ``EventBus`` - Domain event system for that workspace
-  * Worker thread - Dedicated queue processor
-  * Socket.IO room - Isolated event broadcasting
-  * Active runs tracking - Per-run node sets and metadata
-
-**Context Lifecycle**:
-
-* Created: When first client connects to workspace
-* Destroyed: When last client disconnects from workspace
-* Isolation: Each workspace operates independently
-
-This architecture allows:
-
-* Multiple workflows to run simultaneously on one server
-* Automatic workspace context creation and cleanup
-* Complete isolation between different workflows
-* Connection sharing across multiple web frontend and CLI instances for the same workflow
-
-Execution Model
----------------
-
-Workforce employs a unified execution model where every run is treated as a subset run.
-
-Unified Subset Execution
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Philosophy**: Whether running the entire workflow or just a few nodes, the system treats all execution as subset operations. This provides consistency and prevents edge cases.
-
-Node Selection Logic
-^^^^^^^^^^^^^^^^^^^^
-
-When a workflow run is initiated:
-
-1. **Explicit Selection**: If specific nodes are selected (via CLI ``--nodes`` flag or the web frontend):
-   
-   * Those nodes form an induced subgraph for execution
-   * All edges and dependencies within this subgraph are preserved
-
-2. **Failed Node Selection**: If no nodes are explicitly selected:
-   
-   * The system checks for nodes in a ``failed`` state
-   * All failed nodes are automatically selected for re-execution
-   * This enables the "resume" functionality
-
-3. **Full Workflow Selection**: If no nodes are selected and none have failed:
-   
-   * All nodes with zero in-degree in the full workflow are selected
-   * This effectively runs the entire workflow from the beginning
-
-Execution Initialization
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Upon starting a run, the scheduler:
-
-1. **Subgraph Extraction**: Extracts the target subset from the main workflow graph
-
-2. **Dependency Analysis**: Identifies all nodes within the subset that have:
-   
-   * Zero in-degree relative only to that subset
-   * (Not zero in-degree in the full graph)
-
-3. **Initial Scheduling**: Transitions these zero-in-degree nodes to ``run`` state
-
-4. **Boundary Enforcement**: Ensures nodes start immediately if their dependencies in the master workfile are omitted from the current run scope
-
-Subgraph Boundary Enforcement
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To prevent execution from bleeding into the rest of the workfile:
-
-* The scheduler strictly enforces subnetwork boundaries
-* Propagation is confined entirely to the active selection
-* When a node completes:
-  
-  * Only outgoing edges within the filtered subnetwork are evaluated
-  * Edges leading to nodes outside the original subset are **ignored**
-  * This effectively "caps" the execution at the subset boundary
-
-Execution Loop
-~~~~~~~~~~~~~~
-
-The execution loop follows this pattern:
-
-1. **Node Execution**
-   
-   * Node command is executed via subprocess
-   * stdout and stderr are captured in real-time
-   * Outputs are stored as node attributes in the graph
-   * Logs are viewable from the web frontend
-
-2. **Event Emission**
-   
-   * Upon completion, a ``NODE_FINISHED`` event is emitted (or ``NODE_FAILED`` on error)
-   * Event includes client ID for multi-client coordination
-   * Server broadcasts event to all connected clients via WebSocket
-
-3. **Scheduler Update**
-   
-   * Emission triggers the scheduler to retrieve the filtered subnetwork map
-   * All valid outgoing edges (within the subnetwork) are updated to ``to_run`` status
-   * A ``GRAPH_UPDATED`` event is broadcast
-
-4. **Dependency Check**
-   
-   * An edge becoming ``to_run`` prompts a dependency check for its target.
-   * The target can run only after **every incoming blocking edge** in the
-     active subset is ``to_run``.
-   * An incoming non-blocking edge is an immediate trigger once that rule is
-     satisfied. With no blocking inputs, it triggers the target immediately.
-
-This mechanism keeps strict prerequisites explicit while allowing event-like
-triggers where they are useful.
-
-Dependency Resolution
-^^^^^^^^^^^^^^^^^^^^^
-
-The scheduler uses one readiness rule: **all incoming blocking edges must be
-complete before their target can run**. Non-blocking edges never add another
-prerequisite; they are triggers.
-
-When an upstream node finishes, its outgoing edges become ``to_run``. For each
-target in the active subset, the scheduler then applies this rule:
-
-1. If any incoming blocking edge is not ``to_run``, leave the target waiting.
-2. Otherwise, queue the target when the arriving edge is ready.
-3. If the arriving edge is non-blocking, it is consumed as that immediate
-   trigger. If it is blocking, the completed blocking inputs are consumed
-   together before the target is queued.
-
-For a blocking fan-in, C waits for both A and B::
-
-    A ──blocking──> C <──blocking── B
-
-    A finishes: C waits for B.
-    B finishes: C runs.
-
-For a target with only non-blocking inputs, every arriving edge triggers it
-immediately::
-
-    A ──non-blocking──> C <──non-blocking── B
-
-    A finishes: C runs.
-    B finishes: C runs again.
-
-That second form permits non-blocking loops and repeated execution. It is the
-workflow author's responsibility to ensure such loops have an intended stopping
-condition.
-
-All propagation respects :ref:`subset-run` boundaries: only edges whose source
-and target are in the active subset participate in readiness checks.
-
-**Cycle Detection**:
-
-Before execution begins, Workforce checks for cycles using only :ref:`blocking-edge` edges:
-
-* Constructs a subgraph containing only blocking edges
-* Checks if the subgraph is a directed acyclic graph (DAG)
-* Non-blocking edges are ignored for cycle detection
-* This permits non-blocking cycles and deliberate repeated execution
-* Blocking cycles cause an error before run initiation
-
-**Subset Run Propagation**:
-
-During dependency resolution, the system:
-
-* Maintains an active set of nodes for the current run (the subset)
-* Only propagates edges where both endpoints are in the subset
-* Ignores edges leading to nodes outside the subset
-* Prevents execution from "leaking" beyond the intended scope
-* Enables safe subset runs and node recovery without side effects
-
-Resume Functionality
-~~~~~~~~~~~~~~~~~~~~
-
-The resume feature (re-running failed nodes from the web frontend or CLI) handles workflow recovery:
-
-**How Resume Works**:
-
-1. **Failed Node Detection**: System identifies nodes in ``failed`` state
-
-2. **Status Reset**: Failed node status is replaced with ``run``
-
-3. **Event Loop Trigger**: Status change re-triggers the event loop
-
-4. **Dependency Re-check**: Scheduler re-evaluates dependencies for the failed node
-
-5. **Queue for Execution**: If dependencies are met, node is queued for execution
-
-6. **Pipeline Continuation**: Remainder of pipeline proceeds through normal dependency checking
-
-**Boundary Enforcement**:
-
-* Resume is strictly bounded by the original subset
-* Resume never propagates to nodes outside the original selection
-* Ensures nodes do not remain in a running state indefinitely
-* Clean status management prevents zombie processes
-
-Event System
-------------
-
-Workforce uses a publish-subscribe event system for coordinating workflow execution.
-
-Event Types
-~~~~~~~~~~~
-
-**Node Events**:
-
-* ``NODE_READY`` - Node is ready to execute (all dependencies met, status set to ``run``)
-* ``NODE_STARTED`` - Node execution has begun (status set to ``running``)
-* ``NODE_FINISHED`` - Node finished successfully (status set to ``ran``)
-* ``NODE_FAILED`` - Node execution failed (status set to ``fail``)
-
-**Workflow Events**:
-
-* ``RUN_COMPLETE`` - All nodes in the run have completed or failed
-* ``GRAPH_UPDATED`` - Graph structure or attributes were modified
-
-Event Flow
-~~~~~~~~~~
-
-1. **Event Generation**: Server generates events during workflow execution
-
-2. **Event Broadcasting**: Events are broadcast via WebSocket to all connected clients
-
-3. **Client Handling**: Each client receives events and updates its local state
-
-4. **Client ID Tagging**: Events are tagged with originating client ID to prevent conflicts
-
-5. **State Synchronization**: All clients maintain synchronized view of workflow state
-
-Multi-User Support
-~~~~~~~~~~~~~~~~~~
-
-The event system enables true multi-user collaboration:
-
-* Multiple web frontend clients can connect to the same workspace context simultaneously
-* Changes made in one client are broadcast to all others in real-time via Socket.IO rooms
-* Execution initiated by one client is visible to all connected clients
-* Each workspace maintains isolated event streams preventing cross-workspace interference
-* Client connections are workspace-scoped, ensuring proper event routing
-
-Data Flow
----------
-
-Workflow File (GraphML)
-~~~~~~~~~~~~~~~~~~~~~~~
-
-The workflow is stored as a GraphML file with:
-
-* **Nodes**: Represent bash commands with attributes (``id``, ``label``, ``status``, ``log``, ``x``, ``y``)
-  
-  * ``id`` - UUID for the node
-  * ``label`` - The bash command to execute
-  * ``status`` - Current state: ``""`` (empty), ``run``, ``running``, ``ran``, ``fail``
-  * ``log`` - Combined stdout/stderr from execution
-  * ``x``, ``y`` - Position coordinates (stored as strings)
-
-* **Edges**: Represent dependencies with attributes (``id``, ``status``)
-  
-  * ``id`` - UUID for the edge
-  * ``status`` - Either ``""`` (empty) or ``to_run`` (source completed)
-
-* **Graph**: Graph-level attributes
-  
-  * ``wrapper`` - Command template with ``{}`` placeholder (e.g., ``bash -c '{}'``)
-
-File Loading and Saving
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-* ``load_graph(path)``: Loads GraphML into NetworkX DiGraph
-* ``save_graph(graph, path)``: Writes NetworkX DiGraph to GraphML using atomic temp file + os.replace
-* Graph operations like ``add_node_to_graph()`` automatically save changes
-* **Concurrency Safety**: All graph mutations are serialized through the server's single-threaded queue worker (one per workspace), preventing concurrent writes
-* **Crash Safety**: Atomic file replacement (temp file + os.replace) ensures files are never partially written
-* The singleton server architecture with queue-based serialization eliminates the need for file locking
-
-Network Communication
-~~~~~~~~~~~~~~~~~~~~~
-
-**HTTP API**:
-
-* RESTful endpoints for workflow modification
-* JSON request/response format
-* Workspace-scoped URLs: ``/workspace/{workspace_id}/...``
-* Server URL discovered via ``find_running_server()``
-
-**Socket.IO**:
-
-* Real-time bidirectional communication
-* Event broadcasting from server to clients via workspace-specific rooms
-* Status updates and log streaming
-* Persistent connection during workflow execution
-* Room-based isolation ensures events only reach relevant clients
-
-Process Management
-------------------
-
-Command Execution
-~~~~~~~~~~~~~~~~~
-
-* Commands run via Python's ``subprocess`` module
-* Separate process for each node
-* stdout/stderr captured in real-time
-* Exit codes determine success/failure
-
-Process Lifecycle
-^^^^^^^^^^^^^^^^^
-
-1. **Spawn**: Process created when node transitions to ``run`` state
-2. **Monitor**: Output streams monitored via threads
-3. **Complete**: Process terminates, exit code checked
-4. **Cleanup**: Resources released, status updated
-
-Parallel Execution
-~~~~~~~~~~~~~~~~~~
-
-* Multiple nodes can run simultaneously
-* Limited only by available system resources
-* Dependency constraints prevent invalid parallelism
-* No explicit parallelism limit (user-controlled via workflow design)
-
-Error Handling
---------------
-
-Node Failures
-~~~~~~~~~~~~~
-
-When a node fails:
-
-1. Node status set to ``failed``
-2. Error information captured in stderr attribute
-3. ``NODE_FAILED`` event broadcast to clients
-4. Execution continues for independent branches
-5. Failed node prevents downstream execution
-
-Workflow Failures
-~~~~~~~~~~~~~~~~~
-
-* Failed nodes do not stop the entire workflow
-* Independent branches continue executing
-* Workflow completes when all executable nodes finish
-* Resume functionality allows recovery from failures
-
-Server Failures
-~~~~~~~~~~~~~~~
-
-* Server auto-discovery detects running servers via health checks
-* Idle servers automatically shut down (no clients + no active runs)
-* Deferred shutdown with 1-second delay prevents race conditions
-* Clients detect disconnection and notify user
-* Manual cleanup via ``workforce server stop`` if needed
-
-Security Considerations
------------------------
-
-* Commands execute with user's shell permissions
-* No authentication currently implemented (local use)
-* Registry file permissions control access
-* WebSocket connections not encrypted (localhost)
-* Command injection risks if workflow files untrusted
-
-Performance Considerations
---------------------------
-
-* Graph size limited by memory
-* NetworkX provides efficient graph operations
-* WebSocket events add minimal overhead
-* Subprocess spawning has system-dependent limits
-* Large stdout/stderr captured in memory (consider log rotation)
+The Vite-built React Flow frontend is a projection of server state. It edits
+nodes and edges, launches runs, and receives real-time changes through
+Socket.IO. Rebuild it explicitly with ``./build-frontend.sh`` after frontend
+changes.

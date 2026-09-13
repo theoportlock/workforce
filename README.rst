@@ -3,219 +3,98 @@ workforce
 =========
 
 .. image:: https://img.shields.io/pypi/v/workforce.svg
-    :target: https://pypi.python.org/pypi/workforce
+   :target: https://pypi.python.org/pypi/workforce
 
 .. image:: https://readthedocs.org/projects/workforce/badge/?version=latest
-    :target: https://workforce.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
+   :target: https://workforce.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+Workforce creates and runs shell commands in the order of a directed GraphML
+graph. It supports multiuser editing and running through a Flask + Socket.IO
+server, a React Flow web frontend, and an equivalent CLI. Like Galaxy, QIIME
+plugin workflows, AnADAMA2, Snakemake, Nextflow, and Make, it represents work
+as connected commands; unlike a DAG-only workflow engine, Workforce also
+supports loops.
 
 .. image:: images/small.png
-    :alt: Small pipeline example
-    :align: center
-    :width: 800px
-
-Workforce is an application that creates and runs bash commands in the order of a graph. It serves as a desktop for terminals, allowing you to build and run pipelines of bash commands with python multiprocessing according to a graphml file.
-
-Similar to other workflow management systems like Galaxy workflow, QIIME plugin workflows, AnADAMA2, Snakemake, Nextflow, and Make, but designed with multiuser support and a graphical interface for workflow editing.
+   :alt: Small pipeline example
+   :align: center
+   :width: 800px
 
 * Free software: MIT license
-* Documentation: https://workforce-documentation.readthedocs.io.
+* Documentation: https://workforce-documentation.readthedocs.io
 
-.. image:: images/complex.png
-    :alt: Complex pipeline editor view
-    :align: center
-    :width: 800px
+Quick start
+-----------
 
-Features
---------
-
-* **Graph-based workflow execution**: Define bash commands as nodes in a directed graph
-* **Multiuser support**: Multiple clients can interact with the same workflow simultaneously
-* **Server-based architecture**: Workflows are served via Flask API with unique URLs
-* **Event-driven execution**: Dependency-aware scheduling with real-time status updates
-* **Flexible edge types**: Use blocking edges for strict dependencies or non-blocking edges for flexible triggering and re-execution
-* **Subset execution**: Run specific subgraphs or the entire workflow
-* **Resume capability**: Restart failed nodes and continue pipeline execution
-* **Interactive Web UI**: Edit workflows visually with the React Flow frontend
-* **Flexible command wrapping**: Add prefixes/suffixes to commands (Docker, SSH, tmux, etc.)
-
-Architecture Overview
----------------------
-
-Server
-~~~~~~
-
-The server component provides a single machine-wide instance that manages multiple workspace contexts:
-
-**Server Startup**: When starting a server using the CLI (``python -m workforce server start``):
-
-1. Checks if a server is already running via PID file registry (default port 5049)
-2. If found, informs user and exits (enforces singleton per machine)
-3. If not found, starts Flask + Socket.IO server on configured port
-4. Waits for clients to connect and creates workspace contexts on-demand
-
-**Workspace Management**:
-
-- Each workfile gets a deterministic workspace ID (SHA256 hash of absolute path)
-- Server maintains isolated ServerContext objects per workspace with:
-  - Dedicated modification queue for serialized graph operations
-  - Per-workspace event bus for domain events
-  - Worker thread for processing queued mutations
-  - Socket.IO room for event isolation
-- Contexts created on first client connect, destroyed on last disconnect
-
-**Server Operations**:
-
-- Accepts workspace-scoped requests at ``/workspace/{workspace_id}/...`` endpoints
-- Edit API: Modify workflow structure (add/remove nodes, edges, statuses)
-- Run API: Initiate workflow execution with arguments:
-  - ``nodes``: Specific nodes to execute as subset
-  - ``wrapper``: Command prefix/suffix wrapper
-- Status updates propagate via Socket.IO room-based events
-
-**Server Shutdown**: On idle (no active clients or runs):
-
-- Automatically shuts down after brief idle period
-- Contexts destroyed on last client disconnect
-- Next client connection auto-starts new server instance
-
-Unified Execution Model
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-The system employs a unified execution model where every run is treated as a subset run:
-
-**Node Selection**:
-
-- If specific nodes are selected (via CLI or GUI), those nodes form an induced subgraph for execution
-- If no nodes are explicitly selected:
-  - The system first checks for failed nodes and selects them for re-execution
-  - If there are no failed nodes, nodes with zero in-degree in the full workflow are selected
-  - This means by default, the entire workflow is treated as the active subset
-
-**Execution Initialization**: Upon initialization, the scheduler:
-
-1. Identifies all nodes within the target subset that have an in-degree of zero relative only to that subset
-2. Transitions these nodes to a "run" state
-3. Ensures nodes start immediately if their dependencies in the master workfile are omitted from the current run scope
-
-**Subgraph Boundaries**: To prevent execution from bleeding into the rest of the workfile:
-
-- The scheduler strictly enforces subnetwork boundaries
-- Propagation is confined entirely to the active selection
-- When a node completes, only outgoing edges within the filtered subnetwork are evaluated
-- Edges leading to nodes outside the original subset are ignored, effectively "capping" the execution
-
-Execution Loop and Dependency Management
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Node Execution**:
-
-1. When a node runs, its stdout and stderr are captured as node attributes
-2. These outputs are viewable from the GUI (with the 'l' shortcut key)
-3. Upon successful completion, an event is emitted to the run request
-4. Each event is tagged with a client ID, allowing multiple concurrent runs and GUI clients to operate without interference
-
-**Scheduler Operations**:
-
-1. The emission triggers the scheduler to retrieve the filtered subnetwork map
-2. All valid outgoing edges (within the subnetwork) are updated to a ``to_run`` status
-3. An edge-status change event is broadcast
-
-**Dependency Checking**:
-
-1. The status change prompts the target node to perform a dependency check
-2. The node transitions to the ``run`` state only if ALL incoming edges (within the subnetwork context) are marked as ``to_run``
-3. Once this condition is satisfied:
-   - The node clears the statuses from those incoming edges
-   - Begins execution
-   - Loops back to the capture and emission phase
-
-This mechanism ensures the engine only advances when subset-specific dependencies are fully met.
-
-Resume Logic
-~~~~~~~~~~~~
-
-The resume functionality (Shift+R in GUI) handles failures or cancellations:
-
-- Replaces a node's ``failed`` status with ``run``
-- Re-triggers the event loop, which causes the scheduler to re-check dependencies and queue the node for execution
-- Allows the remainder of the pipeline to proceed through the normal dependency checking process
-- Strictly bounded by the subset; resume never propagates to nodes outside the original selection
-- Ensures nodes do not remain in a running state indefinitely
-
-By ensuring clean status management and ignoring edges outside the active scope, the system guarantees a clean termination once the selected subgraph is exhausted.
-
-Installation
-------------
-Installation can be done with:
+Install Workforce and launch the default ``Workfile``:
 
 .. code-block:: bash
 
    pip install workforce
-
-Building a workforce workflow
------------------------------
-To launch the pipeline editor in your browser, run:
-
-.. code-block:: bash
-
    workforce
 
-or:
+``workforce`` starts (or connects to) the server at ``127.0.0.1:5049``, loads
+the default workfile, and launches the web app. Use ``workforce start`` to run
+the server in the background, ``workforce start --foreground`` to run it in the
+foreground, and ``workforce stop`` to request shutdown.
+
+Use ``workforce edit <workfile>`` to load a workfile into the server and
+``workforce load <workfile>`` to add one to the server as a worksession. Set
+``WORKFORCE_URL`` or ``WORKFORCE_WORKSESSION`` to override the default URL or
+worksession.
+
+Running a graph
+---------------
+
+Run a worksession from the web frontend by selecting its starting nodes (or no
+nodes for the default selection) and pressing ``r``. Run the same worksession
+from the CLI with:
 
 .. code-block:: bash
 
-   python -m workforce
+   workforce run <worksession>
+   workforce run <worksession> --nodes node1
+   workforce run <worksession> --group <groupid>
+   workforce run <worksession> --wrapper 'docker run image bash -c "{}"'
 
-To open a previously constructed pipeline, run:
+A selected subset runs as an induced subgraph. Without a subset, selected nodes
+are start nodes; without a selection, failed nodes are selected; if none have
+failed, Workforce starts nodes with in-degree zero. Execution and readiness are
+strictly confined to the active run subgraph.
 
-.. code-block:: bash
+On success, a node records its PID, exit code, stdout, and stderr, changes to
+``ran``, and marks its outgoing edges ``ready``. A target runs after all of its
+incoming blocking edges are ready. Non-blocking edges do not add another
+prerequisite and can re-trigger work, including in loops. Workforce supports
+loops; design loop commands and edges with an intended stopping condition.
 
-   workforce <PIPELINE.graphml>
-    
-If a `Workfile` is in the current directory:
+Editing
+-------
 
-.. code-block:: bash
+In the web editor, double-click empty canvas to add a node and double-click a
+node to edit it. Drag from a right handle to a left handle to create a blocking
+edge. Shift-right-drag creates a non-blocking edge. Press ``r`` to run, ``d``
+to delete selected nodes, ``w`` to edit the wrapper, ``e`` to edit a node,
+``c`` to clear, and ``o`` to open a ``.wf`` workfile named in a selected
+command.
 
-   workforce
+The CLI exposes the same operations, including ``workforce node add``,
+``workforce edge add``, ``workforce group add``, ``workforce wrapper edit``,
+``workforce save``, ``workforce ls``, ``workforce ps``, and ``workforce top``.
 
-Running workforce plan
-----------------------
-To run a plan from the web editor, click the 'Run' button or press 'r'. If nodes are selected, execution starts from those nodes. Otherwise, the full pipeline is executed. Run from cli with:
+.. image:: images/complex.png
+   :alt: Complex pipeline editor view
+   :align: center
+   :width: 800px
 
-.. code-block:: bash
+Architecture
+------------
 
-   workforce run Workfile
-
-Wrapper commands
-----------------
-Adding the following wrappers to the wf run command (or within gui) will add to each command ran by the pipeline.
-
-.. list-table::
-   :widths: 40 60
-   :header-rows: 1
-
-   * - Wrapper Command
-     - Description
-   * - ``'bash -c "{}"'``
-     - Standard bash execution
-   * - ``'bash -c ". env.sh"'``
-     - Bash execution with definition of config or other environmental settings
-   * - ``'tmux send-keys {} C-m'``
-     - Sends each command to a tmux session and executes it.
-   * - ``'ssh ADDRESS {}'``
-     - Executes each command remotely on the specified server.
-   * - ``'parallel {} ::: FILENAMES'``
-     - Runs the pipeline on each specified filename.
-   * - ``'docker run -it IMAGE {}'``
-     - Executes each command inside a Docker container with an interactive TTY.
-   * - ``'echo {} >> commands.sh'``
-     - Exports pipeline commands to a bash script named commands.sh.
-   * - ``'bash -lc "conda activate ENV && {}"'``
-     - Activates a Conda environment before executing the command.
-   * - ``'nohup {} &'``
-     - Runs commands in the background.
-
-To run specific process(es) from the editor, select the process(es) and click the 'Run' button (or shortcut with 'r' key). If no processes are selected, the entire pipeline will run.
-
-This is tested on mac, linux, and windows powershell and wsl2.
+The server is authoritative. Every graph mutation goes through
+``ServerContext.enqueue()`` and the serialized queue in ``server/queue.py``;
+clients are projections of that state. Node statuses use the state machine
+``""`` → ``run`` → ``running`` → ``ran``, with ``running`` → ``fail`` and
+``fail`` → ``run`` as the failure and retry transitions. A wrapper is applied
+deterministically with ``wrapper.replace("{}", cmd)`` or, without a placeholder,
+by concatenation.
