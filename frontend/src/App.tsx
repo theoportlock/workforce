@@ -1091,7 +1091,6 @@ function AppContent() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <a href="/" style={{ color: '#f8fafc', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span>←</span>
               <strong>Home</strong>
             </a>
           <MenuBar
