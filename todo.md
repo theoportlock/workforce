@@ -19,3 +19,15 @@ news aggregator
 Paper bot to find new papers that match my interests
 Notifications server
 one big handle and straight lines with right click and drag support
+
+frontend
+Lasso-selection
+node-collisions
+sub-flows for grouping support
+touch-device but with one handle (tap handle then next node, or select nodes then click next node)
+floating-edges
+multi-connection-line
+right click and drag
+double click to make node and immediately enter edit mode
+download pdf/svg/jpg
+layout button
