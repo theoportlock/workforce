@@ -1439,7 +1439,7 @@ function AppContent() {
           >
             <Background gap={18} color="#334155" />
             <Controls />
-            <MiniMap pannable zoomable style={{ background: '#0f172a' }} />
+	    <MiniMap pannable zoomable position="bottom-left" style={{ background: '#0f172a' }} />
           </ReactFlow>
         </section>
 
