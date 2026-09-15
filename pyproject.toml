@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "workforce"
-version = "1.1.20"
+version = "1.1.21"
 description = "Run bash commands with Python multiprocessing and a web-based workflow editor."
 readme = "README.rst"
 license = {text = "MIT"}
