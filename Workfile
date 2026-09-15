@@ -51,8 +51,8 @@
     </node>
     <node id="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
       <data key="d1">echo world &gt; world.txt</data>
-      <data key="d2">368.0504537655216</data>
-      <data key="d3">207.43183270509917</data>
+      <data key="d2">367.54826489747904</data>
+      <data key="d3">202.91213289271644</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; cd ~/workforce; echo world &gt; world.txt"</data>
       <data key="d6" />

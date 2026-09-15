@@ -498,30 +498,28 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
     <div
       style={{
         ...nodeWrapperBaseStyle,
-        border: selected ? '2px solid #111827' : nodeWrapperBaseStyle.border,
-        borderLeft: `6px solid ${statusColor}`,
-        background: statusColor
+        border: selected ? '2px solid #111827' : '1px solid #555',
+        background: statusColor,
+        position: 'relative'
       }}
       onDoubleClick={handleStartEditing}
     >
       <Handle type="target" position={Position.Left} className="workflow-node__target-handle" />
       {isEditing ? (
-        <>
-          <textarea
-            ref={textareaRef}
-            className="nodrag nowheel"
-            value={draftLabel}
-            aria-label="Node label"
-            rows={1}
-            spellCheck={false}
-            style={inputStyle}
-            onBlur={commitLabel}
-            onChange={handleDraftChange}
-            onKeyDown={handleKeyDown}
-            onMouseDown={(event) => event.stopPropagation()}
-            onDoubleClick={(event) => event.stopPropagation()}
-          />
-        </>
+        <textarea
+          ref={textareaRef}
+          className="nodrag nowheel"
+          value={draftLabel}
+          aria-label="Node label"
+          rows={1}
+          spellCheck={false}
+          style={inputStyle}
+          onBlur={commitLabel}
+          onChange={handleDraftChange}
+          onKeyDown={handleKeyDown}
+          onMouseDown={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        />
       ) : (
         <div
           role="button"
