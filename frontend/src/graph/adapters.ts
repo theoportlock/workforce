@@ -1,4 +1,4 @@
-import { Edge, Node } from 'reactflow';
+import { Edge, MarkerType, Node } from 'reactflow';
 import { BackendNodeLinkGraph, WorkforceStatus, WorkflowNodeData } from './types';
 
 const statusLabelMap: Record<WorkforceStatus, string> = {
@@ -74,7 +74,8 @@ export function adaptBackendGraph(data: BackendNodeLinkGraph): {
       source: String(link.source),
       target: String(link.target),
       animated: link.status === 'to_run',
-      type: link.edge_type === 'non-blocking' ? 'nonBlockingEdge' : 'default',
+      type: 'floating',
+      markerEnd: { type: MarkerType.ArrowClosed },
       data: { edge_type: link.edge_type ?? 'blocking' }
     }))
   };

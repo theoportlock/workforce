@@ -6,8 +6,9 @@ import ReactFlow, {
   Controls,
   Edge,
   EdgeProps,
-  getBezierPath,
+  getStraightPath,
   Handle,
+  MarkerType,
   MiniMap,
   Node,
   NodeProps,
@@ -18,6 +19,7 @@ import ReactFlow, {
   useNodesState,
   useOnSelectionChange,
   useReactFlow,
+  useStore,
   useUpdateNodeInternals
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -214,8 +216,54 @@ const nodeWrapperBaseStyle: CSSProperties = {
   position: 'relative'
 };
 
-function NonBlockingEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, markerEnd }: EdgeProps) {
-  const [edgePath] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+function getNodeIntersection(sourceNode: Node, targetNode: Node) {
+  const sourceWidth = sourceNode.width ?? (typeof sourceNode.style?.width === 'number' ? sourceNode.style.width : 150);
+  const sourceHeight = sourceNode.height ?? (typeof sourceNode.style?.height === 'number' ? sourceNode.style.height : 48);
+  const targetWidth = targetNode.width ?? (typeof targetNode.style?.width === 'number' ? targetNode.style.width : 150);
+  const targetHeight = targetNode.height ?? (typeof targetNode.style?.height === 'number' ? targetNode.style.height : 48);
+  const sourceCenter = {
+    x: sourceNode.position.x + sourceWidth / 2,
+    y: sourceNode.position.y + sourceHeight / 2
+  };
+  const targetCenter = {
+    x: targetNode.position.x + targetWidth / 2,
+    y: targetNode.position.y + targetHeight / 2
+  };
+  const dx = targetCenter.x - sourceCenter.x;
+  const dy = targetCenter.y - sourceCenter.y;
+
+  if (Math.abs(dx) * sourceHeight > Math.abs(dy) * sourceWidth) {
+    const x = dx > 0 ? sourceNode.position.x + sourceWidth : sourceNode.position.x;
+    return {
+      source: { x, y: sourceCenter.y + (dy / dx) * (x - sourceCenter.x) },
+      sourcePosition: dx > 0 ? Position.Right : Position.Left
+    };
+  }
+
+  const y = dy > 0 ? sourceNode.position.y + sourceHeight : sourceNode.position.y;
+  return {
+    source: { x: sourceCenter.x + (dx / dy) * (y - sourceCenter.y), y },
+    sourcePosition: dy > 0 ? Position.Bottom : Position.Top
+  };
+}
+
+function FloatingEdge({ id, source, target, style = {}, markerEnd, data }: EdgeProps) {
+  const { sourceNode, targetNode } = useStore((state) => ({
+    sourceNode: state.nodeInternals.get(source),
+    targetNode: state.nodeInternals.get(target)
+  }));
+
+  if (!sourceNode || !targetNode) return null;
+
+  const sourceIntersection = getNodeIntersection(sourceNode, targetNode);
+  const targetIntersection = getNodeIntersection(targetNode, sourceNode);
+  const [edgePath] = getStraightPath({
+    sourceX: sourceIntersection.source.x,
+    sourceY: sourceIntersection.source.y,
+    targetX: targetIntersection.source.x,
+    targetY: targetIntersection.source.y
+  });
+  const isNonBlocking = data?.edge_type === 'non-blocking';
 
   return (
     <path
@@ -224,13 +272,34 @@ function NonBlockingEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositio
       style={{
         ...style,
         strokeWidth: 2,
-        strokeDasharray: '5,5',
-        stroke: '#94a3b8'
+        strokeDasharray: isNonBlocking ? '5,5' : undefined,
+        stroke: isNonBlocking ? '#94a3b8' : '#64748b'
       }}
       d={edgePath}
       markerEnd={markerEnd}
     />
   );
+}
+
+function FloatingConnectionLine({
+  fromX,
+  fromY,
+  toX,
+  toY
+}: {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}) {
+  const [edgePath] = getStraightPath({
+    sourceX: fromX,
+    sourceY: fromY,
+    targetX: toX,
+    targetY: toY
+  });
+
+  return <path fill="none" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5,5" d={edgePath} />;
 }
 
 const textDisplayStyle: CSSProperties = {
@@ -458,7 +527,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
 }
 
 const nodeTypes = { workflowNode: WorkflowNode };
-const edgeTypes = { nonBlockingEdge: NonBlockingEdge };
+const edgeTypes = { floating: FloatingEdge };
 
 function AppContent() {
   const workspaceBaseUrl = resolveWorkspaceBaseUrl();
@@ -580,7 +649,9 @@ function AppContent() {
         target: connection.target,
         sourceHandle: connection.sourceHandle,
         targetHandle: connection.targetHandle,
-        animated: false
+        animated: false,
+        type: 'floating',
+        markerEnd: { type: MarkerType.ArrowClosed }
       };
       setEdges((existing) => addEdge(optimisticEdge, existing));
       void bridgeCall('addEdge', { source: connection.source, target: connection.target }).catch((error) => {
@@ -1216,6 +1287,7 @@ function AppContent() {
             onEdgeContextMenu={onEdgeContextMenu}
             onPaneContextMenu={onPaneContextMenu}
             edgeTypes={edgeTypes}
+            connectionLineComponent={FloatingConnectionLine}
             onMouseMove={(event) => {
               if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
               const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -1285,6 +1357,7 @@ function AppContent() {
                color: '#e2e8f0',
                width: '600px',
                maxWidth: '90vw',
+	       boxSizing: 'border-box',
                display: 'flex',
                flexDirection: 'column',
                gap: 16
@@ -1296,6 +1369,7 @@ function AppContent() {
                onChange={(e) => setDraftWrapper(e.target.value)}
                style={{
                  width: '100%',
+		 boxSizing: 'border-box',
                  height: '300px',
                  background: '#0f172a',
                  color: '#e2e8f0',
