@@ -12,6 +12,7 @@ import ReactFlow, {
   MiniMap,
   Node,
   NodeProps,
+  OnConnectStart,
   Position,
   ReactFlowProvider,
   SelectionMode,
@@ -203,6 +204,14 @@ function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): stri
     throw new Error(`${verb} cancelled: path is required.`);
   }
   return trimmed;
+}
+
+function pointerPosition(event: globalThis.MouseEvent | globalThis.TouchEvent) {
+  if ('changedTouches' in event) {
+    const touch = event.changedTouches[0] ?? event.touches[0];
+    return { x: touch.clientX, y: touch.clientY };
+  }
+  return { x: event.clientX, y: event.clientY };
 }
 
 const nodeWrapperBaseStyle: CSSProperties = {
@@ -548,6 +557,7 @@ function AppContent() {
   const { screenToFlowPosition } = useReactFlow();
   const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const connectionStartRef = useRef<{ nodeId: string; handleId: string | null } | null>(null);
   const editRequestCounterRef = useRef(0);
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -642,6 +652,7 @@ function AppContent() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      connectionStartRef.current = null;
       if (!connection.source || !connection.target) return;
       const optimisticEdge: Edge = {
         id: `${connection.source}-${connection.target}`,
@@ -660,6 +671,34 @@ function AppContent() {
       });
     },
     [setEdges]
+  );
+
+  const onConnectStart = useCallback<OnConnectStart>(
+    (_event, { nodeId, handleId, handleType }) => {
+      connectionStartRef.current = handleType === 'source' && nodeId ? { nodeId, handleId } : null;
+    },
+    []
+  );
+
+  const onConnectEnd = useCallback(
+    (event: globalThis.MouseEvent | globalThis.TouchEvent) => {
+      const connectionStart = connectionStartRef.current;
+      connectionStartRef.current = null;
+      if (!connectionStart) return;
+
+      const { x, y } = pointerPosition(event);
+      const targetElement = document.elementFromPoint(x, y)?.closest<HTMLElement>('.react-flow__node');
+      const target = targetElement?.dataset.id;
+      if (!target || target === connectionStart.nodeId) return;
+
+      onConnect({
+        source: connectionStart.nodeId,
+        sourceHandle: connectionStart.handleId,
+        target,
+        targetHandle: null
+      });
+    },
+    [onConnect]
   );
 
   const onEdgesDelete = useCallback(
@@ -1270,6 +1309,8 @@ function AppContent() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onConnectStart={onConnectStart}
+            onConnectEnd={onConnectEnd}
             onEdgesDelete={onEdgesDelete}
             onNodesDelete={onNodesDelete}
             onNodeDragStart={onNodeDragStart}

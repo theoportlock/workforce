@@ -1,6 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
-  <key id="d12" for="edge" attr.name="status" attr.type="string" />
   <key id="d11" for="edge" attr.name="edge_type" attr.type="string" />
   <key id="d10" for="edge" attr.name="id" attr.type="string" />
   <key id="d9" for="node" attr.name="error_code" attr.type="string" />
@@ -61,24 +60,20 @@
       <data key="d9">0</data>
     </node>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="db544d08-ecf3-4c3b-85dd-048a7a211bd8">
-      <data key="d10">74ae295c-da33-41e9-b76c-8898bc1bb0af</data>
+      <data key="d10">84622550-00fd-4250-bae2-e0fc7241e1b3</data>
       <data key="d11">blocking</data>
-      <data key="d12" />
-    </edge>
-    <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
-      <data key="d10">47358621-cab2-4229-a2b5-3673cdc41a2d</data>
-      <data key="d11">non-blocking</data>
-      <data key="d12" />
     </edge>
     <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
-      <data key="d10">65839161-2dc5-4f09-a533-543cc98bbf36</data>
+      <data key="d10">b290b556-a43f-45bf-9c74-b8974af50ce4</data>
       <data key="d11">blocking</data>
-      <data key="d12" />
+    </edge>
+    <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="a8059ffe-420a-458d-8e8e-268c9c1421e8">
+      <data key="d10">b16aeb17-be05-4278-8369-91c4a4fd80e3</data>
+      <data key="d11">blocking</data>
     </edge>
     <edge source="3955c2d4-4d4d-4f5b-8d95-133a2bedd081" target="db544d08-ecf3-4c3b-85dd-048a7a211bd8">
-      <data key="d10">9e4c67c3-71cf-4239-a88a-86d593c5fa3f</data>
+      <data key="d10">dce08e7c-aaf5-4add-8192-d2cf4792d88e</data>
       <data key="d11">blocking</data>
-      <data key="d12" />
     </edge>
     <data key="d0">bash -c "sleep 1; cd ~/workforce; {}"</data>
   </graph>
