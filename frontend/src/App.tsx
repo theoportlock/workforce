@@ -1238,6 +1238,7 @@ function AppContent() {
             zoomOnScroll
             zoomOnDoubleClick={false}
             minZoom={0.01}
+            maxZoom={10}
             selectionOnDrag
             selectionMode={SelectionMode.Partial}
             multiSelectionKeyCode={['Meta', 'Control']}

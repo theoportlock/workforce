@@ -16,8 +16,8 @@
   <graph edgedefault="directed">
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d1">echo hello &gt; hello.txt</data>
-      <data key="d2">290.65850121609765</data>
-      <data key="d3">96.5312262454722</data>
+      <data key="d2">300.650393005698</data>
+      <data key="d3">97.44065618537843</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; cd ~/workforce; echo hello &gt; hello.txt"</data>
       <data key="d6" />
