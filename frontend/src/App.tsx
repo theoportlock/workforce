@@ -214,6 +214,15 @@ function pointerPosition(event: globalThis.MouseEvent | globalThis.TouchEvent) {
   return { x: event.clientX, y: event.clientY };
 }
 
+const RIGHT_DRAG_THRESHOLD = 5;
+
+type RightDragState = {
+  sourceNodeId: string;
+  startX: number;
+  startY: number;
+  dragging: boolean;
+};
+
 const nodeWrapperBaseStyle: CSSProperties = {
   padding: '10px 15px',
   border: '1px solid #555',
@@ -558,6 +567,8 @@ function AppContent() {
   const cursorFlowPosRef = useRef<{ x: number; y: number }>({ x: 200, y: 180 });
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const connectionStartRef = useRef<{ nodeId: string; handleId: string | null } | null>(null);
+  const rightDragRef = useRef<RightDragState | null>(null);
+  const suppressNextContextMenuRef = useRef<number | null>(null);
   const editRequestCounterRef = useRef(0);
   const opQueueRef = useRef(
     new FrontendOperationQueue(
@@ -673,6 +684,66 @@ function AppContent() {
     [setEdges]
   );
 
+  const onRightDragMouseDown = useCallback((event: globalThis.MouseEvent) => {
+    if (event.button !== 2) return;
+
+    const sourceNode = (event.target as HTMLElement | null)?.closest<HTMLElement>('.react-flow__node');
+    const sourceNodeId = sourceNode?.dataset.id;
+    if (!sourceNodeId) return;
+
+    rightDragRef.current = {
+      sourceNodeId,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false
+    };
+  }, []);
+
+  const onRightDragMouseMove = useCallback((event: globalThis.MouseEvent) => {
+    const rightDrag = rightDragRef.current;
+    if (!rightDrag) return;
+
+    if (!rightDrag.dragging) {
+      const distance = Math.hypot(event.clientX - rightDrag.startX, event.clientY - rightDrag.startY);
+      if (distance < RIGHT_DRAG_THRESHOLD) return;
+      rightDrag.dragging = true;
+    }
+
+    event.preventDefault();
+  }, []);
+
+  const onRightDragMouseUp = useCallback(
+    (event: globalThis.MouseEvent) => {
+      if (event.button !== 2) return;
+
+      const rightDrag = rightDragRef.current;
+      rightDragRef.current = null;
+      if (!rightDrag?.dragging) return;
+
+      suppressNextContextMenuRef.current = Date.now();
+      const targetNode = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('.react-flow__node');
+      const targetNodeId = targetNode?.dataset.id;
+      if (!targetNodeId || targetNodeId === rightDrag.sourceNodeId) return;
+
+      onConnect({
+        source: rightDrag.sourceNodeId,
+        sourceHandle: null,
+        target: targetNodeId,
+        targetHandle: null
+      });
+    },
+    [onConnect]
+  );
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onRightDragMouseMove);
+    window.addEventListener('mouseup', onRightDragMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onRightDragMouseMove);
+      window.removeEventListener('mouseup', onRightDragMouseUp);
+    };
+  }, [onRightDragMouseMove, onRightDragMouseUp]);
+
   const onConnectStart = useCallback<OnConnectStart>(
     (_event, { nodeId, handleId, handleType }) => {
       connectionStartRef.current = handleType === 'source' && nodeId ? { nodeId, handleId } : null;
@@ -727,17 +798,28 @@ function AppContent() {
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node<WorkflowNodeData>) => {
     event.preventDefault();
+    const rightDragEndedAt = suppressNextContextMenuRef.current;
+    suppressNextContextMenuRef.current = null;
+    if (rightDragEndedAt !== null && Date.now() - rightDragEndedAt < 500) {
+      return;
+    }
     setSelectedNodeIds([node.id]);
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
   }, []);
 
   const onEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
     event.preventDefault();
+    suppressNextContextMenuRef.current = null;
     setContextMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
   }, []);
 
   const onPaneContextMenu = useCallback((event: MouseEvent) => {
     event.preventDefault();
+    const rightDragEndedAt = suppressNextContextMenuRef.current;
+    suppressNextContextMenuRef.current = null;
+    if (rightDragEndedAt !== null && Date.now() - rightDragEndedAt < 500) {
+      return;
+    }
     setContextMenu({ x: event.clientX, y: event.clientY });
   }, []);
 
@@ -1296,6 +1378,7 @@ function AppContent() {
       >
         <section
           style={{ borderRight: '1px solid #1e293b', minHeight: 0, overflow: 'hidden' }}
+          onMouseDownCapture={(event) => onRightDragMouseDown(event.nativeEvent)}
           onDoubleClick={(event) => {
             const target = event.target as HTMLElement;
             if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return;
