@@ -504,7 +504,7 @@ function WorkflowNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
       }}
       onDoubleClick={handleStartEditing}
     >
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position={Position.Left} className="workflow-node__target-handle" />
       {isEditing ? (
         <>
           <textarea
