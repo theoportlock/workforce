@@ -1,173 +1,97 @@
 <?xml version='1.0' encoding='utf-8'?>
-<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d12" for="edge" attr.name="status" attr.type="string"/>
-<key id="d11" for="edge" attr.name="edge_type" attr.type="string"/>
-<key id="d10" for="edge" attr.name="id" attr.type="string"/>
-<key id="d9" for="node" attr.name="error_code" attr.type="string"/>
-<key id="d8" for="node" attr.name="pid" attr.type="string"/>
-<key id="d7" for="node" attr.name="stderr" attr.type="string"/>
-<key id="d6" for="node" attr.name="stdout" attr.type="string"/>
-<key id="d5" for="node" attr.name="command" attr.type="string"/>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d7" for="edge" attr.name="status" attr.type="string"/>
+<key id="d6" for="edge" attr.name="edge_type" attr.type="string"/>
+<key id="d5" for="edge" attr.name="id" attr.type="string"/>
 <key id="d4" for="node" attr.name="status" attr.type="string"/>
 <key id="d3" for="node" attr.name="y" attr.type="string"/>
 <key id="d2" for="node" attr.name="x" attr.type="string"/>
 <key id="d1" for="node" attr.name="label" attr.type="string"/>
 <key id="d0" for="graph" attr.name="wrapper" attr.type="string"/>
 <graph edgedefault="directed"><data key="d0">sleep 1
-MODEL=gemma4:31b-cloud
+#MODEL=gemma4:31b-cloud
+MODEL=gemma4:e2b
 </data>
 <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
-  <data key="d1">echo "2" &gt; /tmp/sequence.txt
+  <data key="d1"># Input prime numbers
+echo "2" &gt; /tmp/sequence.txt
 echo "3" &gt;&gt; /tmp/sequence.txt
 echo "5" &gt;&gt; /tmp/sequence.txt
 echo "7" &gt;&gt; /tmp/sequence.txt
 echo "11" &gt;&gt; /tmp/sequence.txt</data>
-  <data key="d2">349.8056163175006</data>
-  <data key="d3">22.647297900113102</data>
-  <data key="d4">ran</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- echo "2" &gt; /tmp/sequence.txt
-echo "3" &gt;&gt; /tmp/sequence.txt
-echo "5" &gt;&gt; /tmp/sequence.txt
-echo "7" &gt;&gt; /tmp/sequence.txt
-echo "11" &gt;&gt; /tmp/sequence.txt</data>
-  <data key="d6"></data>
-  <data key="d7"></data>
-  <data key="d8">23594</data>
-  <data key="d9">0</data>
+  <data key="d2">369.89107749519735</data>
+  <data key="d3">10.930778879790012</data>
+  <data key="d4"></data>
 </node>
 <node id="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
-  <data key="d1"># Look at the previous 5 numbers and guess the next one
-tail -n 5 /tmp/sequence.txt | ollama run "$MODEL" \
+  <data key="d1"># Generate the next number in the sequence
+tail -n 50 /tmp/sequence.txt | \
+ollama run "$MODEL" \
   --hidethinking \
   --think=false \
   "Whats the next number in the sequence? output the next number ONLY" \
   &gt; /tmp/next.txt</data>
-  <data key="d2">670.2492731588616</data>
-  <data key="d3">13.193073245201589</data>
-  <data key="d4">ran</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- # Look at the previous 5 numbers and guess the next one
-tail -n 5 /tmp/sequence.txt | ollama run "$MODEL" \
-  --hidethinking \
-  --think=false \
-  "Whats the next number in the sequence? output the next number ONLY" \
-  &gt; /tmp/next.txt</data>
-  <data key="d6"></data>
-  <data key="d7"></data>
-  <data key="d8">24233</data>
-  <data key="d9"></data>
+  <data key="d2">671.9230615903364</data>
+  <data key="d3">15.703755892413682</data>
+  <data key="d4"></data>
 </node>
 <node id="f93354c4-e911-4a1b-a2b5-789f71846d76">
-  <data key="d1">cat \
+  <data key="d1"># Merge with the sequence
+cat \
   /tmp/next.txt \
   &gt;&gt; /tmp/sequence.txt</data>
-  <data key="d2">1314.9967753304627</data>
-  <data key="d3">32.71083971431639</data>
-  <data key="d4">ran</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- cat \
-  /tmp/next.txt \
-  &gt;&gt; /tmp/sequence.txt</data>
-  <data key="d6"></data>
-  <data key="d7"></data>
-  <data key="d8">24262</data>
-  <data key="d9">0</data>
+  <data key="d2">1279.0103240537562</data>
+  <data key="d3">35.22152236152846</data>
+  <data key="d4"></data>
 </node>
 <node id="c22c2386-f18c-449e-a140-0c841f49acd5">
   <data key="d1"># If there are more than 20 lines, quit the loop
-[ "$(wc -l &lt; /tmp/sequence.txt)" -le 20 ] || exit 1</data>
-  <data key="d2">996.9325976111121</data>
-  <data key="d3">204.25915115764423</data>
-  <data key="d4">fail</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- # If there are more than 20 lines, quit the loop
-[ "$(wc -l &lt; /tmp/sequence.txt)" -le 20 ] || exit 1</data>
-  <data key="d6"></data>
-  <data key="d7"></data>
-  <data key="d8">24283</data>
-  <data key="d9">1</data>
+[ "$(wc -l &lt; /tmp/sequence.txt)" -le 2000 ] || exit 1</data>
+  <data key="d2">1011.9966934943847</data>
+  <data key="d3">219.32324704091673</data>
+  <data key="d4"></data>
 </node>
 <node id="fb1a5736-d45f-4332-a30c-4af4395abd37">
   <data key="d1"># Show the sequence
 cat /tmp/sequence.txt</data>
-  <data key="d2">1579.6555081302686</data>
-  <data key="d3">38.39156497310438</data>
-  <data key="d4">ran</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- # Show the sequence
-cat /tmp/sequence.txt</data>
-  <data key="d6">2
-3
-5
-7
-11
-13
-
-17
-
-19
-
-23
-
-27
-
-31
-
-35
-
-39
-
-</data>
-  <data key="d7"></data>
-  <data key="d8">24291</data>
-  <data key="d9">0</data>
+  <data key="d2">1532.7894320489768</data>
+  <data key="d3">50.94497820916483</data>
+  <data key="d4"></data>
 </node>
 <node id="ab0b260a-9b9e-426b-9d52-f739cdd21b84">
-  <data key="d1">ollama pull $MODEL</data>
-  <data key="d2">555.8326611635663</data>
-  <data key="d3">-83.82568468523856</data>
-  <data key="d4">ran</data>
-  <data key="d5">sleep 1
-MODEL=gemma4:31b-cloud
- ollama pull $MODEL</data>
-  <data key="d6"></data>
-  <data key="d7"></data>
-  <data key="d8">23566</data>
-  <data key="d9"></data>
+  <data key="d1"># Pull the model
+ollama pull $MODEL </data>
+  <data key="d2">572.5705454783135</data>
+  <data key="d3">-107.25872272588472</data>
+  <data key="d4"></data>
 </node>
 <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
-  <data key="d10">c6713d58-2ffb-4dda-805f-3199f030aaf3</data>
-  <data key="d11">non-blocking</data>
-  <data key="d12"></data>
+  <data key="d5">c6713d58-2ffb-4dda-805f-3199f030aaf3</data>
+  <data key="d6">non-blocking</data>
+  <data key="d7"></data>
 </edge>
 <edge source="3955c2d4-4d4d-4f5b-8d95-133a2bedd081" target="f93354c4-e911-4a1b-a2b5-789f71846d76">
-  <data key="d10">fc3b3567-28c9-4f9b-940e-3472734a8002</data>
-  <data key="d11">blocking</data>
-  <data key="d12"></data>
+  <data key="d5">fc3b3567-28c9-4f9b-940e-3472734a8002</data>
+  <data key="d6">blocking</data>
+  <data key="d7"></data>
 </edge>
 <edge source="f93354c4-e911-4a1b-a2b5-789f71846d76" target="c22c2386-f18c-449e-a140-0c841f49acd5">
-  <data key="d10">426aa840-3756-4e52-8a1b-88179fa42606</data>
-  <data key="d11">blocking</data>
-  <data key="d12"></data>
+  <data key="d5">426aa840-3756-4e52-8a1b-88179fa42606</data>
+  <data key="d6">blocking</data>
+  <data key="d7"></data>
 </edge>
 <edge source="f93354c4-e911-4a1b-a2b5-789f71846d76" target="fb1a5736-d45f-4332-a30c-4af4395abd37">
-  <data key="d10">d1d0379a-3d92-4b1c-ba92-33f4af813739</data>
-  <data key="d11">blocking</data>
-  <data key="d12"></data>
+  <data key="d5">d1d0379a-3d92-4b1c-ba92-33f4af813739</data>
+  <data key="d6">blocking</data>
+  <data key="d7"></data>
 </edge>
 <edge source="c22c2386-f18c-449e-a140-0c841f49acd5" target="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
-  <data key="d10">1e4ff9de-c7fb-42e6-a024-e9beb026aa78</data>
-  <data key="d11">non-blocking</data>
-  <data key="d12"></data>
+  <data key="d5">1e4ff9de-c7fb-42e6-a024-e9beb026aa78</data>
+  <data key="d6">non-blocking</data>
+  <data key="d7"></data>
 </edge>
 <edge source="ab0b260a-9b9e-426b-9d52-f739cdd21b84" target="cf7bb102-eb38-442a-bbdf-6a688802514a">
-  <data key="d10">f0ce1bd0-1184-44cc-afaa-17e183759bf5</data>
-  <data key="d11">blocking</data>
-  <data key="d12"></data>
+  <data key="d5">f0ce1bd0-1184-44cc-afaa-17e183759bf5</data>
+  <data key="d6">blocking</data>
+  <data key="d7"></data>
 </edge>
 </graph></graphml>
