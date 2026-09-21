@@ -257,7 +257,8 @@ def register_routes(app):
             # Fallback if bind info not yet set
             host = "127.0.0.1"
             port = 5000
-        url = f"http://{host}:{port}/workspace/{workspace_id}"
+        #url = f"http://{host}:{port}/workspace/{workspace_id}"
+        url = f"{request.host_url.rstrip('/')}/workspace/{workspace_id}"
 
         return jsonify(
             {
