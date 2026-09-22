@@ -18,23 +18,13 @@
       <data key="d1">echo hello &gt; hello.txt</data>
       <data key="d2">370.46479210600404</data>
       <data key="d3">-39.5726708474574</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; cd ~/workforce; echo hello &gt; hello.txt"</data>
-      <data key="d6" />
-      <data key="d7" />
-      <data key="d8">42402</data>
-      <data key="d9">0</data>
+      <data key="d4" />
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">touch example.txt</data>
       <data key="d2">105.03336252131882</data>
       <data key="d3">71.23308421866301</data>
-      <data key="d4">ran</data>
-      <data key="d5">bash -c "sleep 1; cd ~/workforce; touch example.txt"</data>
-      <data key="d6" />
-      <data key="d7" />
-      <data key="d8">42372</data>
-      <data key="d9">0</data>
+      <data key="d4" />
     </node>
     <node id="db544d08-ecf3-4c3b-85dd-048a7a211bd8">
       <data key="d1">cat hello.txt world.txt \
@@ -80,6 +70,6 @@
       <data key="d11">blocking</data>
       <data key="d12" />
     </edge>
-    <data key="d0">bash -c "sleep 1; cd ~/workforce; {}"</data>
+    <data key="d0">bash -c "sleep 2; cd ~/workforce; {}"</data>
   </graph>
 </graphml>

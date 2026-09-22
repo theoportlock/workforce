@@ -1135,7 +1135,7 @@ function AppContent() {
 
   const handleAddNodeAtPosition = useCallback(
     (position: { x: number; y: number }) => {
-      const id = crypto.randomUUID();
+      const id = `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const dims = nodeDimensionsForLabel(`node-${nodes.length + 1}`);
       const node = {
         id,
