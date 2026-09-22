@@ -7,16 +7,16 @@ An execution can be performed on either the full graph or a subgraph.
 
 # cli
 <workfile> = graphml file
-<worksession> = file or worksession; if is file then load server first (wf load); export WORKFORCE_WORKSESSION=<workfile> # Default url
+<worksession> = file or worksession; if is file then load server first (workforce load); export WORKFORCE_WORKSESSION=<workfile> # Default url
 <url> = export WORKFORCE_URL='127.0.0.1:5049' # Default url
 <cmd> = command as string
 
 ---- not requests ----
-workforce # Attempts to start the server at <url>, loads default workfile name (Workfile)
+workforce # Launches help
 workforce start # Starts the server in background
 workforce start --foreground # Attempts to start the server at <url>
 ---- requests ----
-workforce edit <workfile> # loads a workfile into the server
+workforce open <workfile> # loads a workfile into the server
 workforce stop # Attempts to stops the server running at <url> env variable with shutdown request
 workforce # Launch webapp
 workforce run <worksession> # Runs the worksession. Uses load with autounload argument that will unload when finished/error?
@@ -24,6 +24,8 @@ workforce <worksession> # Runs the worksession
 workforce run <worksession> --nodes node1 # Runs the worksession with the specific nodes
 workforce run <worksession> --wrapper 'docker run image bash -c "{}"' # Runs the worksession with the specific wrapper
 workforce run <worksession> --group <groupid> # Runs the worksession with the specific wrapper
+workforce run <worksession> --until node1 # Runs the worksession from indegree=0 to node1
+workforce run <worksession> --from node1 # Runs the worksession node1 to outdegree=0
 workforce ls # Views worksessions on server and URL
 workforce ls <worksession> # Views nodes and edges of worksession with their IDs
 workforce ls nodes/edges <worksession> # Views nodes/edges of worksession with their IDs
@@ -41,12 +43,12 @@ workforce node add <worksession> <cmd> --id 'filtering_of_data' --after 'quality
 workforce edge add <worksession> <src> <tgt> --blocking # adds edge (blocking is default)
 workforce group add <worksession> <nodeIDs> # adds nodes to group
 workforce node edit status <worksession> <id> "run" # Changes node status
-workforce node edit command <worksession> <id> "echo test" # Changes node command
+workforce node edit command <worksession> <id> "echo test" # Changes node command AND CLEAR THE LOG
 workforce node edit name <worksession> <id> "run" # Changes session name
 workforce edge edit type <worksession> <id> --blocking/--nonblocking # Changes edge to blocking or non-blocking
 workforce wrapper edit <worksession> 'docker run image bash -c "{}"' # Changes session name
 workforce node cp <worksession> <groupornodeids> <worksession>
-workforce new <workfile> # Creates a new session; if it's a path then create blank then load
+workforce new <worksession> # Creates a new session; if it's a path then create blank then load
 workforce save <worksession> <workfile> # Saves the session to a workfile and relinks session to that workfile
 workforce ps # list currently running nodes in queue (accepts workfile or not)
 workforce top <worksession> -n 2 # Same as workforce ps but with watch
