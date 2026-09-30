@@ -116,14 +116,18 @@ def _main_impl():
     # Default behaviour: open web UI with default workfile.
     if len(sys.argv) == 1:
         wf = ensure_workfile()
-        server_url = utils.resolve_server()
-        registration = register_workspace(server_url, wf)
-        ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
-        base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
-        _launch_browser_async(base_url)
-        print(f"Opening workspace {ws_id} in browser: {base_url}")
-        print(f"workspace_id: {ws_id}")
-        print(f"workfile: {wf}")
+        try:
+            server_url = utils.resolve_server()
+            registration = register_workspace(server_url, wf)
+            ws_id = registration.get("workspace_id") or compute_workspace_id(wf)
+            base_url = registration.get("url") or f"{server_url}/workspace/{ws_id}"
+            _launch_browser_async(base_url)
+            print(f"Opening workspace {ws_id} in browser: {base_url}")
+            print(f"workspace_id: {ws_id}")
+            print(f"workfile: {wf}")
+        except RuntimeError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
         return
 
     known_commands = {"web", "run", "server", "edit"}
