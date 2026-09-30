@@ -22,15 +22,15 @@
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">touch example.txt</data>
-      <data key="d2">30.82643852954277</data>
-      <data key="d3">144.80576099683424</data>
+      <data key="d2">33.22978605185287</data>
+      <data key="d3">164.5132106797771</data>
       <data key="d4" />
     </node>
     <node id="db544d08-ecf3-4c3b-85dd-048a7a211bd8">
       <data key="d1">cat hello.txt world.txt \
   &gt; example.txt</data>
-      <data key="d2">535.9931543376755</data>
-      <data key="d3">133.23452947701128</data>
+      <data key="d2">537.9158323555235</data>
+      <data key="d3">156.3066656911883</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 1; cd ~/workforce; cat hello.txt world.txt \
   &gt; example.txt"</data>
