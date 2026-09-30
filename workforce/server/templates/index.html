@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Workforce Server</title>
+    <style>
+      :root {
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+        --accent-color: #3b82f6;
+        --card-bg: #2a2a2a;
+        --card-border: #3f3f3f;
+        --muted-text: #a0a0a0;
+        --code-bg: #121212;
+      }
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        background-color: var(--bg-color); 
+        color: var(--text-color); 
+        margin: 0; 
+        display: flex; 
+        justify-content: center; 
+        padding: 4rem 1rem;
+        line-height: 1.5; 
+      }
+      .container { 
+        max-width: 800px; 
+        width: 100%; 
+      }
+      h1 { 
+        font-size: 2rem; 
+        font-weight: 600; 
+        margin-bottom: 0.5rem; 
+        color: #fff;
+      }
+      .muted { 
+        color: var(--muted-text); 
+        margin-bottom: 2rem; 
+        font-size: 1rem;
+      }
+      .controls {
+        margin-bottom: 2rem;
+      }
+      .btn-link {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: 1px solid var(--accent-color);
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      .btn-link:hover {
+        background: var(--accent-color);
+        color: #fff;
+      }
+      h2 { 
+        font-size: 1.25rem; 
+        font-weight: 500; 
+        margin-bottom: 1rem;
+        color: #fff;
+      }
+      ul { 
+        list-style: none; 
+        padding: 0; 
+        display: grid;
+        gap: 1rem;
+      }
+      li { 
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: transform 0.1s, border-color 0.2s;
+      }
+      li:hover {
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+      }
+      .item-url {
+        display: block;
+        color: var(--accent-color);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        word-break: break-all;
+      }
+      .item-url:hover {
+        text-decoration: underline;
+      }
+      .item-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.85rem;
+        color: var(--muted-text);
+      }
+      code { 
+        background: var(--code-bg); 
+        color: #d1d5db;
+        padding: 0.2rem 0.4rem; 
+        border-radius: 4px; 
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Workforce Server</h1>
+      <p class="muted">Active workspace sessions currently running on this server.</p>
+      
+      <div class="controls">
+        <a href="/workspaces" class="btn-link">View Active Workspaces JSON &rarr;</a>
+      </div>
+
+      <h2>Active Workspaces</h2>
+      <ul>
+        {% for item in items %}
+        <li>
+          <a class="item-url" href="{{ item.url }}">{{ item.url }}</a>
+          <div class="item-details">
+            <span>Path: <code>{{ item.path }}</code></span>
+            <span>Workspace ID: <code>{{ item.workspace_id }}</code></span>
+          </div>
+        </li>
+        {% else %}
+        <li style="text-align: center; color: var(--muted-text);">No active workspaces found.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </body>
+</html>

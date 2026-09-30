@@ -130,6 +130,9 @@ def register_routes(app):
     def server_home():
         """Render a landing page with active workspace links."""
         from workforce.server import _contexts, _contexts_lock
+        from flask import render_template_string
+        import os
+
         host_root = request.host_url.rstrip("/")
 
         active_items = []
@@ -144,40 +147,12 @@ def register_routes(app):
                         "url": workspace_url,
                     }
                 )
-
-        def render_item(item):
-            return (
-                "<li>"
-                f'<div><a href="{item["url"]}">{item["url"]}</a></div>'
-                f"<div><code>{item['path']}</code></div>"
-                f"<div>Workspace ID: <code>{item['workspace_id']}</code></div>"
-                "</li>"
-            )
-
-        items_html = "".join(render_item(item) for item in active_items) or "<li>No active workspaces found.</li>"
-
-        html = f"""<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Workforce Server</title>
-    <style>
-      body {{ font-family: sans-serif; margin: 2rem auto; max-width: 960px; line-height: 1.5; padding: 0 1rem; }}
-      code {{ background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 4px; }}
-      ul {{ padding-left: 1.25rem; }}
-      li {{ margin-bottom: 1rem; }}
-      .muted {{ color: #4b5563; }}
-    </style>
-  </head>
-  <body>
-    <h1>Workforce Server</h1>
-    <p class="muted">Active workspace sessions are linked below.</p>
-    <p><a href="/workspaces">View active workspaces JSON</a></p>
-    <h2>Active Workspaces</h2>
-    <ul>{items_html}</ul>
-  </body>
-</html>"""
-        return current_app.response_class(html, mimetype="text/html")
+        
+        template_path = os.path.join(os.path.dirname(__file__), "..", "server", "templates", "index.html")
+        with open(template_path, "r", encoding="utf-8") as f:
+            template_content = f.read()
+            
+        return render_template_string(template_content, items=active_items)
 
     @app.route("/workspaces", methods=["GET"])
     def list_workspaces():
