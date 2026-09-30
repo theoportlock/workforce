@@ -1,3 +1,9 @@
+# General
+index should have active workspces previous workspaces and new workspace
+Different edge for non-blocking
+Node groups (name the combinations of nodes for easy running)
+cli updates - Consider using typer/click vs argparse
+undo-redo stack
 Copy node groups with ctrl C
 right click and drag for edges also
 tab icon being workforce
@@ -6,7 +12,8 @@ Runner = Flow approach - allow floodgates
 Some way of running on startup (systemd?)
 No changing names of IDs? Will make undo stack very difficult as how do you refer to the node, separate name from id from command? (complicated)
 don't clear the edges - see the example for prime number increaser
-undo-redo stack
+workforce run <worksession> --wrapper 'docker run image bash -c "{}"' only updates the wrapper when an -o is specified or not self referencing
+have the statuses that appear in the frontend (such as wrapper updated succesfully) also be returned in the cli
 
 # Examples
 Wifi speed/temperature/webcam checker
@@ -17,7 +24,7 @@ one big handle and straight lines with right click and drag support
 prime numbers
 JEV models integration - wait for ollama to release
 
-# frontend
+# Frontend
 Lasso-selection
 node-collisions
 sub-flows for grouping support
@@ -26,7 +33,6 @@ floating-edges
 multi-connection-line
 right click and drag
 double click to make node and immediately enter edit mode
-download pdf/svg/jpg
 layout button
 index should have active workspces previous workspaces and new workspace
 Node groups (name the combinations of nodes for easy running)
