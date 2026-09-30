@@ -35,7 +35,7 @@ echo "7" &gt;&gt; /tmp/sequence.txt
 echo "11" &gt;&gt; /tmp/sequence.txt</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">91145</data>
+      <data key="d8">26062</data>
       <data key="d9">0</data>
     </node>
     <node id="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
@@ -59,10 +59,10 @@ ollama run "$MODEL" \
   --think=false \
   "Whats the next number in the sequence? output the next number ONLY" \
   &gt; /tmp/next.txt 2&gt;/dev/null</data>
-      <data key="d8">155172</data>
-      <data key="d9">0</data>
       <data key="d6" />
       <data key="d7" />
+      <data key="d8">32642</data>
+      <data key="d9">0</data>
     </node>
     <node id="f93354c4-e911-4a1b-a2b5-789f71846d76">
       <data key="d1"># Merge with the sequence
@@ -81,7 +81,7 @@ cat \
   &gt;&gt; /tmp/sequence.txt</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">155290</data>
+      <data key="d8">32719</data>
       <data key="d9">-9</data>
     </node>
     <node id="c22c2386-f18c-449e-a140-0c841f49acd5">
@@ -97,7 +97,7 @@ MODEL=gemma4:e2b
 [ "$(wc -l &lt; /tmp/sequence.txt)" -le 2000 ] || exit 1</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">155105</data>
+      <data key="d8">32570</data>
       <data key="d9">0</data>
     </node>
     <node id="fb1a5736-d45f-4332-a30c-4af4395abd37">
@@ -164,517 +164,41 @@ cat /tmp/sequence.txt</data>
 
 109
 
+103
+
+113
+
+113
+
+117
+
 113
 
 127
 
-137
+127
 
-149
-
-151
-
-173
-
-179
-
-181
-
-191
-
-211
-
-227
-
-229
-
-233
-
-239
-
-241
-
-251
-
-257
-
-263
-
-269
-
-271
-
-277
-
-281
-
-283
-
-287
-
-293
-
-307
-
-311
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-317
-
-311
-
-318
-
-319
-
-320
-
-321
-
-322
-
-323
-
-324
-
-325
-
-326
-
-327
-
-328
-
-329
-
-330
-
-331
-
-332
-
-333
-
-334
-
-335
-
-336
-
-337
-
-338
-
-339
-
-340
-
-341
-
-342
-
-343
-
-344
-
-345
-
-346
-
-347
-
-348
-
-349
-
-350
-
-351
-
-352
-
-353
-
-354
-
-355
-
-356
-
-357
-
-358
-
-359
-
-360
-
-361
-
-362
-
-363
-
-364
-
-365
-
-366
-
-367
-
-368
-
-369
-
-370
-
-371
-
-372
-
-373
-
-374
-
-375
-
-376
-
-377
-
-378
-
-379
-
-380
-
-381
-
-382
-
-383
-
-384
-
-385
-
-386
-
-387
-
-388
-
-389
-
-390
-
-391
-
-392
-
-393
-
-394
-
-395
-
-396
-
-397
-
-398
-
-399
-
-400
-
-401
-
-402
-
-403
-
-404
-
-405
-
-406
-
-407
-
-408
-
-409
-
-410
-
-411
-
-412
-
-413
-
-414
-
-415
-
-416
-
-417
-
-418
-
-419
-
-420
-
-421
-
-422
-
-423
-
-424
-
-425
-
-426
-
-427
-
-428
-
-429
-
-430
-
-431
-
-432
-
-433
-
-434
-
-435
-
-436
-
-437
-
-438
-
-439
-
-440
-
-441
-
-442
-
-443
-
-444
-
-445
-
-446
-
-447
-
-448
-
-449
-
-450
-
-451
-
-452
-
-453
-
-454
-
-455
-
-456
-
-457
-
-458
-
-459
-
-460
-
-461
-
-462
-
-463
-
-464
-
-465
-
-466
-
-467
-
-468
-
-469
-
-470
-
-471
-
-472
-
-473
-
-474
-
-475
-
-476
-
-477
-
-478
-
-479
-
-480
-
-481
-
-482
-
-483
-
-484
-
-485
-
-486
-
-487
-
-488
-
-489
-
-490
-
-491
-
-492
-
-493
-
-494
-
-495
-
-496
-
-497
-
-498
-
-499
-
-500
-
-501
-
-502
-
-503
-
-504
-
-505
-
-506
-
-507
-
-508
-
-509
-
-510
-
-511
+131
 
 </data>
       <data key="d7" />
-      <data key="d8">155113</data>
+      <data key="d8">32581</data>
       <data key="d9">0</data>
     </node>
     <node id="ab0b260a-9b9e-426b-9d52-f739cdd21b84">
       <data key="d1"># Pull the model
-ollama pull $MODEL &amp;&gt;/dev/null</data>
+ollama pull "$MODEL" &gt;/dev/null 2&gt;&amp;1</data>
       <data key="d2">571.7297077819784</data>
       <data key="d3">-107.25872272588472</data>
-      <data key="d8">91048</data>
-      <data key="d9">0</data>
       <data key="d4">ran</data>
       <data key="d5">sleep 1
 #MODEL=gemma4:31b-cloud
 MODEL=gemma4:e2b
  # Pull the model
-ollama pull $MODEL &amp;&gt;/dev/null</data>
+ollama pull "$MODEL" &gt;/dev/null 2&gt;&amp;1</data>
       <data key="d6" />
+      <data key="d8">25990</data>
+      <data key="d9">0</data>
       <data key="d7" />
     </node>
     <edge source="cf7bb102-eb38-442a-bbdf-6a688802514a" target="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
