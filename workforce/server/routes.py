@@ -11,7 +11,6 @@ from urllib.parse import quote
 from workforce import edit
 import networkx as nx
 from workforce.web import frontend_file
-from workforce.recent import RecentFileManager
 
 log = logging.getLogger(__name__)
 
@@ -129,28 +128,24 @@ def register_routes(app):
 
     @app.route("/", methods=["GET"])
     def server_home():
-        """Render a lightweight landing page with recently opened workspace links."""
-        recent_manager = RecentFileManager()
-        recent_files = recent_manager.get_list()
-        recent_remotes = recent_manager.get_remote_list()
+        """Render a landing page with active workspace links."""
+        from workforce.server import _contexts, _contexts_lock
         host_root = request.host_url.rstrip("/")
 
-        local_items = []
-        for file_path in recent_files:
-            abs_path = os.path.abspath(file_path)
-            workspace_id = compute_workspace_id(abs_path)
-            workspace_url = f"{host_root}/workspace/{workspace_id}?workfile_path={quote(abs_path, safe='')}"
-            local_items.append(
-                {
-                    "path": abs_path,
-                    "workspace_id": workspace_id,
-                    "url": workspace_url,
-                }
-            )
+        active_items = []
+        with _contexts_lock:
+            for ws_id, ctx in _contexts.items():
+                abs_path = ctx.workfile_path
+                workspace_url = f"{host_root}/workspace/{ws_id}?workfile_path={quote(abs_path, safe='')}"
+                active_items.append(
+                    {
+                        "path": abs_path,
+                        "workspace_id": ws_id,
+                        "url": workspace_url,
+                    }
+                )
 
-        remote_items = [entry for entry in recent_remotes if entry.get("url")]
-
-        def render_local_item(item):
+        def render_item(item):
             return (
                 "<li>"
                 f'<div><a href="{item["url"]}">{item["url"]}</a></div>'
@@ -159,19 +154,7 @@ def register_routes(app):
                 "</li>"
             )
 
-        def render_remote_item(item):
-            label = item.get("label") or item.get("workspace_id") or item["url"]
-            workspace_id = item.get("workspace_id") or "unknown"
-            return (
-                "<li>"
-                f'<div><a href="{item["url"]}">{item["url"]}</a></div>'
-                f"<div>Label: <code>{label}</code></div>"
-                f"<div>Workspace ID: <code>{workspace_id}</code></div>"
-                "</li>"
-            )
-
-        local_list_html = "".join(render_local_item(item) for item in local_items) or "<li>No recent local workfiles found.</li>"
-        remote_list_html = "".join(render_remote_item(item) for item in remote_items) or "<li>No recent remote workspaces found.</li>"
+        items_html = "".join(render_item(item) for item in active_items) or "<li>No active workspaces found.</li>"
 
         html = f"""<!doctype html>
 <html lang="en">
@@ -188,12 +171,10 @@ def register_routes(app):
   </head>
   <body>
     <h1>Workforce Server</h1>
-    <p class="muted">Recently opened workfiles are linked below. Visiting a local workfile URL will register its workspace if needed, then open the web UI.</p>
+    <p class="muted">Active workspace sessions are linked below.</p>
     <p><a href="/workspaces">View active workspaces JSON</a></p>
-    <h2>Recent local workfiles</h2>
-    <ul>{local_list_html}</ul>
-    <h2>Recent remote workspaces</h2>
-    <ul>{remote_list_html}</ul>
+    <h2>Active Workspaces</h2>
+    <ul>{items_html}</ul>
   </body>
 </html>"""
         return current_app.response_class(html, mimetype="text/html")

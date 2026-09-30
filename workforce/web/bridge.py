@@ -10,7 +10,6 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
-from workforce.recent import RecentFileManager
 from workforce.utils import _post
 
 PROTOCOL_VERSION = "1.0"
@@ -29,7 +28,7 @@ class WebBridge:
     workspace_id: str
 
     def __post_init__(self) -> None:
-        self.recent_manager = RecentFileManager()
+        pass
 
     @property
     def workspace_url(self) -> str:
@@ -232,9 +231,6 @@ class WebBridge:
         self._require_params("saveWorkflowAs", params, "new_path")
         result = _post(self.workspace_url, "/save-as", params)
         self._update_workspace_from_result(result)
-        new_path = result.get("new_path")
-        if new_path:
-            self.recent_manager.add(new_path)
         return result
 
     def _save_workflow_as_dialog(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -252,7 +248,6 @@ class WebBridge:
             "/workspace/register",
             {"path": abs_path},
         )
-        self.recent_manager.add(abs_path)
         self._update_workspace_from_result(result)
         return result
 

@@ -86,29 +86,6 @@ def test_workspace_static_asset_route_rejects_unknown_workspace():
     assert data['error'] == 'Workspace not found'
 
 
-def test_server_home_lists_recent_workfile_links(monkeypatch):
-    app = build_test_app()
-
-    class StubRecentManager:
-        def get_list(self):
-            return ["/tmp/example.graphml"]
-
-        def get_remote_list(self):
-            return []
-
-    monkeypatch.setattr(routes, "RecentFileManager", StubRecentManager)
-
-    with app.test_client() as client:
-        response = client.get("/")
-
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    assert "Workforce Server" in html
-    assert "/workspace/ws_" in html
-    assert "workfile_path=%2Ftmp%2Fexample.graphml" in html
-    assert "Recent local workfiles" in html
-
-
 def test_workspace_shell_can_lazy_register_from_workfile_query(monkeypatch):
     workfile_path = "/tmp/example.graphml"
     workspace_id = compute_workspace_id(workfile_path)
