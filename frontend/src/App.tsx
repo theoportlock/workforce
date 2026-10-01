@@ -1280,9 +1280,21 @@ function AppContent() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <a href="/" style={{ color: '#f8fafc', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <strong>Home</strong>
-            </a>
+           <button
+             onClick={() => { window.location.href = '/'; }}
+             style={{
+               background: '#334155',
+               border: 'none',
+               color: '#e2e8f0',
+               cursor: 'pointer',
+               padding: '4px 12px',
+               borderRadius: 4,
+               fontSize: 13,
+               fontFamily: 'inherit'
+             }}
+           >
+             Home
+           </button>
           <MenuBar
             menus={[
               {
