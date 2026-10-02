@@ -171,8 +171,7 @@ def register_routes(app):
                     {
                         "workspace_id": ws_id,
                         "workfile_path": ctx.workfile_path,
-                        "client_count": summary.get("web", 0)
-                        + summary.get("runner", 0),
+                        "client_count": summary.get("runner", 0),
                         "clients": summary,
                         "created_at": ctx.created_at,
                     }
@@ -187,6 +186,7 @@ def register_routes(app):
                 "workspaces": workspaces,
             }
         )
+
 
     @app.route("/workspace/register", methods=["POST"])
     def register_workspace():
@@ -221,11 +221,11 @@ def register_routes(app):
                 "workspace_id": workspace_id,
                 "url": url,
                 "path": abs_path,
-                "client_count": ctx.client_summary.get("web", 0)
-                + ctx.client_summary.get("runner", 0),
+                "client_count": ctx.client_summary.get("runner", 0),
                 "clients": ctx.client_summary,
             }
         ), 200
+
 
     @app.route("/workspace/<workspace_id>/get-graph", methods=["GET"])
     def get_graph(workspace_id):
@@ -507,9 +507,7 @@ def register_routes(app):
 
     @app.route("/workspace/<workspace_id>/client-connect", methods=["POST"])
     def client_connect(workspace_id):
-        """Called when a client connects. Creates context if needed.
-        Defaults to GUI client when client_type is omitted.
-        """
+        """Called when a client connects. Creates context if needed."""
         try:
             data = request.get_json(force=True) if request.data else {}
             workfile_path = data.get("workfile_path")
@@ -521,17 +519,13 @@ def register_routes(app):
 
             ctx = get_or_create_context(workspace_id, workfile_path)
 
-            if client_type == "web":
-                client_id = str(uuid.uuid4())
-                ctx.add_web_client(client_id, socketio_sid)
-            elif client_type == "runner":
+            client_id = None
+            if client_type == "runner":
                 # Runner clients register via /run; accept but do not add here
-                client_id = None
+                pass
             else:
-                # Unknown client type, default to web for backwards compatibility
-                client_type = "web"
+                # Web clients no longer tracked for lifecycle
                 client_id = str(uuid.uuid4())
-                ctx.add_web_client(client_id, socketio_sid)
 
             return jsonify(
                 {
@@ -545,11 +539,10 @@ def register_routes(app):
             log.exception("Error in client_connect: %s", e)
             return jsonify({"error": str(e)}), 500
 
+
     @app.route("/workspace/<workspace_id>/client-disconnect", methods=["POST"])
     def client_disconnect(workspace_id):
-        """Called when a client disconnects. Destroys context if no clients remain.
-        If client_type/client_id are omitted and exactly one GUI client exists, remove it.
-        """
+        """Called when a client disconnects."""
         try:
             ctx = get_context(workspace_id)
             if not ctx:
@@ -559,10 +552,8 @@ def register_routes(app):
             client_type = data.get("client_type")
             client_id = data.get("client_id")
 
-            # Explicit removal when identifiers provided
-            if client_type == "web" and client_id:
-                ctx.remove_web_client(client_id)
-            elif client_type == "runner" and client_id:
+            # Only handle runner removals
+            if client_type == "runner" and client_id:
                 _kill_nodes_for_run(ctx, client_id)
                 ctx.remove_runner_client(client_id)
                 ctx.active_runs.pop(client_id, None)
@@ -571,20 +562,14 @@ def register_routes(app):
                 ]
                 for nid in to_remove:
                     ctx.active_node_run.pop(nid, None)
-            else:
-                # Fallback: if exactly one web client exists, remove it
-                if len(ctx.web_clients) == 1 and len(ctx.runner_clients) == 0:
-                    only_id = next(iter(ctx.web_clients.keys()))
-                    ctx.remove_web_client(only_id)
 
-            if ctx.should_destroy():
-                destroy_context(workspace_id)
             return jsonify(
                 {"status": "disconnected", "workspace_id": workspace_id}
             ), 200
         except Exception as e:
             log.exception("Error in client_disconnect: %s", e)
             return jsonify({"error": str(e)}), 500
+
 
     @app.route("/workspace/<workspace_id>/run", methods=["POST"])
     def run_pipeline(workspace_id):
@@ -736,16 +721,6 @@ def register_routes(app):
         if not ctx:
             return jsonify({"error": "Workspace not found"}), 404
 
-        web = []
-        for gid, meta in ctx.web_clients.items():
-            web.append(
-                {
-                    "client_id": gid,
-                    "connected_at": meta.get("connected_at"),
-                    "socketio_sid": meta.get("socketio_sid"),
-                }
-            )
-
         runner = []
         try:
             G = edit.load_graph(ctx.workfile_path)
@@ -778,7 +753,8 @@ def register_routes(app):
                 }
             )
 
-        return jsonify({"web": web, "runner": runner})
+        return jsonify({"web": [], "runner": runner})
+
 
     @app.route("/workspace/<workspace_id>/runs", methods=["GET"])
     def list_runs(workspace_id):

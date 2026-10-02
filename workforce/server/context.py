@@ -59,26 +59,15 @@ class ServerContext:
     def client_summary(self) -> Dict[str, int]:
         """Return per-type client counts."""
         return {
-            "web": len(self.web_clients),
             "runner": len(self.runner_clients),
         }
 
     def _sync_client_count(self):
         """Keep legacy client_count in sync with authoritative per-type maps."""
-        self.client_count = len(self.web_clients) + len(self.runner_clients)
-
-    def add_web_client(self, web_id: str, socketio_sid: str | None = None):
-        self.web_clients[web_id] = {
-            "connected_at": time.time(),
-            "socketio_sid": socketio_sid,
-        }
-        self._sync_client_count()
-
-    def remove_web_client(self, web_id: str):
-        self.web_clients.pop(web_id, None)
-        self._sync_client_count()
+        self.client_count = len(self.runner_clients)
 
     def add_runner_client(self, run_id: str, socketio_sid: str | None = None):
+
         self.runner_clients[run_id] = {
             "connected_at": time.time(),
             "socketio_sid": socketio_sid,
@@ -90,8 +79,9 @@ class ServerContext:
         self._sync_client_count()
 
     def should_destroy(self) -> bool:
-        """Returns True if context should be destroyed (no clients left)."""
-        return (len(self.web_clients) + len(self.runner_clients)) <= 0
+        """Worksessions persist indefinitely until manually deleted."""
+        return False
+
 
     def enqueue(self, func: Callable, *args, idempotency_key: str | None = None, **kwargs):
         """
