@@ -54,6 +54,21 @@
         background: var(--accent-color);
         color: #fff;
       }
+      .btn-primary {
+        background: #334155;
+        color: #e2e8f0;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-bottom: 1rem;
+      }
+      .btn-primary:hover {
+        background: #475569;
+      }
       h2 { 
         font-size: 1.25rem; 
         font-weight: 500; 
@@ -178,7 +193,8 @@
       <h1>Workforce Server</h1>
       <p class="muted">Active sessions currently running on this server.</p>
       
-      <h2>Active Workspaces</h2>
+      <button class="btn-primary" onclick="createNewWorkspace()">New</button>
+      <h2 style="margin-top: 0;">Active Workspaces</h2>
       <ul>
         {% for item in items %}
         <li class="workspace-item">
@@ -203,6 +219,19 @@
       </ul>
     </div>
     <script>
+      function createNewWorkspace() {
+        const path = prompt('Enter full path for the new workspace:');
+        if (path) {
+          fetch('/workspace/register', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: path })
+          })
+            .then(res => res.ok ? location.reload() : alert('Error creating workspace'))
+            .catch(err => alert('Network error: ' + err));
+        }
+      }
+
       function toggleMenu(btn) {
         const menu = btn.nextElementSibling;
         const isOpen = menu.classList.contains('show');
