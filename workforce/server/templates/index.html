@@ -232,9 +232,13 @@
       function saveAs(btn) {
         const item = btn.closest('.workspace-item');
         const id = item.querySelector('.workspace-id').textContent;
-        const newName = prompt('Enter new name for workspace:');
-        if (newName) {
-          fetch(`/save_as?id=${id}&name=${encodeURIComponent(newName)}`, { method: 'POST' })
+        const newPath = prompt('Enter full path to save workspace:');
+        if (newPath) {
+          fetch(`/workspace/${id}/save-as`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_path: newPath })
+          })
             .then(res => res.ok ? location.reload() : alert('Error saving workspace'))
             .catch(err => alert('Network error: ' + err));
         }
