@@ -16,48 +16,48 @@
   <graph edgedefault="directed">
     <node id="a8059ffe-420a-458d-8e8e-268c9c1421e8">
       <data key="d1">echo hello &gt; hello.txt</data>
-      <data key="d2">232.35712244586423</data>
-      <data key="d3">52.30601296226976</data>
+      <data key="d2">262.63930122697155</data>
+      <data key="d3">69.1294456184405</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; cd ~/workforce; echo hello &gt; hello.txt"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">9589</data>
+      <data key="d8">4213</data>
       <data key="d9">0</data>
     </node>
     <node id="cf7bb102-eb38-442a-bbdf-6a688802514a">
       <data key="d1">touch example.txt</data>
-      <data key="d2">33.22978605185287</data>
-      <data key="d3">164.5132106797771</data>
+      <data key="d2">116.86627982824456</data>
+      <data key="d3">163.07120216639103</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; cd ~/workforce; touch example.txt"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">9557</data>
+      <data key="d8">4183</data>
       <data key="d9">0</data>
     </node>
     <node id="db544d08-ecf3-4c3b-85dd-048a7a211bd8">
       <data key="d1">cat hello.txt world.txt \
   &gt; example.txt</data>
-      <data key="d2">537.9158323555235</data>
-      <data key="d3">156.3066656911883</data>
+      <data key="d2">452.83733006574585</data>
+      <data key="d3">153.9033181688782</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; cd ~/workforce; cat hello.txt world.txt \
   &gt; example.txt"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">9620</data>
+      <data key="d8">4242</data>
       <data key="d9">0</data>
     </node>
     <node id="3955c2d4-4d4d-4f5b-8d95-133a2bedd081">
       <data key="d1">echo world &gt; world.txt</data>
-      <data key="d2">292.7644773790847</data>
-      <data key="d3">276.48480967088767</data>
+      <data key="d2">264.40497661582543</data>
+      <data key="d3">248.6059784120904</data>
       <data key="d4">ran</data>
       <data key="d5">bash -c "sleep 2; cd ~/workforce; echo world &gt; world.txt"</data>
       <data key="d6" />
       <data key="d7" />
-      <data key="d8">9580</data>
+      <data key="d8">4204</data>
       <data key="d9">0</data>
     </node>
     <edge source="a8059ffe-420a-458d-8e8e-268c9c1421e8" target="db544d08-ecf3-4c3b-85dd-048a7a211bd8">

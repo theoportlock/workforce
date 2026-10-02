@@ -28,7 +28,6 @@ import { adaptBackendGraph, nodeDimensionsForLabel, statusColorMap } from './gra
 import { BackendNodeLinkGraph, WorkflowNodeData, WorkforceStatus } from './graph/types';
 import { RightPanel } from './components/RightPanel';
 import { CanvasContextMenu, ContextMenuItem } from './components/CanvasContextMenu';
-import { MenuBar } from './components/MenuBar';
 import { WorkspacesIndex } from './components/WorkspacesIndex';
 import { connectWorkspaceSocket, getLaunchContext, SocketLike } from './runtime/socketClient';
 import { FrontendOperationQueue } from './runtime/operationQueue';
@@ -189,21 +188,6 @@ async function bridgeCall<T = Record<string, unknown>>(method: string, params: R
     throw new Error(response.error?.message ?? `Bridge request failed for ${method}`);
   }
   return (response.result ?? {}) as T;
-}
-
-function promptWorkflowPath(action: 'open' | 'save', currentPath?: string): string | null {
-  const verb = action === 'open' ? 'Open' : 'Save As';
-  const promptMessage =
-    action === 'open'
-      ? 'Enter the workflow file path to open:'
-      : 'Enter the workflow file path to save as:';
-  const entered = window.prompt(promptMessage, currentPath ?? '');
-  if (entered === null) return null;
-  const trimmed = entered.trim();
-  if (!trimmed) {
-    throw new Error(`${verb} cancelled: path is required.`);
-  }
-  return trimmed;
 }
 
 function pointerPosition(event: globalThis.MouseEvent | globalThis.TouchEvent) {
@@ -848,20 +832,6 @@ function AppContent() {
     []
   );
 
-  const handleOpenWorkflow = useCallback(async () => {
-    try {
-      await opQueueRef.current.flush();
-      const selectedPath = promptWorkflowPath('open', currentPath);
-      if (!selectedPath) return;
-      const result = await bridgeCall<{ path?: string }>('openWorkflow', { path: selectedPath });
-      if (result.path) setCurrentPath(result.path);
-      await refreshGraph();
-      setStatusMessage('Opened workflow successfully.');
-    } catch (error) {
-      setStatusMessage(`Open failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-    }
-  }, [currentPath, refreshGraph]);
-
   const handleSelectWorkspace = useCallback((id: string) => {
     window.location.href = `/workspace/${id}`;
   }, []);
@@ -1034,20 +1004,6 @@ function AppContent() {
       socketRef.disconnect();
     };
   }, [applyGraphUpdate, refreshGraph, setNodes, setEdges]);
-
-  const handleSaveWorkflowAs = useCallback(async () => {
-    try {
-      await opQueueRef.current.flush();
-      const selectedPath = promptWorkflowPath('save', currentPath);
-      if (!selectedPath) return;
-      const result = await bridgeCall<{ new_path?: string }>('saveWorkflowAs', { new_path: selectedPath });
-      if (result.new_path) setCurrentPath(result.new_path);
-      await refreshGraph();
-      setStatusMessage('Saved workflow copy successfully.');
-    } catch (error) {
-      setStatusMessage(`Save As failed: ${error instanceof Error ? error.message : 'unknown error'}`);
-    }
-  }, [currentPath, refreshGraph]);
 
   const handleStopRuns = useCallback(async () => {
     try {
@@ -1279,7 +1235,7 @@ function AppContent() {
           padding: '0 16px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
            <button
              onClick={() => { window.location.href = '/'; }}
              style={{
@@ -1295,19 +1251,7 @@ function AppContent() {
            >
              Home
            </button>
-          <MenuBar
-            menus={[
-              {
-                label: 'File',
-                items: [
-                  { label: 'New', action: () => setStatusMessage('New not yet implemented') },
-                  { label: 'Open...', action: () => void handleOpenWorkflow() },
-                  { label: 'Save As...', action: () => void handleSaveWorkflowAs() }
-                ]
-              }
-            ]}
-          />
-          <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => void handleRunWorkflow()}
               style={{
