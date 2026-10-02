@@ -46,13 +46,15 @@ workforce = "workforce.__main__:main"
 [tool.setuptools.packages.find]
 where = ["."]
 
-
 [tool.setuptools.package-data]
 "workforce.web" = [
   "static/**/*.html",
   "static/**/*.css",
   "static/**/*.js",
   "static/assets/**/*"
+]
+"workforce.server" = [
+  "templates/*.html"
 ]
 
 [tool.black]
