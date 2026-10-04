@@ -48,6 +48,7 @@ where = ["."]
 
 [tool.setuptools.package-data]
 "workforce.web" = [
+  "static/*.html",
   "static/**/*.html",
   "static/**/*.css",
   "static/**/*.js",
