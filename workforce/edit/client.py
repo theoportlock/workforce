@@ -1,14 +1,22 @@
 import logging
+import json
+import urllib.request
 from workforce.utils import _post
 
 log = logging.getLogger(__name__)
 
+def _get(base_url, endpoint):
+    with urllib.request.urlopen(f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}") as response:
+        return json.loads(response.read().decode("utf-8"))
+
 def cmd_add_node(args, base_url, workspace_id):
+    command = getattr(args, "command", None)
     payload = {
-        "label": args.label,
+        "label": command if command is not None else args.label,
         "x": args.x,
         "y": args.y,
         "status": args.status,
+        "command": command,
     }
     endpoint = f"/workspace/{workspace_id}/add-node"
     print(f"[CLIENT] POST {endpoint} {payload}")
@@ -82,3 +90,27 @@ def cmd_save_node_log(args, base_url, workspace_id):
     print(f"[CLIENT] POST {endpoint} {payload}")
     resp = _post(base_url, endpoint, payload)
     print(resp)
+
+def cmd_edit_node_command(args, base_url, workspace_id):
+    print(_post(base_url, f"/workspace/{workspace_id}/edit-node-command", {"node_id": args.node_id, "command": args.value}))
+
+def cmd_list_nodes(args, base_url, workspace_id):
+    print(json.dumps(_get(base_url, f"/workspace/{workspace_id}/list-nodes").get("nodes", []), indent=2))
+
+def cmd_list_edges(args, base_url, workspace_id):
+    print(json.dumps(_get(base_url, f"/workspace/{workspace_id}/list-edges").get("edges", []), indent=2))
+
+def cmd_edit_edge_type_by_id(args, base_url, workspace_id):
+    edges = _get(base_url, f"/workspace/{workspace_id}/list-edges").get("edges", [])
+    edge = next((edge for edge in edges if str(edge.get("id")) == str(args.edge_id)), None)
+    if edge is None:
+        raise RuntimeError(f"Edge not found: {args.edge_id}")
+    args.source, args.target = edge["source"], edge["target"]
+    cmd_edit_edge_type(args, base_url, workspace_id)
+
+def cmd_node_status(args, base_url, workspace_id):
+    nodes = _get(base_url, f"/workspace/{workspace_id}/list-nodes").get("nodes", [])
+    node = next((node for node in nodes if str(node.get("id")) == str(args.node_id)), None)
+    if node is None:
+        raise RuntimeError(f"Node not found: {args.node_id}")
+    print(node.get("status", ""))

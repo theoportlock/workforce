@@ -36,10 +36,13 @@ def save_graph(G: nx.DiGraph, path: str):
     nx.write_graphml(G, tmppath)
     os.replace(tmppath, path)
 
-def add_node_to_graph(path, label, x=0.0, y=0.0, status=""):
+def add_node_to_graph(path, label, x=0.0, y=0.0, status="", command=None):
     G = load_graph(path)
     node_id = str(uuid.uuid4())
-    G.add_node(node_id, label=label, x=str(x), y=str(y), status=status)
+    attrs = {"label": label, "x": str(x), "y": str(y), "status": status}
+    if command is not None:
+        attrs["command"] = command
+    G.add_node(node_id, **attrs)
     save_graph(G, path)
     log.info(f"Added node {node_id} to graph: {path}")
     return {"node_id": node_id}
@@ -169,6 +172,14 @@ def edit_node_label_in_graph(path, node_id, label):
     if node_id not in G:
         return {"error": "Node not found"}
     G.nodes[node_id]["label"] = label
+    save_graph(G, path)
+    return {"status": "updated"}
+
+def edit_node_command_in_graph(path, node_id, command):
+    G = load_graph(path)
+    if node_id not in G:
+        return {"error": "Node not found"}
+    G.nodes[node_id]["command"] = command
     save_graph(G, path)
     return {"status": "updated"}
 

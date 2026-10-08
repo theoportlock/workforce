@@ -299,6 +299,7 @@ def register_routes(app):
             data.get("x", 0),
             data.get("y", 0),
             data.get("status", ""),
+            data.get("command"),
             idempotency_key=idempotency_key,
         )
         return jsonify(result), 202
@@ -473,6 +474,36 @@ def register_routes(app):
             data["label"],
         )
         return jsonify(result), 202
+
+    @app.route("/workspace/<workspace_id>/edit-node-command", methods=["POST"])
+    def edit_node_command(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        data = request.get_json(force=True)
+        result = ctx.enqueue(
+            edit.edit_node_command_in_graph,
+            ctx.workfile_path,
+            data["node_id"],
+            data["command"],
+        )
+        return jsonify(result), 202
+
+    @app.route("/workspace/<workspace_id>/list-nodes", methods=["GET"])
+    def list_nodes(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        G = edit.load_graph(ctx.workfile_path)
+        return jsonify({"nodes": [{"id": node_id, **attrs} for node_id, attrs in G.nodes(data=True)]})
+
+    @app.route("/workspace/<workspace_id>/list-edges", methods=["GET"])
+    def list_edges(workspace_id):
+        ctx = g.ctx
+        if not ctx:
+            return jsonify({"error": "Workspace not found"}), 404
+        G = edit.load_graph(ctx.workfile_path)
+        return jsonify({"edges": [{"id": attrs.get("id", f"{source}->{target}"), "source": source, "target": target, **attrs} for source, target, attrs in G.edges(data=True)]})
 
     @app.route("/workspace/<workspace_id>/save-node-log", methods=["POST"])
     def save_node_log_api(workspace_id):

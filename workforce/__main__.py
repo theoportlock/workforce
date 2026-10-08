@@ -130,7 +130,7 @@ def _main_impl():
             sys.exit(1)
         return
 
-    known_commands = {"web", "run", "server", "edit"}
+    known_commands = {"web", "run", "server", "edit", "node", "edge"}
     sys.argv = _maybe_rewrite_bare_target_to_run(sys.argv, known_commands)
 
     parser = argparse.ArgumentParser(
@@ -465,6 +465,71 @@ def _main_impl():
 
     ew.set_defaults(func=_edit_wrapper)
 
+    # ---------------- NODE / EDGE ----------------
+    def _workspace_action(args):
+        wf_path = ensure_workfile(args.worksession)
+        server_url = utils.resolve_server()
+        registration = register_workspace(server_url, wf_path)
+        ws_id = registration.get("workspace_id") or compute_workspace_id(wf_path)
+        base_url = server_url
+        if args.func is cmd_edit_status:
+            args.element_id = args.node_id
+        if args.func is cmd_edit_node_label:
+            args.label = args.value
+        if args.func is cmd_edit_edge_type:
+            args.func = cmd_edit_edge_type_by_id
+        args.func(args, base_url, ws_id)
+
+    from workforce.edit.client import (
+        cmd_edit_edge_type, cmd_edit_node_command, cmd_edit_node_label, cmd_node_status,
+        cmd_list_nodes, cmd_list_edges, cmd_edit_edge_type_by_id,
+    )
+
+    node_p = subparsers.add_parser("node", help="Manage workflow nodes")
+    node_sub = node_p.add_subparsers(dest="node_command", required=True)
+    node_add = node_sub.add_parser("add", help="Add a node")
+    node_add.add_argument("worksession")
+    node_add.add_argument("command")
+    node_add.set_defaults(func=cmd_add_node, _new_workspace_cli=True, x=0, y=0, status="")
+
+    node_edit = node_sub.add_parser("edit", help="Edit a node")
+    node_edit_sub = node_edit.add_subparsers(dest="node_edit_field", required=True)
+    for field in ("status", "command", "name"):
+        field_parser = node_edit_sub.add_parser(field)
+        field_parser.add_argument("worksession")
+        field_parser.add_argument("node_id")
+        field_parser.add_argument("value")
+        field_parser.set_defaults(func={"status": cmd_edit_status, "command": cmd_edit_node_command, "name": cmd_edit_node_label}[field], element_type="node", _new_workspace_cli=True)
+    node_ls = node_sub.add_parser("ls", help="List nodes")
+    node_ls.add_argument("worksession")
+    node_ls.set_defaults(func=cmd_list_nodes, _new_workspace_cli=True)
+    node_status = node_sub.add_parser("status", help="Show a node status")
+    node_status.add_argument("--id", dest="node_id", required=True)
+    node_status.add_argument("worksession")
+    node_status.set_defaults(func=cmd_node_status, _new_workspace_cli=True)
+
+    edge_p = subparsers.add_parser("edge", help="Manage workflow edges")
+    edge_sub = edge_p.add_subparsers(dest="edge_command", required=True)
+    edge_add = edge_sub.add_parser("add", help="Add an edge")
+    edge_add.add_argument("worksession")
+    edge_add.add_argument("source")
+    edge_add.add_argument("target")
+    edge_add.add_argument("--blocking", dest="edge_type", action="store_const", const="blocking", default="blocking")
+    edge_add.add_argument("--nonblocking", dest="edge_type", action="store_const", const="non-blocking")
+    edge_add.set_defaults(func=cmd_add_edge, _new_workspace_cli=True)
+    edge_edit = edge_sub.add_parser("edit", help="Edit an edge")
+    edge_edit_sub = edge_edit.add_subparsers(dest="edge_edit_field", required=True)
+    edge_type = edge_edit_sub.add_parser("type")
+    edge_type.add_argument("worksession")
+    edge_type.add_argument("edge_id")
+    edge_type_group = edge_type.add_mutually_exclusive_group(required=True)
+    edge_type_group.add_argument("--blocking", dest="edge_type", action="store_const", const="blocking")
+    edge_type_group.add_argument("--nonblocking", dest="edge_type", action="store_const", const="non-blocking")
+    edge_type.set_defaults(func=cmd_edit_edge_type, _new_workspace_cli=True)
+    edge_ls = edge_sub.add_parser("ls", help="List edges")
+    edge_ls.add_argument("worksession")
+    edge_ls.set_defaults(func=cmd_list_edges, _new_workspace_cli=True)
+
     # Parse arguments and execute the corresponding function
     args = parser.parse_args()
 
@@ -478,7 +543,10 @@ def _main_impl():
         parser.print_help()
         return
 
-    args.func(args)
+    if getattr(args, "_new_workspace_cli", False):
+        _workspace_action(args)
+    else:
+        args.func(args)
 
 
 # -----------------------------------------------------------------------------
