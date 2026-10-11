@@ -79,3 +79,6 @@ edges:
 groups:
   core: [search, analyse]
   extended: [search, analyse, report]
+
+--------------------
+Want to make it also so that the run command (everything after the .wf file) is interepreted as a variable in the wrapper environmental variable.
