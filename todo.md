@@ -45,3 +45,37 @@ increase handle size
 # CLI
 Consider using typer/click vs argparse
 make it such that workforce filenasdf does not create a new file called filenasdf, instead errors. New files should be specified explicitly like workforce new/create
+
+# Filetype
+Possible change to YAML
+
+#!/usr/bin/env workforce
+name: 'daily_profile'        # optional, defaults to filename
+wrapper: 'bash -c "{}"'      # optional, this is the default
+
+nodes:
+  search:
+    command: find . -maxdepth 1 -type f -print
+    pos: [0, 0]
+  analyse:
+    command: python run.py
+    pos: [200, 0]
+  report:
+    command: |
+      python write_report.py
+    pos: [400, 0]
+    stdout: 'ran successfully'
+    stderr: 'none'
+    status: 'ran'
+    errcode: 0
+
+edges:
+  ws035256:
+    edge: [search, analyse]                                # blocking by default
+    type: non-blocking
+    status: ready
+  ws035870:
+    
+groups:
+  core: [search, analyse]
+  extended: [search, analyse, report]
