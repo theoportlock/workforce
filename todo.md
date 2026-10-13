@@ -50,8 +50,8 @@ make it such that workforce filenasdf does not create a new file called filenasd
 Possible change to YAML
 
 #!/usr/bin/env workforce
-name: 'daily_profile'        # optional, defaults to filename
-wrapper: 'bash -c "{}"'      # optional, this is the default
+name: 'daily_profile'
+wrapper: 'bash -c "{}"'
 
 nodes:
   search:
@@ -71,10 +71,13 @@ nodes:
 
 edges:
   ws035256:
-    edge: [search, analyse]                                # blocking by default
+    edge: [search, analyse]
+    type: non-blocking
+    status: ran
+  ws035870:
+    edge: [analyse, report]
     type: non-blocking
     status: ready
-  ws035870:
     
 groups:
   core: [search, analyse]
